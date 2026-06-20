@@ -305,7 +305,7 @@ window.renderAgenda = () => {
   const rango=`${new Date(dias[0]+"T12:00:00").toLocaleDateString("es-MX",{day:"numeric",month:"short"})} – ${new Date(dias[6]+"T12:00:00").toLocaleDateString("es-MX",{day:"numeric",month:"short"})}`;
   const slots=[]; HORARIOS.forEach(h=>dias.filter(f=>new Date(f+"T12:00:00").getDay()===h.diaN).forEach(fecha=>slots.push({h,fecha,resSlot:reservas.filter(r=>r.horarioId===h.id&&r.fecha===fecha&&r.estado!=="cancelada")})));
   slots.sort((a,b)=>a.fecha.localeCompare(b.fecha)||a.h.hora.localeCompare(b.h.hora));
-  let html=`<div class="semana-nav"><button class="nav-btn" onclick="semanaOffset--;renderAgenda()">‹</button><div style="text-align:center"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif">${nom}</div><div style="font-size:12px;color:var(--gris)">${rango}</div></div><button class="nav-btn" onclick="semanaOffset++;renderAgenda()">›</button></div>`;
+  let html=`<div class="semana-nav"><button class="nav-btn" id="btn-semana-prev">‹</button><div style="text-align:center"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif">${nom}</div><div style="font-size:12px;color:var(--gris)">${rango}</div></div><button class="nav-btn" id="btn-semana-next">›</button></div>`;
   if(!slots.length)html+=`<div class="card empty-state"><div style="font-size:32px;margin-bottom:8px">📅</div><div>Sin clases esta semana</div></div>`;
   slots.forEach(({h,fecha,resSlot})=>{
     const esHoy=fecha===hoyStr,pasado=fecha<hoyStr,cupo=cupoDisponible(h.id,fecha);
@@ -318,6 +318,10 @@ window.renderAgenda = () => {
     html+=`</div>`;
   });
   document.getElementById("tab-agenda").innerHTML=html;
+  const btnPrev = document.getElementById("btn-semana-prev");
+  const btnNext = document.getElementById("btn-semana-next");
+  if (btnPrev) btnPrev.addEventListener("click", function() { semanaOffset--; renderAgenda(); });
+  if (btnNext) btnNext.addEventListener("click", function() { semanaOffset++; renderAgenda(); });
 };
 
 // ── ALUMNAS ───────────────────────────────────────────────────
@@ -428,10 +432,28 @@ window.cancelarReservaAlumna = async rId => {
 window.openAgendarAlumna = () => { agendarHorarioSel=HORARIOS[0].id; agendarFechaSel=""; renderAgendarContent(); openModal("modal-agendar"); };
 window.renderAgendarContent = () => {
   const h=HORARIOS.find(hh=>hh.id===agendarHorarioSel),fechas=proximasFechas(h.diaN);
-  let html=`<div class="field"><label>Horario</label><select onchange="agendarHorarioSel=this.value;agendarFechaSel='';renderAgendarContent()">${HORARIOS.map(hh=>`<option value="${hh.id}"${hh.id===agendarHorarioSel?" selected":""}>${hh.label}</option>`).join("")}</select></div><div style="font-size:12px;color:var(--gris);margin-bottom:8px;font-weight:700;letter-spacing:.3px">ELIGE FECHA</div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">`;
-  fechas.forEach(f=>{const c=cupoDisponible(agendarHorarioSel,f),sel=agendarFechaSel===f;html+=`<button class="fecha-btn${sel?" sel":c===0?" lleno":""}" onclick="${c>0?`agendarFechaSel='${f}';renderAgendarContent()`:""}"><div style="font-weight:700;font-size:13px">${new Date(f+"T12:00:00").toLocaleDateString("es-MX",{day:"numeric",month:"short"})}</div><div style="font-size:10px;margin-top:2px">${c>0?c+" lugar"+(c!==1?"es":""):"Lleno"}</div></button>`;});
-  html+=`</div>${agendarFechaSel?`<div class="aviso aviso-rosa" style="font-size:13px;margin-bottom:14px">📅 ${new Date(agendarFechaSel+"T12:00:00").toLocaleDateString("es-MX",{weekday:"long",day:"numeric",month:"long"})}<br>⏰ ${h?.hora}</div>`:""}<div class="aviso aviso-oro" style="font-size:12px;line-height:1.5;margin-bottom:16px">⚠️ Recuerda cancelar con al menos <strong>24 horas de anticipación</strong>.</div><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-ghost btn-small" onclick="closeModal('modal-agendar')">Cancelar</button><button class="btn btn-primary btn-small"${!agendarFechaSel?" disabled":""} onclick="confirmarReserva()">Confirmar</button></div>`;
+  let html=`<div class="field"><label>Horario</label><select id="sel-horario">${HORARIOS.map(hh=>`<option value="${hh.id}"${hh.id===agendarHorarioSel?" selected":""}>${hh.label}</option>`).join("")}</select></div><div style="font-size:12px;color:var(--gris);margin-bottom:8px;font-weight:700;letter-spacing:.3px">ELIGE FECHA</div><div id="fechas-container" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">`;
+  fechas.forEach(f=>{const c=cupoDisponible(agendarHorarioSel,f),sel=agendarFechaSel===f;html+=`<button class="fecha-btn${sel?" sel":c===0?" lleno":""}" data-fecha="${f}" data-cupo="${c}"><div style="font-weight:700;font-size:13px">${new Date(f+"T12:00:00").toLocaleDateString("es-MX",{day:"numeric",month:"short"})}</div><div style="font-size:10px;margin-top:2px">${c>0?c+" lugar"+(c!==1?"es":""):"Lleno"}</div></button>`;});
+  html+=`</div>${agendarFechaSel?`<div class="aviso aviso-rosa" style="font-size:13px;margin-bottom:14px">📅 ${new Date(agendarFechaSel+"T12:00:00").toLocaleDateString("es-MX",{weekday:"long",day:"numeric",month:"long"})}<br>⏰ ${h?.hora}</div>`:""}<div class="aviso aviso-oro" style="font-size:12px;line-height:1.5;margin-bottom:16px">⚠️ Recuerda cancelar con al menos <strong>24 horas de anticipación</strong>.</div><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-ghost btn-small" id="btn-cancelar-agendar">Cancelar</button><button class="btn btn-primary btn-small" id="btn-confirmar-agendar" ${!agendarFechaSel?"disabled":""}>Confirmar</button></div>`;
   document.getElementById("agendar-content").innerHTML=html;
+  
+  // Event listeners en lugar de onclick inline
+  document.getElementById("sel-horario").addEventListener("change", function() {
+    agendarHorarioSel = this.value; agendarFechaSel = ""; renderAgendarContent();
+  });
+  document.getElementById("btn-cancelar-agendar").addEventListener("click", function() {
+    closeModal("modal-agendar");
+  });
+  document.getElementById("btn-confirmar-agendar").addEventListener("click", function() {
+    confirmarReserva();
+  });
+  document.querySelectorAll(".fecha-btn[data-fecha]").forEach(function(btn) {
+    btn.addEventListener("click", function() {
+      const f = this.getAttribute("data-fecha");
+      const c = parseInt(this.getAttribute("data-cupo"));
+      if (c > 0) { agendarFechaSel = f; renderAgendarContent(); }
+    });
+  });
 };
 window.confirmarReserva = async () => {
   if(!agendarFechaSel)return;
