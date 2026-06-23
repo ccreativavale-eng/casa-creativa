@@ -53,6 +53,16 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
 .progress-bg{background:var(--hueso2);border-radius:20px;height:8px;margin:12px 0 8px;overflow:hidden;}
 .progress-fill{height:100%;border-radius:20px;background:linear-gradient(90deg,var(--principal),var(--complemento));transition:width .4s;}
 .semana-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.vista-toggle{display:flex;gap:4px;background:var(--hueso2);border-radius:10px;padding:4px;margin-bottom:16px;}
+.vista-btn{flex:1;border:none;border-radius:7px;padding:7px;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:var(--gris);font-family:inherit;}
+.vista-btn.active{background:var(--blanco);color:var(--principal);box-shadow:0 1px 4px #0001;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:8px;}
+.cal-header{text-align:center;font-size:10px;font-weight:700;color:var(--gris);padding:4px 0;}
+.cal-day{min-height:60px;background:var(--blanco);border-radius:6px;border:1px solid var(--hueso2);padding:4px;cursor:pointer;}
+.cal-day.otro-mes{opacity:.4;}
+.cal-day.hoy{border:2px solid var(--principal);}
+.cal-day-num{font-size:11px;font-weight:700;color:var(--grafito);margin-bottom:2px;}
+.cal-slot{border-radius:4px;padding:2px 4px;font-size:9px;font-weight:700;margin-bottom:2px;white-space:nowrap;overflow:hidden;}
 .nav-btn{background:none;border:1.5px solid var(--hueso2);border-radius:8px;padding:6px 14px;cursor:pointer;font-size:18px;color:var(--gris);}
 .aviso{border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:13px;}
 .aviso-oro{background:#B8860B18;border:1px solid #B8860B40;}
@@ -272,7 +282,7 @@ const HORARIOS = [
 ];
 
 let alumnas=[],reservas=[],asistencias=[];
-let alumnaActiva=null,semanaOffset=0,pkgAlumnaId=null;
+let alumnaActiva=null,semanaOffset=0,pkgAlumnaId=null,vistaAgenda="semana",mesOffset=0;
 let agendarHorarioSel=HORARIOS[0].id,agendarFechaSel="";
 let asistenciaReservaId=null;
 
@@ -337,12 +347,13 @@ window.setTab=name=>{
 const renderMaestra=()=>renderAgenda();
 
 window.renderAgenda=()=>{
+  if(vistaAgenda==="mes"){renderAgendaMes();return;}
   const dias=diasDeSemana(semanaOffset),hoyStr=hoy();
   const nom=semanaOffset===0?"Esta semana":semanaOffset===1?"Próxima semana":semanaOffset===-1?"Semana pasada":`Semana ${semanaOffset>0?"+":""}${semanaOffset}`;
   const rango=`${new Date(dias[0]+"T12:00:00").toLocaleDateString("es-MX",{day:"numeric",month:"short"})} – ${new Date(dias[6]+"T12:00:00").toLocaleDateString("es-MX",{day:"numeric",month:"short"})}`;
   const slots=[];HORARIOS.forEach(h=>dias.filter(f=>new Date(f+"T12:00:00").getDay()===h.diaN).forEach(fecha=>slots.push({h,fecha,resSlot:reservas.filter(r=>r.horarioId===h.id&&r.fecha===fecha&&r.estado!=="cancelada")})));
   slots.sort((a,b)=>a.fecha.localeCompare(b.fecha)||a.h.hora.localeCompare(b.h.hora));
-  let html=`<div class="semana-nav"><button class="nav-btn" id="btn-semana-prev">‹</button><div style="text-align:center"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif">${nom}</div><div style="font-size:12px;color:var(--gris)">${rango}</div></div><button class="nav-btn" id="btn-semana-next">›</button></div>`;
+  let html=`<div class="vista-toggle"><button class="vista-btn active" id="btn-vista-semana">📅 Semana</button><button class="vista-btn" id="btn-vista-mes">📆 Mes</button></div><div class="semana-nav"><button class="nav-btn" id="btn-semana-prev">‹</button><div style="text-align:center"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif">${nom}</div><div style="font-size:12px;color:var(--gris)">${rango}</div></div><button class="nav-btn" id="btn-semana-next">›</button></div>`;
   if(!slots.length)html+=`<div class="card empty-state"><div style="font-size:32px;margin-bottom:8px">📅</div><div>Sin clases esta semana</div></div>`;
   slots.forEach(({h,fecha,resSlot})=>{
     const esHoy=fecha===hoyStr,pasado=fecha<hoyStr,cupo=cupoDisponible(h.id,fecha);
@@ -359,12 +370,96 @@ window.renderAgenda=()=>{
   const btnN=document.getElementById("btn-semana-next");
   if(btnP)btnP.addEventListener("click",()=>{semanaOffset--;renderAgenda();});
   if(btnN)btnN.addEventListener("click",()=>{semanaOffset++;renderAgenda();});
+  const btnVS=document.getElementById("btn-vista-semana");
+  const btnVM=document.getElementById("btn-vista-mes");
+  if(btnVS)btnVS.addEventListener("click",()=>{vistaAgenda="semana";renderAgenda();});
+  if(btnVM)btnVM.addEventListener("click",()=>{vistaAgenda="mes";renderAgendaMes();});
   document.querySelectorAll(".btn-verde[data-rid]").forEach(btn=>{
     btn.addEventListener("click",()=>abrirNotaAsistencia(btn.getAttribute("data-rid")));
   });
   document.querySelectorAll(".btn-falta[data-rid]").forEach(btn=>{
     btn.addEventListener("click",()=>marcarAsistencia(btn.getAttribute("data-rid"),false));
   });
+};
+
+window.renderAgendaMes=()=>{
+  const hoyD=new Date(),hoyStr=hoy();
+  const año=(new Date(hoyD.getFullYear(),hoyD.getMonth()+mesOffset,1)).getFullYear();
+  const mes=(new Date(hoyD.getFullYear(),hoyD.getMonth()+mesOffset,1)).getMonth();
+  const primerDia=new Date(año,mes,1);
+  const ultimoDia=new Date(año,mes+1,0);
+  const nombreMes=primerDia.toLocaleDateString("es-MX",{month:"long",year:"numeric"});
+  
+  // Count clases and membresias per day
+  const counts={};
+  reservas.filter(r=>r.estado!=="cancelada").forEach(r=>{
+    if(!counts[r.fecha])counts[r.fecha]={total:0,pkg:0,mem:0,horarios:{}};
+    counts[r.fecha].total++;
+    const al=alumnas.find(a=>a.id===r.alumnaId);
+    const pkt=al?(al.paquetes||[]).find(p=>p.id===r.paqueteId):null;
+    const def=pkt?PAQUETES_DEF[pkt.paqueteDefId]:null;
+    if(def?.tipo==="membresia")counts[r.fecha].mem++;
+    else counts[r.fecha].pkg++;
+    const h=HORARIOS.find(hh=>hh.id===r.horarioId);
+    if(h){
+      if(!counts[r.fecha].horarios[r.horarioId])counts[r.fecha].horarios[r.horarioId]={label:h.hora,count:0,tipo:h.tipo};
+      counts[r.fecha].horarios[r.horarioId].count++;
+    }
+  });
+
+  let html=`<div class="vista-toggle"><button class="vista-btn" id="btn-vista-semana2">📅 Semana</button><button class="vista-btn active" id="btn-vista-mes2">📆 Mes</button></div>`;
+  
+  // Month nav
+  html+=`<div class="semana-nav"><button class="nav-btn" id="btn-mes-prev">‹</button><div style="text-align:center"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif;text-transform:capitalize">${nombreMes}</div></div><button class="nav-btn" id="btn-mes-next">›</button></div>`;
+  
+  // Stats bar
+  const totalMes=Object.entries(counts).filter(([f])=>new Date(f+"T12:00:00").getMonth()===mes).reduce((s,[,v])=>s+v.total,0);
+  const pkgMes=Object.entries(counts).filter(([f])=>new Date(f+"T12:00:00").getMonth()===mes).reduce((s,[,v])=>s+v.pkg,0);
+  const memMes=Object.entries(counts).filter(([f])=>new Date(f+"T12:00:00").getMonth()===mes).reduce((s,[,v])=>s+v.mem,0);
+  html+=`<div style="display:flex;gap:8px;margin-bottom:12px">
+    <div style="flex:1;background:var(--blanco);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--hueso2)"><div style="font-size:20px;font-weight:800;color:var(--principal)">${totalMes}</div><div style="font-size:10px;color:var(--gris)">Total clases</div></div>
+    <div style="flex:1;background:var(--blanco);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--hueso2)"><div style="font-size:20px;font-weight:800;color:var(--verde)">${pkgMes}</div><div style="font-size:10px;color:var(--gris)">Paquetes</div></div>
+    <div style="flex:1;background:var(--blanco);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--hueso2)"><div style="font-size:20px;font-weight:800;color:var(--oro)">${memMes}</div><div style="font-size:10px;color:var(--gris)">Membresías</div></div>
+  </div>`;
+  
+  // Day headers
+  html+=`<div class="cal-grid">`;
+  ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"].forEach(d=>html+=`<div class="cal-header">${d}</div>`);
+  html+=`</div><div class="cal-grid">`;
+  
+  // Empty cells before first day
+  const startDow=(primerDia.getDay()+6)%7;
+  for(let i=0;i<startDow;i++)html+=`<div class="cal-day otro-mes"></div>`;
+  
+  // Days
+  for(let d=1;d<=ultimoDia.getDate();d++){
+    const fecha=`${año}-${String(mes+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    const esHoy=fecha===hoyStr;
+    const c=counts[fecha];
+    const total=c?.total||0;
+    const bgIntensity=total===0?"":total<=2?"var(--secundario)33":total<=5?"var(--principal)22":"var(--principal)44";
+    html+=`<div class="cal-day${esHoy?" hoy":""}" style="${bgIntensity?"background:"+bgIntensity:""}">`;
+    html+=`<div class="cal-day-num" style="color:${esHoy?"var(--principal)":"var(--grafito)"}">${d}</div>`;
+    if(c){
+      Object.values(c.horarios).forEach(h=>{
+        const color=h.tipo==="membresia"?"var(--oro)":"var(--principal)";
+        html+=`<div class="cal-slot" style="background:${color}22;color:${color}">${h.count}/${CUPO_MAX} ${h.label.split("–")[0]}</div>`;
+      });
+    }
+    html+=`</div>`;
+  }
+  
+  // Empty cells after last day
+  const endDow=(ultimoDia.getDay()+6)%7;
+  for(let i=endDow+1;i<7;i++)html+=`<div class="cal-day otro-mes"></div>`;
+  html+=`</div>`;
+  
+  document.getElementById("tab-agenda").innerHTML=html;
+  
+  document.getElementById("btn-vista-semana2")?.addEventListener("click",()=>{vistaAgenda="semana";renderAgenda();});
+  document.getElementById("btn-vista-mes2")?.addEventListener("click",()=>{vistaAgenda="mes";renderAgendaMes();});
+  document.getElementById("btn-mes-prev")?.addEventListener("click",()=>{mesOffset--;renderAgendaMes();});
+  document.getElementById("btn-mes-next")?.addEventListener("click",()=>{mesOffset++;renderAgendaMes();});
 };
 
 window.renderAlumnas=()=>{
