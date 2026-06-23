@@ -53,6 +53,16 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
 .progress-bg{background:var(--hueso2);border-radius:20px;height:8px;margin:12px 0 8px;overflow:hidden;}
 .progress-fill{height:100%;border-radius:20px;background:linear-gradient(90deg,var(--principal),var(--complemento));transition:width .4s;}
 .semana-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.vista-toggle{display:flex;gap:4px;background:var(--hueso2);border-radius:10px;padding:4px;margin-bottom:16px;}
+.vista-btn{flex:1;border:none;border-radius:7px;padding:7px;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:var(--gris);font-family:inherit;}
+.vista-btn.active{background:var(--blanco);color:var(--principal);box-shadow:0 1px 4px #0001;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:8px;}
+.cal-header{text-align:center;font-size:10px;font-weight:700;color:var(--gris);padding:4px 0;}
+.cal-day{min-height:60px;background:var(--blanco);border-radius:6px;border:1px solid var(--hueso2);padding:4px;cursor:pointer;}
+.cal-day.otro-mes{opacity:.4;}
+.cal-day.hoy{border:2px solid var(--principal);}
+.cal-day-num{font-size:11px;font-weight:700;color:var(--grafito);margin-bottom:2px;}
+.cal-slot{border-radius:4px;padding:2px 4px;font-size:9px;font-weight:700;margin-bottom:2px;white-space:nowrap;overflow:hidden;}
 .nav-btn{background:none;border:1.5px solid var(--hueso2);border-radius:8px;padding:6px 14px;cursor:pointer;font-size:18px;color:var(--gris);}
 .aviso{border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:13px;}
 .aviso-oro{background:#B8860B18;border:1px solid #B8860B40;}
@@ -121,12 +131,14 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
       <button class="tab active" onclick="setTab('agenda')">📅 Agenda</button>
       <button class="tab" onclick="setTab('alumnas')">👩‍🎨 Alumnas</button>
       <button class="tab" onclick="setTab('ingresos')">💰 Ingresos</button>
+      <button class="tab" onclick="setTab('servicios')">🔥 Servicios</button>
     </div>
   </div>
   <div class="max" style="padding-top:16px;padding-bottom:80px;flex:1">
     <div id="tab-agenda"></div>
     <div id="tab-alumnas" style="display:none"></div>
     <div id="tab-ingresos" style="display:none"></div>
+    <div id="tab-servicios" style="display:none"></div>
   </div>
   <button class="fab" onclick="goLogin()">🌸 Vista alumna</button>
 </div>
@@ -172,8 +184,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
         <option value="intensivo">✨ Curso Intensivo · 12 clases · 120 días · $4,500</option>
       </optgroup>
       <optgroup label="── Membresías ──">
-        <option value="mem4">🎨 Membresía 4 sesiones · 30 días · $1,200</option>
-        <option value="mem8">🎨 Membresía 8 sesiones · 60 días · $2,200</option>
+        <option value="mem_esencial">🎨 Membresía Esencial · 4 sesiones · 60 días · $1,600</option>
+        <option value="mem_plus">💎 Membresía Plus · 8 sesiones · 90 días · $2,900</option>
       </optgroup>
       </select>
     </div>
@@ -250,12 +262,12 @@ const db = getFirestore(app);
 const CLAVE = "1512";
 const CUPO_MAX = 8;
 const PAQUETES_DEF = {
-  primera:     {nombre:"Primera Pieza",           clases:1, dias:15, precio:390,  emoji:"🌱", tipo:"paquete"},
-  proceso:     {nombre:"Proceso Completo",         clases:2, dias:15, precio:750,  emoji:"🌿", tipo:"paquete"},
-  habilidades: {nombre:"Desarrolla tus Habilidades", clases:6, dias:90, precio:2250, emoji:"🏺", tipo:"paquete"},
-  intensivo:   {nombre:"Curso Intensivo",          clases:12,dias:120,precio:4500, emoji:"✨", tipo:"paquete"},
-  mem4:        {nombre:"Membresía 4 sesiones",     clases:4, dias:30, precio:1200, emoji:"🎨", tipo:"membresia"},
-  mem8:        {nombre:"Membresía 8 sesiones",     clases:8, dias:60, precio:2200, emoji:"🎨", tipo:"membresia"},
+  primera:     {nombre:"Primera Pieza",             clases:1, dias:15, precio:390,  emoji:"🌱", tipo:"paquete"},
+  proceso:     {nombre:"Proceso Completo",           clases:2, dias:15, precio:750,  emoji:"🌿", tipo:"paquete"},
+  habilidades: {nombre:"Desarrolla tus Habilidades",clases:6, dias:90, precio:2250, emoji:"🏺", tipo:"paquete"},
+  intensivo:   {nombre:"Curso Intensivo",            clases:12,dias:120,precio:4500, emoji:"✨", tipo:"paquete"},
+  mem_esencial:{nombre:"Membresía Esencial",         clases:4, dias:60, precio:1600, emoji:"🎨", tipo:"membresia"},
+  mem_plus:    {nombre:"Membresía Plus",             clases:8, dias:90, precio:2900, emoji:"💎", tipo:"membresia"},
 };
 const HORARIOS = [
   {id:"mar_a",label:"Martes 9:00–11:00",     dia:"Martes",    hora:"9:00–11:00",   diaN:2, tipo:"paquete"},
@@ -266,13 +278,13 @@ const HORARIOS = [
   {id:"mie_b",label:"Miércoles 16:00–18:00", dia:"Miércoles", hora:"16:00–18:00",  diaN:3, tipo:"paquete"},
   {id:"jue_a",label:"Jueves 11:30–13:30",    dia:"Jueves",    hora:"11:30–13:30",  diaN:4, tipo:"paquete"},
   {id:"jue_b",label:"Jueves 16:00–18:00",    dia:"Jueves",    hora:"16:00–18:00",  diaN:4, tipo:"paquete"},
-  {id:"lun_m",label:"Lunes 16:00–19:00",     dia:"Lunes",     hora:"16:00–19:00",  diaN:1, tipo:"membresia"},
-  {id:"mie_m",label:"Miércoles 16:00–19:00", dia:"Miércoles", hora:"16:00–19:00",  diaN:3, tipo:"membresia"},
-  {id:"sab_m",label:"Sábado 16:00–19:00",    dia:"Sábado",    hora:"16:00–19:00",  diaN:6, tipo:"membresia"},
+  {id:"lun_m",label:"Lunes 16:00–19:00",   dia:"Lunes",  hora:"16:00–19:00", diaN:1, tipo:"membresia"},
+  {id:"mar_m",label:"Martes 16:00–19:00",  dia:"Martes", hora:"16:00–19:00", diaN:2, tipo:"membresia"},
+  {id:"sab_m",label:"Sábado 16:00–19:00",  dia:"Sábado", hora:"16:00–19:00", diaN:6, tipo:"membresia"},
 ];
 
 let alumnas=[],reservas=[],asistencias=[];
-let alumnaActiva=null,semanaOffset=0,pkgAlumnaId=null;
+let alumnaActiva=null,semanaOffset=0,pkgAlumnaId=null,vistaAgenda="semana",mesOffset=0;
 let agendarHorarioSel=HORARIOS[0].id,agendarFechaSel="";
 let asistenciaReservaId=null;
 
@@ -330,19 +342,20 @@ window.entrarAlumna=()=>{if(!alumnaLoginSel)return;alumnaActiva=alumnas.find(x=>
 window.entrarMaestra=()=>{if(document.getElementById("input-clave").value===CLAVE){renderMaestra();showScreen("maestra");}else{document.getElementById("error-clave").style.display="block";setTimeout(()=>document.getElementById("error-clave").style.display="none",2000);}};
 
 window.setTab=name=>{
-  ["agenda","alumnas","ingresos"].forEach(t=>{document.getElementById("tab-"+t).style.display=t===name?"block":"none";});
-  document.querySelectorAll(".tab").forEach((b,i)=>b.classList.toggle("active",["agenda","alumnas","ingresos"][i]===name));
-  if(name==="agenda")renderAgenda();if(name==="alumnas")renderAlumnas();if(name==="ingresos")renderIngresos();
+  ["agenda","alumnas","ingresos","servicios"].forEach(t=>{document.getElementById("tab-"+t).style.display=t===name?"block":"none";});
+  document.querySelectorAll(".tab").forEach((b,i)=>b.classList.toggle("active",["agenda","alumnas","ingresos","servicios"][i]===name));
+  if(name==="agenda")renderAgenda();if(name==="alumnas")renderAlumnas();if(name==="ingresos")renderIngresos();if(name==="servicios")renderServicios();
 };
 const renderMaestra=()=>renderAgenda();
 
 window.renderAgenda=()=>{
+  if(vistaAgenda==="mes"){renderAgendaMes();return;}
   const dias=diasDeSemana(semanaOffset),hoyStr=hoy();
   const nom=semanaOffset===0?"Esta semana":semanaOffset===1?"Próxima semana":semanaOffset===-1?"Semana pasada":`Semana ${semanaOffset>0?"+":""}${semanaOffset}`;
   const rango=`${new Date(dias[0]+"T12:00:00").toLocaleDateString("es-MX",{day:"numeric",month:"short"})} – ${new Date(dias[6]+"T12:00:00").toLocaleDateString("es-MX",{day:"numeric",month:"short"})}`;
   const slots=[];HORARIOS.forEach(h=>dias.filter(f=>new Date(f+"T12:00:00").getDay()===h.diaN).forEach(fecha=>slots.push({h,fecha,resSlot:reservas.filter(r=>r.horarioId===h.id&&r.fecha===fecha&&r.estado!=="cancelada")})));
   slots.sort((a,b)=>a.fecha.localeCompare(b.fecha)||a.h.hora.localeCompare(b.h.hora));
-  let html=`<div class="semana-nav"><button class="nav-btn" id="btn-semana-prev">‹</button><div style="text-align:center"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif">${nom}</div><div style="font-size:12px;color:var(--gris)">${rango}</div></div><button class="nav-btn" id="btn-semana-next">›</button></div>`;
+  let html=`<div class="vista-toggle"><button class="vista-btn active" id="btn-vista-semana">📅 Semana</button><button class="vista-btn" id="btn-vista-mes">📆 Mes</button></div><div class="semana-nav"><button class="nav-btn" id="btn-semana-prev">‹</button><div style="text-align:center"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif">${nom}</div><div style="font-size:12px;color:var(--gris)">${rango}</div></div><button class="nav-btn" id="btn-semana-next">›</button></div>`;
   if(!slots.length)html+=`<div class="card empty-state"><div style="font-size:32px;margin-bottom:8px">📅</div><div>Sin clases esta semana</div></div>`;
   slots.forEach(({h,fecha,resSlot})=>{
     const esHoy=fecha===hoyStr,pasado=fecha<hoyStr,cupo=cupoDisponible(h.id,fecha);
@@ -359,12 +372,182 @@ window.renderAgenda=()=>{
   const btnN=document.getElementById("btn-semana-next");
   if(btnP)btnP.addEventListener("click",()=>{semanaOffset--;renderAgenda();});
   if(btnN)btnN.addEventListener("click",()=>{semanaOffset++;renderAgenda();});
+  const btnVS=document.getElementById("btn-vista-semana");
+  const btnVM=document.getElementById("btn-vista-mes");
+  if(btnVS)btnVS.addEventListener("click",()=>{vistaAgenda="semana";renderAgenda();});
+  if(btnVM)btnVM.addEventListener("click",()=>{vistaAgenda="mes";renderAgendaMes();});
   document.querySelectorAll(".btn-verde[data-rid]").forEach(btn=>{
     btn.addEventListener("click",()=>abrirNotaAsistencia(btn.getAttribute("data-rid")));
   });
   document.querySelectorAll(".btn-falta[data-rid]").forEach(btn=>{
     btn.addEventListener("click",()=>marcarAsistencia(btn.getAttribute("data-rid"),false));
   });
+};
+
+window.renderAgendaMes=()=>{
+  const hoyD=new Date(),hoyStr=hoy();
+  const año=(new Date(hoyD.getFullYear(),hoyD.getMonth()+mesOffset,1)).getFullYear();
+  const mes=(new Date(hoyD.getFullYear(),hoyD.getMonth()+mesOffset,1)).getMonth();
+  const primerDia=new Date(año,mes,1);
+  const ultimoDia=new Date(año,mes+1,0);
+  const nombreMes=primerDia.toLocaleDateString("es-MX",{month:"long",year:"numeric"});
+  
+  // Count clases and membresias per day
+  const counts={};
+  reservas.filter(r=>r.estado!=="cancelada").forEach(r=>{
+    if(!counts[r.fecha])counts[r.fecha]={total:0,pkg:0,mem:0,horarios:{}};
+    counts[r.fecha].total++;
+    const al=alumnas.find(a=>a.id===r.alumnaId);
+    const pkt=al?(al.paquetes||[]).find(p=>p.id===r.paqueteId):null;
+    const def=pkt?PAQUETES_DEF[pkt.paqueteDefId]:null;
+    if(def?.tipo==="membresia")counts[r.fecha].mem++;
+    else counts[r.fecha].pkg++;
+    const h=HORARIOS.find(hh=>hh.id===r.horarioId);
+    if(h){
+      if(!counts[r.fecha].horarios[r.horarioId])counts[r.fecha].horarios[r.horarioId]={label:h.hora,count:0,tipo:h.tipo};
+      counts[r.fecha].horarios[r.horarioId].count++;
+    }
+  });
+
+  let html=`<div class="vista-toggle"><button class="vista-btn" id="btn-vista-semana2">📅 Semana</button><button class="vista-btn active" id="btn-vista-mes2">📆 Mes</button></div>`;
+  
+  // Month nav
+  html+=`<div class="semana-nav"><button class="nav-btn" id="btn-mes-prev">‹</button><div style="text-align:center"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif;text-transform:capitalize">${nombreMes}</div></div><button class="nav-btn" id="btn-mes-next">›</button></div>`;
+  
+  // Stats bar
+  const totalMes=Object.entries(counts).filter(([f])=>new Date(f+"T12:00:00").getMonth()===mes).reduce((s,[,v])=>s+v.total,0);
+  const pkgMes=Object.entries(counts).filter(([f])=>new Date(f+"T12:00:00").getMonth()===mes).reduce((s,[,v])=>s+v.pkg,0);
+  const memMes=Object.entries(counts).filter(([f])=>new Date(f+"T12:00:00").getMonth()===mes).reduce((s,[,v])=>s+v.mem,0);
+  html+=`<div style="display:flex;gap:8px;margin-bottom:12px">
+    <div style="flex:1;background:var(--blanco);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--hueso2)"><div style="font-size:20px;font-weight:800;color:var(--principal)">${totalMes}</div><div style="font-size:10px;color:var(--gris)">Total clases</div></div>
+    <div style="flex:1;background:var(--blanco);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--hueso2)"><div style="font-size:20px;font-weight:800;color:var(--verde)">${pkgMes}</div><div style="font-size:10px;color:var(--gris)">Paquetes</div></div>
+    <div style="flex:1;background:var(--blanco);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--hueso2)"><div style="font-size:20px;font-weight:800;color:var(--oro)">${memMes}</div><div style="font-size:10px;color:var(--gris)">Membresías</div></div>
+  </div>`;
+  
+  // Day headers
+  html+=`<div class="cal-grid">`;
+  ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"].forEach(d=>html+=`<div class="cal-header">${d}</div>`);
+  html+=`</div><div class="cal-grid">`;
+  
+  // Empty cells before first day
+  const startDow=(primerDia.getDay()+6)%7;
+  for(let i=0;i<startDow;i++)html+=`<div class="cal-day otro-mes"></div>`;
+  
+  // Days
+  for(let d=1;d<=ultimoDia.getDate();d++){
+    const fecha=`${año}-${String(mes+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    const esHoy=fecha===hoyStr;
+    const c=counts[fecha];
+    const total=c?.total||0;
+    const bgIntensity=total===0?"":total<=2?"var(--secundario)33":total<=5?"var(--principal)22":"var(--principal)44";
+    html+=`<div class="cal-day${esHoy?" hoy":""}" style="${bgIntensity?"background:"+bgIntensity:""}">`;
+    html+=`<div class="cal-day-num" style="color:${esHoy?"var(--principal)":"var(--grafito)"}">${d}</div>`;
+    if(c){
+      Object.values(c.horarios).forEach(h=>{
+        const color=h.tipo==="membresia"?"var(--oro)":"var(--principal)";
+        html+=`<div class="cal-slot" style="background:${color}22;color:${color}">${h.count}/${CUPO_MAX} ${h.label.split("–")[0]}</div>`;
+      });
+    }
+    html+=`</div>`;
+  }
+  
+  // Empty cells after last day
+  const endDow=(ultimoDia.getDay()+6)%7;
+  for(let i=endDow+1;i<7;i++)html+=`<div class="cal-day otro-mes"></div>`;
+  html+=`</div>`;
+  
+  document.getElementById("tab-agenda").innerHTML=html;
+  
+  document.getElementById("btn-vista-semana2")?.addEventListener("click",()=>{vistaAgenda="semana";renderAgenda();});
+  document.getElementById("btn-vista-mes2")?.addEventListener("click",()=>{vistaAgenda="mes";renderAgendaMes();});
+  document.getElementById("btn-mes-prev")?.addEventListener("click",()=>{mesOffset--;renderAgendaMes();});
+  document.getElementById("btn-mes-next")?.addEventListener("click",()=>{mesOffset++;renderAgendaMes();});
+};
+
+// ── SERVICIOS ─────────────────────────────────────────────
+const TARIFAS_SANCOCHO = [{max:200,precio:40},{max:400,precio:50},{max:700,precio:70},{max:1000,precio:130},{max:2000,precio:130},{max:999999,precio:180}];
+const TARIFAS_ESMALTADO = [{max:200,precio:50},{max:400,precio:70},{max:700,precio:90},{max:1000,precio:130},{max:2000,precio:170},{max:999999,precio:240}];
+
+const calcPrecio = (gramos, tarifas) => {
+  for(const t of tarifas) if(gramos <= t.max) return t.precio;
+  return tarifas[tarifas.length-1].precio;
+};
+
+window.renderServicios = () => {
+  const serviciosGuardados = JSON.parse(localStorage.getItem("cc_servicios")||"[]");
+  const totalServicios = serviciosGuardados.reduce((s,x)=>s+x.precio,0);
+  
+  let html = `<div class="row-space" style="margin-bottom:16px">
+    <span style="font-weight:800;font-size:16px;font-family:'DM Serif Display',serif">Servicios de quema</span>
+    <div style="text-align:right"><div style="font-size:11px;color:var(--gris)">Total registrado</div>
+    <div class="display" style="font-weight:800;font-size:24px;color:var(--principal)">$${totalServicios.toLocaleString("es-MX")}</div></div>
+  </div>`;
+
+  // Formulario nuevo servicio
+  html += `<div class="card" style="margin-bottom:16px;border:2px solid var(--secundario)">
+    <div style="font-weight:800;font-size:14px;font-family:'DM Serif Display',serif;margin-bottom:14px">+ Registrar servicio</div>
+    <div class="field"><label>Nombre de la clienta</label><input type="text" id="srv-nombre" placeholder="Ej. María García"></div>
+    <div class="field"><label>Tipo de servicio</label>
+      <select id="srv-tipo">
+        <option value="sancocho">🔥 Sancocho (primera quema)</option>
+        <option value="esmaltado">✨ Esmaltado (esmalte + quema)</option>
+      </select>
+    </div>
+    <div class="field"><label>Peso de la pieza (gramos)</label><input type="number" id="srv-gramos" placeholder="Ej. 350" oninput="calcServicio()"></div>
+    <div id="srv-precio-preview" style="display:none" class="aviso aviso-rosa" style="font-size:14px;font-weight:700;margin-bottom:14px"></div>
+    <div class="field"><label>Fecha</label><input type="date" id="srv-fecha"></div>
+    <button class="btn btn-primary btn-full" id="btn-guardar-servicio">Registrar servicio</button>
+  </div>`;
+
+  // Historial
+  if(serviciosGuardados.length){
+    html += `<div style="font-weight:800;font-size:14px;font-family:'DM Serif Display',serif;margin-bottom:10px">Historial</div>`;
+    [...serviciosGuardados].reverse().forEach(s=>{
+      html += `<div class="card" style="margin-bottom:8px">
+        <div class="row-space">
+          <div>
+            <div style="font-weight:700">${s.nombre}</div>
+            <div style="font-size:12px;color:var(--gris)">${s.tipo==="sancocho"?"🔥 Sancocho":"✨ Esmaltado"} · ${s.gramos}g · ${fmtFecha(s.fecha)}</div>
+          </div>
+          <div style="font-weight:800;font-size:16px;color:var(--principal)">$${s.precio}</div>
+        </div>
+      </div>`;
+    });
+  } else {
+    html += `<div class="card empty-state"><div style="font-size:32px;margin-bottom:8px">🔥</div><div>Sin servicios registrados aún.</div></div>`;
+  }
+
+  document.getElementById("tab-servicios").innerHTML = html;
+  
+  document.getElementById("srv-fecha").value = hoy();
+  document.getElementById("srv-gramos").addEventListener("input", calcServicio);
+  document.getElementById("srv-tipo").addEventListener("change", calcServicio);
+  document.getElementById("btn-guardar-servicio").addEventListener("click", guardarServicio);
+};
+
+window.calcServicio = () => {
+  const gramos = parseInt(document.getElementById("srv-gramos")?.value||0);
+  const tipo = document.getElementById("srv-tipo")?.value;
+  if(!gramos) { document.getElementById("srv-precio-preview").style.display="none"; return; }
+  const tarifas = tipo==="sancocho"?TARIFAS_SANCOCHO:TARIFAS_ESMALTADO;
+  const precio = calcPrecio(gramos, tarifas);
+  const preview = document.getElementById("srv-precio-preview");
+  if(preview){ preview.style.display="block"; preview.innerHTML=`Precio: <strong style="font-size:18px;color:var(--principal)">$${precio}</strong> · ${gramos}g de ${tipo==="sancocho"?"sancocho":"esmaltado"}`; }
+};
+
+window.guardarServicio = () => {
+  const nombre = document.getElementById("srv-nombre")?.value?.trim();
+  const tipo = document.getElementById("srv-tipo")?.value;
+  const gramos = parseInt(document.getElementById("srv-gramos")?.value||0);
+  const fecha = document.getElementById("srv-fecha")?.value;
+  if(!nombre||!gramos) { showToast("Completa todos los campos"); return; }
+  const tarifas = tipo==="sancocho"?TARIFAS_SANCOCHO:TARIFAS_ESMALTADO;
+  const precio = calcPrecio(gramos, tarifas);
+  const servicios = JSON.parse(localStorage.getItem("cc_servicios")||"[]");
+  servicios.push({id:uid(),nombre,tipo,gramos,precio,fecha,creadoEn:new Date().toISOString()});
+  localStorage.setItem("cc_servicios", JSON.stringify(servicios));
+  showToast(`✓ Servicio registrado · $${precio}`);
+  renderServicios();
 };
 
 window.renderAlumnas=()=>{
