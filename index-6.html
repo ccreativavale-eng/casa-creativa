@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Casa Creativa — Taller de Cerámica</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --fondo:#f7eee8;--principal:#a376a6;--principal-osc:#7a5a7a;
+  --secundario:#edc5da;--complemento:#ff9e97;--acento1:#ff6e54;
+  --acento2:#d13626;--grafito:#2A2218;--gris:#7A6F66;
+  --blanco:#FDFAF8;--hueso2:#edddd5;--verde:#4A7A55;--oro:#B8860B;
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:var(--grafito);min-height:100vh;}
+.display{font-family:'Cormorant Garamond',Georgia,serif;}
+.serif{font-family:'DM Serif Display',Georgia,serif;}
+.screen{display:none;flex-direction:column;min-height:100vh;}
+.screen.active{display:flex;}
+.max{max-width:640px;margin:0 auto;padding:0 16px;width:100%;}
+.header{background:linear-gradient(135deg,var(--principal),var(--principal-osc));padding:20px 16px 0;position:sticky;top:0;z-index:50;box-shadow:0 2px 16px #0002;}
+.header-top{display:flex;align-items:center;gap:10px;margin-bottom:14px;max-width:640px;margin-left:auto;margin-right:auto;}
+.tabs{display:flex;gap:2px;max-width:640px;margin:0 auto;}
+.tab{padding:8px 16px;border:none;border-radius:8px 8px 0 0;cursor:pointer;background:transparent;color:#ffffffcc;font-weight:700;font-size:13px;transition:all .15s;}
+.tab.active{background:var(--blanco);color:var(--principal);}
+.card{background:var(--blanco);border-radius:14px;border:1px solid var(--hueso2);padding:18px;margin-bottom:12px;}
+.btn{border:none;border-radius:9px;padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;}
+.btn-primary{background:var(--principal);color:white;}
+.btn-ghost{background:transparent;color:var(--principal);border:1.5px solid var(--principal)!important;}
+.btn-danger{background:var(--acento2);color:white;}
+.btn-small{padding:6px 14px;font-size:13px;}
+.btn-full{width:100%;}
+.btn:disabled{background:var(--hueso2);color:var(--gris);cursor:not-allowed;opacity:.7;}
+.btn-verde{background:var(--verde);color:white;border:none;border-radius:7px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+.btn-falta{background:#d1362618;color:var(--acento2);border:1px solid #d1362644;border-radius:7px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:12px;color:var(--gris);margin-bottom:4px;font-weight:700;letter-spacing:.3px;}
+.field input,.field select,.field textarea{width:100%;padding:10px 13px;border:1.5px solid var(--hueso2);border-radius:9px;background:var(--blanco);font-size:14px;color:var(--grafito);outline:none;font-family:inherit;}
+.field textarea{resize:vertical;min-height:70px;}
+.badge{display:inline-block;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:700;white-space:nowrap;}
+.modal-overlay{display:none;position:fixed;inset:0;background:#00000077;z-index:200;align-items:center;justify-content:center;padding:16px;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--blanco);border-radius:18px;padding:24px;width:100%;max-width:420px;max-height:92vh;overflow-y:auto;box-shadow:0 16px 60px #00000025;}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+.modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--gris);}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--grafito);color:white;border-radius:30px;padding:12px 24px;font-size:14px;font-weight:600;z-index:999;box-shadow:0 4px 20px #0004;white-space:nowrap;display:none;}
+.fab{position:fixed;bottom:20px;right:20px;z-index:90;background:linear-gradient(135deg,var(--principal),var(--principal-osc));color:white;border:none;border-radius:30px;padding:12px 20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 20px #a376a644;}
+.login-header{background:linear-gradient(135deg,var(--principal),var(--principal-osc));padding:28px 24px 32px;text-align:center;}
+.login-body{flex:1;display:flex;align-items:flex-start;justify-content:center;padding:32px 24px;}
+.login-inner{width:100%;max-width:380px;}
+.alumna-option{width:100%;text-align:left;padding:12px 16px;margin-bottom:8px;background:var(--blanco);border:2px solid var(--secundario);border-radius:10px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:12px;}
+.progress-bg{background:var(--hueso2);border-radius:20px;height:8px;margin:12px 0 8px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:20px;background:linear-gradient(90deg,var(--principal),var(--complemento));transition:width .4s;}
+.semana-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.vista-toggle{display:flex;gap:4px;background:var(--hueso2);border-radius:10px;padding:4px;margin-bottom:16px;}
+.vista-btn{flex:1;border:none;border-radius:7px;padding:7px;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:var(--gris);font-family:inherit;}
+.vista-btn.active{background:var(--blanco);color:var(--principal);box-shadow:0 1px 4px #0001;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:8px;}
+.cal-header{text-align:center;font-size:10px;font-weight:700;color:var(--gris);padding:4px 0;}
+.cal-day{min-height:60px;background:var(--blanco);border-radius:6px;border:1px solid var(--hueso2);padding:4px;cursor:pointer;}
+.cal-day.otro-mes{opacity:.4;}
+.cal-day.hoy{border:2px solid var(--principal);}
+.cal-day-num{font-size:11px;font-weight:700;color:var(--grafito);margin-bottom:2px;}
+.cal-slot{border-radius:4px;padding:2px 4px;font-size:9px;font-weight:700;margin-bottom:2px;white-space:nowrap;overflow:hidden;}
+.nav-btn{background:none;border:1.5px solid var(--hueso2);border-radius:8px;padding:6px 14px;cursor:pointer;font-size:18px;color:var(--gris);}
+.aviso{border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:13px;}
+.aviso-oro{background:#B8860B18;border:1px solid #B8860B40;}
+.aviso-rojo{background:#d1362618;border:1px solid #d1362630;}
+.aviso-rosa{background:#edc5da55;border:1px solid #edc5da;}
+.aviso-verde{background:#4A7A5518;border:1px solid #4A7A5540;}
+.asistencia-row{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-radius:9px;margin-bottom:6px;}
+.fecha-btn{padding:9px 13px;border-radius:10px;text-align:center;cursor:pointer;border:2px solid var(--hueso2);background:var(--blanco);font-family:inherit;min-width:70px;}
+.fecha-btn.sel{border-color:var(--principal);background:var(--principal);color:white;}
+.fecha-btn.lleno{cursor:not-allowed;border-color:#d1362644;background:#d1362608;color:var(--acento2);}
+.row-space{display:flex;justify-content:space-between;align-items:center;}
+.empty-state{text-align:center;color:var(--gris);padding:40px 20px;}
+#loading{position:fixed;inset:0;background:var(--fondo);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;z-index:999;}
+.pago-vencido{background:#d1362612;border:1px solid #d1362630;border-radius:9px;padding:8px 12px;font-size:12px;color:var(--acento2);font-weight:700;margin-top:6px;}
+.pago-pendiente{background:#B8860B12;border:1px solid #B8860B30;border-radius:9px;padding:8px 12px;font-size:12px;color:var(--oro);font-weight:700;margin-top:6px;}
+.renovar-aviso{background:#a376a618;border:1px solid #a376a640;border-radius:9px;padding:8px 12px;font-size:12px;color:var(--principal);font-weight:700;margin-top:6px;}
+</style>
+</head>
+<body>
+<div id="loading"><div style="font-size:40px">🏺</div><div style="color:var(--gris)">Cargando…</div></div>
+<div id="toast"></div>
+
+<!-- LOGIN -->
+<div id="screen-login" class="screen">
+  <div class="login-header">
+    <div style="font-size:40px;margin-bottom:8px">🏺</div>
+    <div class="display" style="font-size:32px;color:white;font-weight:700;letter-spacing:2px">Casa Creativa</div>
+    <div style="color:#ffffffbb;font-size:14px;margin-top:4px">Taller de cerámica</div>
+  </div>
+  <div class="login-body"><div class="login-inner">
+    <div id="login-alumna-panel">
+      <div class="serif" style="font-size:18px;font-weight:800;margin-bottom:6px">¿Cómo te llamas?</div>
+      <div style="font-size:14px;color:var(--gris);margin-bottom:20px">Escribe tu nombre para ver tu espacio personal.</div>
+      <div class="field"><input type="text" id="input-nombre-login" placeholder="Ej. María García" oninput="buscarAlumna()" autocomplete="off"></div>
+      <div id="resultados-login"></div>
+      <div id="error-login" style="display:none" class="aviso aviso-rojo"><span style="color:var(--acento2)">No encontramos tu nombre. Contáctanos para registrarte.</span></div>
+      <button class="btn btn-primary btn-full" id="btn-entrar" onclick="entrarAlumna()" disabled>Entrar</button>
+      <div style="text-align:center;margin-top:32px">
+        <button onclick="showMaestra()" style="background:none;border:none;color:var(--gris);font-size:12px;cursor:pointer;text-decoration:underline;font-family:inherit">Acceso maestra</button>
+      </div>
+    </div>
+    <div id="login-maestra-panel" style="display:none">
+      <div class="serif" style="font-size:18px;font-weight:800;margin-bottom:6px">Acceso maestra</div>
+      <div style="font-size:14px;color:var(--gris);margin-bottom:20px">Ingresa tu contraseña.</div>
+      <div class="field"><input type="password" id="input-clave" placeholder="Contraseña" onkeydown="if(event.key==='Enter')entrarMaestra()"></div>
+      <div id="error-clave" style="display:none" class="aviso aviso-rojo"><span style="color:var(--acento2)">Contraseña incorrecta.</span></div>
+      <button class="btn btn-primary btn-full" onclick="entrarMaestra()">Entrar</button>
+      <div style="text-align:center;margin-top:16px">
+        <button onclick="showAlumnaLogin()" style="background:none;border:none;color:var(--gris);font-size:12px;cursor:pointer;text-decoration:underline;font-family:inherit">← Volver</button>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<!-- MAESTRA -->
+<div id="screen-maestra" class="screen">
+  <div class="header">
+    <div class="header-top">
+      <span style="font-size:26px">🏺</span>
+      <div>
+        <div class="display" style="font-size:20px;font-weight:700;color:white;letter-spacing:1px">Casa Creativa</div>
+        <div style="font-size:12px;color:#ffffffaa">Vista maestra</div>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="setTab('agenda')">📅 Agenda</button>
+      <button class="tab" onclick="setTab('alumnas')">👩‍🎨 Alumnas</button>
+      <button class="tab" onclick="setTab('ingresos')">💰 Ingresos</button>
+      <button class="tab" onclick="setTab('servicios')">🔥 Servicios</button>
+    </div>
+  </div>
+  <div class="max" style="padding-top:16px;padding-bottom:80px;flex:1">
+    <div id="tab-agenda"></div>
+    <div id="tab-alumnas" style="display:none"></div>
+    <div id="tab-ingresos" style="display:none"></div>
+    <div id="tab-servicios" style="display:none"></div>
+  </div>
+  <button class="fab" onclick="goLogin()">🌸 Vista alumna</button>
+</div>
+
+<!-- ALUMNA -->
+<div id="screen-alumna" class="screen">
+  <div style="background:linear-gradient(135deg,var(--principal),var(--principal-osc));padding:20px 16px 16px">
+    <div style="max-width:480px;margin:0 auto;display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div class="display" style="font-size:26px;color:white;font-weight:700;letter-spacing:2px">Casa Creativa</div>
+        <div id="alumna-saludo" style="color:#ffffffcc;font-size:14px"></div>
+      </div>
+      <button onclick="goLogin()" style="background:none;border:1.5px solid #ffffff66;border-radius:8px;padding:6px 12px;color:white;font-size:12px;cursor:pointer;font-family:inherit">← Salir</button>
+    </div>
+  </div>
+  <div style="max-width:480px;margin:0 auto;padding:16px;padding-bottom:40px" id="alumna-content"></div>
+</div>
+
+<!-- MODALES -->
+<div class="modal-overlay" id="modal-nueva-alumna">
+  <div class="modal">
+    <div class="modal-header"><span class="serif" style="font-weight:800;font-size:17px">Nueva alumna</span><button class="modal-close" onclick="closeModal('modal-nueva-alumna')">×</button></div>
+    <div class="field"><label>Nombre completo *</label><input type="text" id="na-nombre" placeholder="Ej. María García"></div>
+    <div class="field"><label>Teléfono / WhatsApp</label><input type="text" id="na-tel" placeholder="55 1234 5678"></div>
+    <div class="field"><label>Correo electrónico</label><input type="email" id="na-email" placeholder="maria@email.com"></div>
+    <div class="field"><label>Notas</label><input type="text" id="na-nota" placeholder="Nivel previo, preferencias…"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost btn-small" onclick="closeModal('modal-nueva-alumna')">Cancelar</button>
+      <button class="btn btn-primary btn-small" onclick="guardarAlumna()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-paquete">
+  <div class="modal">
+    <div class="modal-header"><span class="serif" id="modal-paquete-title" style="font-weight:800;font-size:17px">Nuevo paquete</span><button class="modal-close" onclick="closeModal('modal-paquete')">×</button></div>
+    <div class="field"><label>Paquete</label>
+      <select id="pkg-def" onchange="updatePkgInfo()">
+        <optgroup label="── Paquetes de Curso ──">
+        <option value="previo">📦 Paquete previo (migración) · clases a definir</option>
+        <option value="primera">🌱 Primera Pieza · 1 clase · 15 días · $390</option>
+        <option value="proceso">🌿 Proceso Completo · 2 clases · 15 días · $750</option>
+        <option value="habilidades">🏺 Desarrolla tus Habilidades · 6 clases · 90 días · $2,250</option>
+        <option value="intensivo">✨ Curso Intensivo · 12 clases · 120 días · $4,500</option>
+      </optgroup>
+      <optgroup label="── Membresías ──">
+        <option value="mem_esencial">🎨 Membresía Esencial · 4 sesiones · 60 días · $1,600</option>
+        <option value="mem_plus">💎 Membresía Plus · 8 sesiones · 90 días · $2,900</option>
+      </optgroup>
+      </select>
+    </div>
+    <div class="aviso aviso-rosa" id="pkg-info" style="margin-bottom:14px;font-size:13px"></div>
+    <div class="field" id="pkg-clases-field" style="display:none">
+      <label>Clases restantes (si es migración de paquete anterior)</label>
+      <input type="number" id="pkg-clases-restantes" placeholder="Ej. 2">
+      <div style="font-size:11px;color:var(--gris);margin-top:3px">Déjalo vacío para usar el total del paquete</div>
+    </div>
+    
+    <div style="font-weight:700;font-size:13px;color:var(--grafito);margin-bottom:10px">💰 Pago</div>
+    <div class="field"><label>Método de pago</label>
+      <select id="pkg-metodo" onchange="toggleSegundoPago()">
+        <option value="efectivo">💵 Efectivo — pago completo</option>
+        <option value="transferencia">🏦 Transferencia — pago completo</option>
+        <option value="mixto">🔀 Mixto — parte efectivo, parte transferencia</option>
+        <option value="dos_pagos">📅 En dos pagos</option>
+      </select>
+    </div>
+    <div class="field"><label>Monto primer pago ($) *</label><input type="number" id="pkg-monto1" placeholder="Ej. 4500"></div>
+    <div class="field"><label>Fecha primer pago</label><input type="date" id="pkg-fecha1"></div>
+    
+    <div id="segundo-pago-section" style="display:none">
+      <div style="font-weight:700;font-size:13px;color:var(--grafito);margin:12px 0 10px">2° Pago</div>
+      <div class="field"><label>Monto segundo pago ($)</label><input type="number" id="pkg-monto2" placeholder="Ej. 2250"></div>
+      <div class="field"><label>Fecha límite segundo pago</label><input type="date" id="pkg-fecha2"></div>
+      <div class="field"><label>Método segundo pago</label>
+        <select id="pkg-metodo2">
+          <option value="efectivo">💵 Efectivo</option>
+          <option value="transferencia">🏦 Transferencia</option>
+        </select>
+      </div>
+    </div>
+    
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost btn-small" onclick="closeModal('modal-paquete')">Cancelar</button>
+      <button class="btn btn-primary btn-small" onclick="guardarPaquete()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-ver-alumna">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header"><span class="serif" id="ver-alumna-nombre" style="font-weight:800;font-size:17px"></span><button class="modal-close" onclick="closeModal('modal-ver-alumna')">×</button></div>
+    <div id="ver-alumna-content"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-agendar">
+  <div class="modal">
+    <div class="modal-header"><span class="serif" style="font-weight:800;font-size:17px">Agendar clase</span><button class="modal-close" onclick="closeModal('modal-agendar')">×</button></div>
+    <div id="agendar-content"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-asistencia-nota">
+  <div class="modal">
+    <div class="modal-header"><span class="serif" style="font-weight:800;font-size:17px">Registrar asistencia</span><button class="modal-close" onclick="closeModal('modal-asistencia-nota')">×</button></div>
+    <div id="asistencia-nota-content"></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+import { getFirestore, collection, doc, getDocs, setDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAY-ZGwYfqWbTRI7BL6xGp87SxiGt15OU8",
+  authDomain: "casa-creativa-6a1c1.firebaseapp.com",
+  projectId: "casa-creativa-6a1c1",
+  storageBucket: "casa-creativa-6a1c1.firebasestorage.app",
+  messagingSenderId: "874227781556",
+  appId: "1:874227781556:web:ceaf624a509bce0f4d2ce1"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const CLAVE = "1512";
+const CUPO_MAX = 8;
+const PAQUETES_DEF = {
+  previo:      {nombre:"Paquete previo",             clases:1, dias:365,precio:0,    emoji:"📦", tipo:"paquete"},
+  primera:     {nombre:"Primera Pieza",             clases:1, dias:15, precio:390,  emoji:"🌱", tipo:"paquete"},
+  proceso:     {nombre:"Proceso Completo",           clases:2, dias:15, precio:750,  emoji:"🌿", tipo:"paquete"},
+  habilidades: {nombre:"Desarrolla tus Habilidades",clases:6, dias:90, precio:2250, emoji:"🏺", tipo:"paquete"},
+  intensivo:   {nombre:"Curso Intensivo",            clases:12,dias:120,precio:4500, emoji:"✨", tipo:"paquete"},
+  mem_esencial:{nombre:"Membresía Esencial",         clases:4, dias:60, precio:1600, emoji:"🎨", tipo:"membresia"},
+  mem_plus:    {nombre:"Membresía Plus",             clases:8, dias:90, precio:2900, emoji:"💎", tipo:"membresia"},
+};
+const HORARIOS = [
+  {id:"mar_a",label:"Martes 9:00–11:00",     dia:"Martes",    hora:"9:00–11:00",   diaN:2, tipo:"paquete"},
+  {id:"mar_b",label:"Martes 11:30–13:30",    dia:"Martes",    hora:"11:30–13:30",  diaN:2, tipo:"paquete"},
+  {id:"sab_a",label:"Sábado 9:00–11:00",     dia:"Sábado",    hora:"9:00–11:00",   diaN:6, tipo:"paquete"},
+  {id:"sab_b",label:"Sábado 11:30–13:30",    dia:"Sábado",    hora:"11:30–13:30",  diaN:6, tipo:"paquete"},
+  {id:"mie_a",label:"Miércoles 11:30–13:30", dia:"Miércoles", hora:"11:30–13:30",  diaN:3, tipo:"paquete"},
+  {id:"mie_b",label:"Miércoles 16:00–18:00", dia:"Miércoles", hora:"16:00–18:00",  diaN:3, tipo:"paquete"},
+  {id:"jue_a",label:"Jueves 11:30–13:30",    dia:"Jueves",    hora:"11:30–13:30",  diaN:4, tipo:"paquete"},
+  {id:"jue_b",label:"Jueves 16:00–18:00",    dia:"Jueves",    hora:"16:00–18:00",  diaN:4, tipo:"paquete"},
+  {id:"lun_m",label:"Lunes 16:00–19:00",   dia:"Lunes",  hora:"16:00–19:00", diaN:1, tipo:"membresia"},
+  {id:"mar_m",label:"Martes 16:00–19:00",  dia:"Martes", hora:"16:00–19:00", diaN:2, tipo:"membresia"},
+  {id:"sab_m",label:"Sábado 16:00–19:00",  dia:"Sábado", hora:"16:00–19:00", diaN:6, tipo:"membresia"},
+];
+
+let alumnas=[],reservas=[],asistencias=[];
+let alumnaActiva=null,semanaOffset=0,pkgAlumnaId=null,vistaAgenda="semana",mesOffset=0;
+let agendarHorarioSel=HORARIOS[0].id,agendarFechaSel="";
+let asistenciaReservaId=null;
+
+const hoy=()=>new Date().toISOString().split("T")[0];
+const addDias=(f,d)=>{const dt=new Date(f+"T12:00:00");dt.setDate(dt.getDate()+d);return dt.toISOString().split("T")[0];};
+const diasRestantes=f=>Math.ceil((new Date(f+"T12:00:00")-new Date())/86400000);
+const fmtFecha=d=>new Date(d+"T12:00:00").toLocaleDateString("es-MX",{day:"numeric",month:"short",year:"numeric"});
+const mesAnio=m=>new Date(m+"-01T12:00:00").toLocaleDateString("es-MX",{month:"long",year:"numeric"});
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const badge=(t,c,bg)=>`<span class="badge" style="background:${bg||c+"22"};color:${c};border:1px solid ${c}44">${t}</span>`;
+const getPaqueteActivo=a=>(a.paquetes||[]).find(p=>p.clasesRestantes>0&&diasRestantes(p.expira)>0);
+const cupoDisponible=(hId,f)=>CUPO_MAX-reservas.filter(r=>r.horarioId===hId&&r.fecha===f&&r.estado!=="cancelada").length;
+const puedeCancel24h=r=>{const h=HORARIOS.find(hh=>hh.id===r.horarioId);const[hh,mm]=(h?.hora.split("–")[0]||"09:00").split(":");return(new Date(r.fecha+"T"+hh.padStart(2,"0")+":"+(mm||"00")+":00")-new Date())>86400000;};
+const diasDeSemana=off=>{const d=new Date();d.setHours(0,0,0,0);const l=new Date(d);l.setDate(d.getDate()-((d.getDay()+6)%7)+off*7);return Array.from({length:7},(_,i)=>{const x=new Date(l);x.setDate(l.getDate()+i);return x.toISOString().split("T")[0];});};
+const proximasFechas=(diaN,n=6)=>{const r=[],d=new Date();d.setHours(0,0,0,0);for(let i=1;i<=42&&r.length<n;i++){const x=new Date(d);x.setDate(d.getDate()+i);if(x.getDay()===diaN)r.push(x.toISOString().split("T")[0]);}return r;};
+
+// Pago helpers
+const metodoLabel=m=>m==="efectivo"?"💵 Efectivo":m==="transferencia"?"🏦 Transferencia":m==="mixto"?"🔀 Mixto":"📅 Dos pagos";
+const pagoVencido=p=>p.segundoPago&&!p.segundoPago.pagado&&p.segundoPago.fechaLimite&&diasRestantes(p.segundoPago.fechaLimite)<0;
+const pagoPendiente=p=>p.segundoPago&&!p.segundoPago.pagado&&p.segundoPago.fechaLimite&&diasRestantes(p.segundoPago.fechaLimite)>=0;
+const necesitaRenovar=a=>{const act=getPaqueteActivo(a);return act&&act.clasesRestantes<=2;};
+
+let toastTimer;
+const showToast=msg=>{const t=document.getElementById("toast");t.textContent=msg;t.style.display="block";clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.display="none",2400);};
+
+async function cargarDatos(){
+  const[aSnap,rSnap,asSnap]=await Promise.all([getDocs(collection(db,"alumnas")),getDocs(collection(db,"reservas")),getDocs(collection(db,"asistencias"))]);
+  alumnas=aSnap.docs.map(d=>({id:d.id,...d.data()}));
+  reservas=rSnap.docs.map(d=>({id:d.id,...d.data()}));
+  asistencias=asSnap.docs.map(d=>({id:d.id,...d.data()}));
+  document.getElementById("loading").style.display="none";
+  showScreen("login");
+}
+async function fbSet(col,id,data){await setDoc(doc(db,col,id),data);}
+async function fbUpdate(col,id,data){await updateDoc(doc(db,col,id),data);}
+async function fbDelete(col,id){await deleteDoc(doc(db,col,id));}
+
+window.showScreen=id=>{document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));document.getElementById("screen-"+id).classList.add("active");};
+window.goLogin=()=>{showScreen("login");showAlumnaLogin();};
+window.showMaestra=()=>{document.getElementById("login-alumna-panel").style.display="none";document.getElementById("login-maestra-panel").style.display="block";document.getElementById("input-clave").value="";document.getElementById("error-clave").style.display="none";};
+window.showAlumnaLogin=()=>{document.getElementById("login-alumna-panel").style.display="block";document.getElementById("login-maestra-panel").style.display="none";document.getElementById("input-nombre-login").value="";document.getElementById("resultados-login").innerHTML="";document.getElementById("error-login").style.display="none";document.getElementById("btn-entrar").disabled=true;alumnaLoginSel=null;};
+
+let alumnaLoginSel=null;
+window.buscarAlumna=()=>{
+  const q=document.getElementById("input-nombre-login").value.toLowerCase();
+  alumnaLoginSel=null;document.getElementById("btn-entrar").disabled=true;document.getElementById("error-login").style.display="none";
+  const cont=document.getElementById("resultados-login");
+  if(q.length<2){cont.innerHTML="";return;}
+  const res=alumnas.filter(a=>a.nombre.toLowerCase().includes(q));
+  if(!res.length){cont.innerHTML=`<div style="font-size:13px;color:var(--gris);text-align:center;padding:12px 0">No encontramos ese nombre.</div>`;return;}
+  cont.innerHTML=res.map(a=>`<button class="alumna-option" onclick="selAlumna('${a.id}')"><span style="font-size:22px">👩‍🎨</span><div><div style="font-weight:700">${a.nombre}</div>${a.correo?`<div style="font-size:12px;color:var(--gris)">✉️ ${a.correo}</div>`:a.telefono?`<div style="font-size:12px;color:var(--gris)">📱 ${a.telefono}</div>`:""}</div></button>`).join("");
+};
+window.selAlumna=id=>{alumnaLoginSel=id;document.getElementById("btn-entrar").disabled=false;};
+window.entrarAlumna=()=>{if(!alumnaLoginSel)return;alumnaActiva=alumnas.find(x=>x.id===alumnaLoginSel);if(!alumnaActiva)return;renderVistaAlumna();showScreen("alumna");};
+window.entrarMaestra=()=>{if(document.getElementById("input-clave").value===CLAVE){renderMaestra();showScreen("maestra");}else{document.getElementById("error-clave").style.display="block";setTimeout(()=>document.getElementById("error-clave").style.display="none",2000);}};
+
+window.setTab=name=>{
+  ["agenda","alumnas","ingresos","servicios"].forEach(t=>{document.getElementById("tab-"+t).style.display=t===name?"block":"none";});
+  document.querySelectorAll(".tab").forEach((b,i)=>b.classList.toggle("active",["agenda","alumnas","ingresos","servicios"][i]===name));
+  if(name==="agenda")renderAgenda();if(name==="alumnas")renderAlumnas();if(name==="ingresos")renderIngresos();if(name==="servicios")renderServicios();
+};
+const renderMaestra=()=>renderAgenda();
+
+window.renderAgenda=()=>{
+  if(vistaAgenda==="mes"){renderAgendaMes();return;}
+  const dias=diasDeSemana(semanaOffset),hoyStr=hoy();
+  const nom=semanaOffset===0?"Esta semana":semanaOffset===1?"Próxima semana":semanaOffset===-1?"Semana pasada":`Semana ${semanaOffset>0?"+":""}${semanaOffset}`;
+  const rango=`${new Date(dias[0]+"T12:00:00").toLocaleDateString("es-MX",{day:"numeric",month:"short"})} – ${new Date(dias[6]+"T12:00:00").toLocaleDateString("es-MX",{day:"numeric",month:"short"})}`;
+  const slots=[];HORARIOS.forEach(h=>dias.filter(f=>new Date(f+"T12:00:00").getDay()===h.diaN).forEach(fecha=>slots.push({h,fecha,resSlot:reservas.filter(r=>r.horarioId===h.id&&r.fecha===fecha&&r.estado!=="cancelada")})));
+  slots.sort((a,b)=>a.fecha.localeCompare(b.fecha)||a.h.hora.localeCompare(b.h.hora));
+  let html=`<div class="vista-toggle"><button class="vista-btn active" id="btn-vista-semana">📅 Semana</button><button class="vista-btn" id="btn-vista-mes">📆 Mes</button></div><div class="semana-nav"><button class="nav-btn" id="btn-semana-prev">‹</button><div style="text-align:center"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif">${nom}</div><div style="font-size:12px;color:var(--gris)">${rango}</div></div><button class="nav-btn" id="btn-semana-next">›</button></div>`;
+  if(!slots.length)html+=`<div class="card empty-state"><div style="font-size:32px;margin-bottom:8px">📅</div><div>Sin clases esta semana</div></div>`;
+  slots.forEach(({h,fecha,resSlot})=>{
+    const esHoy=fecha===hoyStr,pasado=fecha<hoyStr,cupo=cupoDisponible(h.id,fecha);
+    html+=`<div class="card" style="${esHoy?"border:2px solid var(--principal);":""}${pasado?"opacity:0.72":""}margin-bottom:14px"><div class="row-space" style="margin-bottom:10px"><div><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif">${h.dia}</div><div style="font-size:13px;color:var(--gris)">${h.hora} · ${fmtFecha(fecha)}</div></div><div style="display:flex;gap:6px;align-items:center">${esHoy?badge("Hoy","var(--principal)"):""} ${badge(cupo>0?cupo+" lugar"+(cupo!==1?"es":""):"Lleno",cupo>2?"var(--verde)":cupo>0?"var(--oro)":"var(--acento2)")}</div></div>`;
+    if(!resSlot.length)html+=`<div style="font-size:13px;color:var(--gris);text-align:center;padding:8px 0">Sin reservas</div>`;
+    resSlot.forEach(r=>{
+      const al=alumnas.find(a=>a.id===r.alumnaId),yaA=r.estado==="asistida",flt=r.estado==="falta",cob=r.estado==="cobrada_sin_asistir";
+      html+=`<div class="asistencia-row" style="background:${yaA?"var(--verde)18":flt?"var(--acento2)12":cob?"var(--oro)18":"var(--fondo)"}"><div><div style="font-weight:700;font-size:14px">${al?.nombre||"—"}</div>${al?.telefono?`<div style="font-size:11px;color:var(--gris)">${al.telefono}</div>`:""} ${yaA?`<div style="font-size:11px;color:var(--verde);font-weight:700">✓ Asistió${r.nota?` · ${r.nota}`:""}</div>`:""} ${flt?`<div style="font-size:11px;color:var(--acento2);font-weight:700">✗ Falta</div>`:""} ${cob?`<div style="font-size:11px;color:var(--oro);font-weight:700">💰 Cobrada sin asistir</div>`:""}</div>${!yaA&&!flt&&!cob?`<div style="display:flex;gap:6px"><button class="btn-verde" data-rid="${r.id}">✓ Asistió</button><button class="btn-falta" data-rid="${r.id}" data-falta="1">✗ Falta</button></div>`:""}</div>`;
+    });
+    html+=`</div>`;
+  });
+  document.getElementById("tab-agenda").innerHTML=html;
+  const btnP=document.getElementById("btn-semana-prev");
+  const btnN=document.getElementById("btn-semana-next");
+  if(btnP)btnP.addEventListener("click",()=>{semanaOffset--;renderAgenda();});
+  if(btnN)btnN.addEventListener("click",()=>{semanaOffset++;renderAgenda();});
+  const btnVS=document.getElementById("btn-vista-semana");
+  const btnVM=document.getElementById("btn-vista-mes");
+  if(btnVS)btnVS.addEventListener("click",()=>{vistaAgenda="semana";renderAgenda();});
+  if(btnVM)btnVM.addEventListener("click",()=>{vistaAgenda="mes";renderAgendaMes();});
+  document.querySelectorAll(".btn-verde[data-rid]").forEach(btn=>{
+    btn.addEventListener("click",()=>abrirNotaAsistencia(btn.getAttribute("data-rid")));
+  });
+  document.querySelectorAll(".btn-falta[data-rid]").forEach(btn=>{
+    btn.addEventListener("click",()=>marcarAsistencia(btn.getAttribute("data-rid"),false));
+  });
+};
+
+window.renderAgendaMes=()=>{
+  const hoyD=new Date(),hoyStr=hoy();
+  const año=(new Date(hoyD.getFullYear(),hoyD.getMonth()+mesOffset,1)).getFullYear();
+  const mes=(new Date(hoyD.getFullYear(),hoyD.getMonth()+mesOffset,1)).getMonth();
+  const primerDia=new Date(año,mes,1);
+  const ultimoDia=new Date(año,mes+1,0);
+  const nombreMes=primerDia.toLocaleDateString("es-MX",{month:"long",year:"numeric"});
+  
+  // Count clases and membresias per day
+  const counts={};
+  reservas.filter(r=>r.estado!=="cancelada").forEach(r=>{
+    if(!counts[r.fecha])counts[r.fecha]={total:0,pkg:0,mem:0,horarios:{}};
+    counts[r.fecha].total++;
+    const al=alumnas.find(a=>a.id===r.alumnaId);
+    const pkt=al?(al.paquetes||[]).find(p=>p.id===r.paqueteId):null;
+    const def=pkt?PAQUETES_DEF[pkt.paqueteDefId]:null;
+    if(def?.tipo==="membresia")counts[r.fecha].mem++;
+    else counts[r.fecha].pkg++;
+    const h=HORARIOS.find(hh=>hh.id===r.horarioId);
+    if(h){
+      if(!counts[r.fecha].horarios[r.horarioId])counts[r.fecha].horarios[r.horarioId]={label:h.hora,count:0,tipo:h.tipo};
+      counts[r.fecha].horarios[r.horarioId].count++;
+    }
+  });
+
+  let html=`<div class="vista-toggle"><button class="vista-btn" id="btn-vista-semana2">📅 Semana</button><button class="vista-btn active" id="btn-vista-mes2">📆 Mes</button></div>`;
+  
+  // Month nav
+  html+=`<div class="semana-nav"><button class="nav-btn" id="btn-mes-prev">‹</button><div style="text-align:center"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif;text-transform:capitalize">${nombreMes}</div></div><button class="nav-btn" id="btn-mes-next">›</button></div>`;
+  
+  // Stats bar
+  const totalMes=Object.entries(counts).filter(([f])=>new Date(f+"T12:00:00").getMonth()===mes).reduce((s,[,v])=>s+v.total,0);
+  const pkgMes=Object.entries(counts).filter(([f])=>new Date(f+"T12:00:00").getMonth()===mes).reduce((s,[,v])=>s+v.pkg,0);
+  const memMes=Object.entries(counts).filter(([f])=>new Date(f+"T12:00:00").getMonth()===mes).reduce((s,[,v])=>s+v.mem,0);
+  html+=`<div style="display:flex;gap:8px;margin-bottom:12px">
+    <div style="flex:1;background:var(--blanco);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--hueso2)"><div style="font-size:20px;font-weight:800;color:var(--principal)">${totalMes}</div><div style="font-size:10px;color:var(--gris)">Total clases</div></div>
+    <div style="flex:1;background:var(--blanco);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--hueso2)"><div style="font-size:20px;font-weight:800;color:var(--verde)">${pkgMes}</div><div style="font-size:10px;color:var(--gris)">Paquetes</div></div>
+    <div style="flex:1;background:var(--blanco);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--hueso2)"><div style="font-size:20px;font-weight:800;color:var(--oro)">${memMes}</div><div style="font-size:10px;color:var(--gris)">Membresías</div></div>
+  </div>`;
+  
+  // Day headers
+  html+=`<div class="cal-grid">`;
+  ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"].forEach(d=>html+=`<div class="cal-header">${d}</div>`);
+  html+=`</div><div class="cal-grid">`;
+  
+  // Empty cells before first day
+  const startDow=(primerDia.getDay()+6)%7;
+  for(let i=0;i<startDow;i++)html+=`<div class="cal-day otro-mes"></div>`;
+  
+  // Days
+  for(let d=1;d<=ultimoDia.getDate();d++){
+    const fecha=`${año}-${String(mes+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    const esHoy=fecha===hoyStr;
+    const c=counts[fecha];
+    const total=c?.total||0;
+    const bgIntensity=total===0?"":total<=2?"var(--secundario)33":total<=5?"var(--principal)22":"var(--principal)44";
+    html+=`<div class="cal-day${esHoy?" hoy":""}" style="${bgIntensity?"background:"+bgIntensity:""}">`;
+    html+=`<div class="cal-day-num" style="color:${esHoy?"var(--principal)":"var(--grafito)"}">${d}</div>`;
+    if(c){
+      Object.values(c.horarios).forEach(h=>{
+        const color=h.tipo==="membresia"?"var(--oro)":"var(--principal)";
+        html+=`<div class="cal-slot" style="background:${color}22;color:${color}">${h.count}/${CUPO_MAX} ${h.label.split("–")[0]}</div>`;
+      });
+    }
+    html+=`</div>`;
+  }
+  
+  // Empty cells after last day
+  const endDow=(ultimoDia.getDay()+6)%7;
+  for(let i=endDow+1;i<7;i++)html+=`<div class="cal-day otro-mes"></div>`;
+  html+=`</div>`;
+  
+  document.getElementById("tab-agenda").innerHTML=html;
+  
+  document.getElementById("btn-vista-semana2")?.addEventListener("click",()=>{vistaAgenda="semana";renderAgenda();});
+  document.getElementById("btn-vista-mes2")?.addEventListener("click",()=>{vistaAgenda="mes";renderAgendaMes();});
+  document.getElementById("btn-mes-prev")?.addEventListener("click",()=>{mesOffset--;renderAgendaMes();});
+  document.getElementById("btn-mes-next")?.addEventListener("click",()=>{mesOffset++;renderAgendaMes();});
+};
+
+// ── SERVICIOS ─────────────────────────────────────────────
+// Tarifas normales (por peso)
+const TARIFAS_SANCOCHO = [{max:200,precio:40},{max:400,precio:50},{max:700,precio:70},{max:1000,precio:130},{max:2000,precio:130},{max:999999,precio:180}];
+const TARIFAS_ESMALTADO = [{max:200,precio:50},{max:400,precio:70},{max:700,precio:90},{max:1000,precio:130},{max:2000,precio:170},{max:999999,precio:240}];
+// Tarifas piezas grandes (por cm)
+const TARIFAS_SANCOCHO_GRANDE = [{max:300,precio:100},{max:400,precio:150},{max:999999,precio:200}];
+const TARIFAS_ESMALTADO_GRANDE = [{max:300,precio:150},{max:400,precio:200},{max:999999,precio:300}];
+// Tarifas lote mini piezas (por peso, max 300g)
+const TARIFAS_SANCOCHO_LOTE = [{max:100,precio:40},{max:200,precio:50},{max:300,precio:70}];
+const TARIFAS_ESMALTADO_LOTE = [{max:100,precio:50},{max:200,precio:70},{max:300,precio:90}];
+
+const calcPrecio = (val, tarifas) => {
+  for(const t of tarifas) if(val <= t.max) return t.precio;
+  return tarifas[tarifas.length-1].precio;
+};
+
+window.renderServicios = () => {
+  const serviciosGuardados = JSON.parse(localStorage.getItem("cc_servicios")||"[]");
+  const totalServicios = serviciosGuardados.reduce((s,x)=>s+x.precio,0);
+  
+  let html = `<div class="row-space" style="margin-bottom:16px">
+    <span style="font-weight:800;font-size:16px;font-family:'DM Serif Display',serif">Servicios de quema</span>
+    <div style="text-align:right"><div style="font-size:11px;color:var(--gris)">Total registrado</div>
+    <div class="display" style="font-weight:800;font-size:24px;color:var(--principal)">$${totalServicios.toLocaleString("es-MX")}</div></div>
+  </div>`;
+
+  // Formulario nuevo servicio
+  html += `<div class="card" style="margin-bottom:16px;border:2px solid var(--secundario)">
+    <div style="font-weight:800;font-size:14px;font-family:'DM Serif Display',serif;margin-bottom:14px">+ Registrar servicio</div>
+    <div class="field"><label>Nombre de la clienta</label><input type="text" id="srv-nombre" placeholder="Ej. María García"></div>
+    <div class="field"><label>Tipo de servicio</label>
+      <select id="srv-tipo" onchange="toggleSrvInput()">
+        <optgroup label="── Piezas normales (por peso) ──">
+          <option value="sancocho">🔥 Sancocho</option>
+          <option value="esmaltado">✨ Esmaltado</option>
+          <option value="ambos">🔥✨ Sancocho + Esmaltado</option>
+        </optgroup>
+        <optgroup label="── Piezas grandes +24cm (por cm) ──">
+          <option value="sancocho_grande">🔥 Sancocho pieza grande</option>
+          <option value="esmaltado_grande">✨ Esmaltado pieza grande</option>
+          <option value="ambos_grande">🔥✨ Ambos pieza grande</option>
+        </optgroup>
+        <optgroup label="── Mini piezas por lote (por peso) ──">
+          <option value="sancocho_lote">🔥 Sancocho lote</option>
+          <option value="esmaltado_lote">✨ Esmaltado lote</option>
+          <option value="ambos_lote">🔥✨ Ambos lote</option>
+        </optgroup>
+      </select>
+    </div>
+    <div class="field" id="srv-input-peso"><label id="srv-input-label">Peso de la pieza (gramos)</label><input type="number" id="srv-gramos" placeholder="Ej. 350"></div>
+    <div id="srv-precio-preview" style="display:none" class="aviso aviso-rosa" style="font-size:14px;font-weight:700;margin-bottom:14px"></div>
+    <div class="field"><label>Fecha</label><input type="date" id="srv-fecha"></div>
+    <button class="btn btn-primary btn-full" id="btn-guardar-servicio">Registrar servicio</button>
+  </div>`;
+
+  // Historial
+  if(serviciosGuardados.length){
+    html += `<div style="font-weight:800;font-size:14px;font-family:'DM Serif Display',serif;margin-bottom:10px">Historial</div>`;
+    [...serviciosGuardados].reverse().forEach(s=>{
+      const tipoLabels = {sancocho:"🔥 Sancocho",esmaltado:"✨ Esmaltado",ambos:"🔥✨ Sancocho+Esmaltado",sancocho_grande:"🔥 Sancocho grande",esmaltado_grande:"✨ Esmaltado grande",ambos_grande:"🔥✨ Ambos grande",sancocho_lote:"🔥 Sancocho lote",esmaltado_lote:"✨ Esmaltado lote",ambos_lote:"🔥✨ Ambos lote"};
+      const tipoLabel = tipoLabels[s.tipo]||s.tipo;
+      html += `<div class="card" style="margin-bottom:8px">
+        <div class="row-space">
+          <div>
+            <div style="font-weight:700">${s.nombre}</div>
+            <div style="font-size:12px;color:var(--gris)">${tipoLabel} · ${s.gramos}g · ${fmtFecha(s.fecha)}</div>
+          </div>
+          <div style="font-weight:800;font-size:16px;color:var(--principal)">$${s.precio}</div>
+        </div>
+      </div>`;
+    });
+  } else {
+    html += `<div class="card empty-state"><div style="font-size:32px;margin-bottom:8px">🔥</div><div>Sin servicios registrados aún.</div></div>`;
+  }
+
+  document.getElementById("tab-servicios").innerHTML = html;
+  
+  document.getElementById("srv-fecha").value = hoy();
+  document.getElementById("srv-gramos").addEventListener("input", calcServicio);
+  document.getElementById("srv-tipo").addEventListener("change", toggleSrvInput);
+  document.getElementById("btn-guardar-servicio").addEventListener("click", guardarServicio);
+};
+
+window.toggleSrvInput = () => {
+  const tipo = document.getElementById("srv-tipo")?.value||"";
+  const label = document.getElementById("srv-input-label");
+  if(tipo.includes("grande")){
+    if(label) label.textContent = "Dimensión mayor de la pieza (cm)";
+  } else {
+    if(label) label.textContent = tipo.includes("lote")?"Peso del lote (gramos, máx 300g)":"Peso de la pieza (gramos)";
+  }
+  calcServicio();
+};
+
+window.calcServicio = () => {
+  const val = parseInt(document.getElementById("srv-gramos")?.value||0);
+  const tipo = document.getElementById("srv-tipo")?.value||"";
+  if(!val) { document.getElementById("srv-precio-preview").style.display="none"; return; }
+  
+  let precio, detalle;
+  
+  if(tipo==="sancocho_grande"){
+    precio = calcPrecio(val, TARIFAS_SANCOCHO_GRANDE);
+    detalle = `🔥 Sancocho pieza grande ${val}cm`;
+  } else if(tipo==="esmaltado_grande"){
+    precio = calcPrecio(val, TARIFAS_ESMALTADO_GRANDE);
+    detalle = `✨ Esmaltado pieza grande ${val}cm`;
+  } else if(tipo==="ambos_grande"){
+    const p1 = calcPrecio(val, TARIFAS_SANCOCHO_GRANDE);
+    const p2 = calcPrecio(val, TARIFAS_ESMALTADO_GRANDE);
+    precio = p1 + p2;
+    detalle = `🔥 Sancocho $${p1} + ✨ Esmaltado $${p2} (${val}cm)`;
+  } else if(tipo==="sancocho_lote"){
+    if(val > 300){ precio = calcPrecio(val, TARIFAS_SANCOCHO); detalle = `🔥 Sancocho normal (lote >300g) ${val}g`; }
+    else { precio = calcPrecio(val, TARIFAS_SANCOCHO_LOTE); detalle = `🔥 Sancocho lote ${val}g`; }
+  } else if(tipo==="esmaltado_lote"){
+    if(val > 300){ precio = calcPrecio(val, TARIFAS_ESMALTADO); detalle = `✨ Esmaltado normal (lote >300g) ${val}g`; }
+    else { precio = calcPrecio(val, TARIFAS_ESMALTADO_LOTE); detalle = `✨ Esmaltado lote ${val}g`; }
+  } else if(tipo==="ambos_lote"){
+    let p1,p2;
+    if(val > 300){ p1=calcPrecio(val,TARIFAS_SANCOCHO); p2=calcPrecio(val,TARIFAS_ESMALTADO); }
+    else { p1=calcPrecio(val,TARIFAS_SANCOCHO_LOTE); p2=calcPrecio(val,TARIFAS_ESMALTADO_LOTE); }
+    precio = p1+p2; detalle = `🔥 $${p1} + ✨ $${p2} lote ${val}g`;
+  } else if(tipo==="ambos"){
+    const p1 = calcPrecio(val, TARIFAS_SANCOCHO);
+    const p2 = calcPrecio(val, TARIFAS_ESMALTADO);
+    precio = p1+p2; detalle = `🔥 Sancocho $${p1} + ✨ Esmaltado $${p2}`;
+  } else {
+    const tarifas = tipo==="sancocho"?TARIFAS_SANCOCHO:TARIFAS_ESMALTADO;
+    precio = calcPrecio(val, tarifas);
+    detalle = `${val}g de ${tipo==="sancocho"?"sancocho":"esmaltado"}`;
+  }
+  
+  const preview = document.getElementById("srv-precio-preview");
+  if(preview){ preview.style.display="block"; preview.innerHTML=`<div style="font-size:12px;color:var(--gris)">${detalle}</div><div>Total: <strong style="font-size:20px;color:var(--principal)">$${precio}</strong></div>`; }
+};
+
+window.guardarServicio = () => {
+  const nombre = document.getElementById("srv-nombre")?.value?.trim();
+  const tipo = document.getElementById("srv-tipo")?.value;
+  const gramos = parseInt(document.getElementById("srv-gramos")?.value||0);
+  const fecha = document.getElementById("srv-fecha")?.value;
+  if(!nombre||!gramos) { showToast("Completa todos los campos"); return; }
+  const val = gramos;
+  let precio;
+  if(tipo==="ambos") precio=calcPrecio(val,TARIFAS_SANCOCHO)+calcPrecio(val,TARIFAS_ESMALTADO);
+  else if(tipo==="sancocho_grande") precio=calcPrecio(val,TARIFAS_SANCOCHO_GRANDE);
+  else if(tipo==="esmaltado_grande") precio=calcPrecio(val,TARIFAS_ESMALTADO_GRANDE);
+  else if(tipo==="ambos_grande") precio=calcPrecio(val,TARIFAS_SANCOCHO_GRANDE)+calcPrecio(val,TARIFAS_ESMALTADO_GRANDE);
+  else if(tipo==="sancocho_lote") precio=val>300?calcPrecio(val,TARIFAS_SANCOCHO):calcPrecio(val,TARIFAS_SANCOCHO_LOTE);
+  else if(tipo==="esmaltado_lote") precio=val>300?calcPrecio(val,TARIFAS_ESMALTADO):calcPrecio(val,TARIFAS_ESMALTADO_LOTE);
+  else if(tipo==="ambos_lote") precio=val>300?calcPrecio(val,TARIFAS_SANCOCHO)+calcPrecio(val,TARIFAS_ESMALTADO):(calcPrecio(val,TARIFAS_SANCOCHO_LOTE)+calcPrecio(val,TARIFAS_ESMALTADO_LOTE));
+  else { const t=tipo==="sancocho"?TARIFAS_SANCOCHO:TARIFAS_ESMALTADO; precio=calcPrecio(val,t); }
+  const servicios = JSON.parse(localStorage.getItem("cc_servicios")||"[]");
+  servicios.push({id:uid(),nombre,tipo,gramos,precio,fecha,creadoEn:new Date().toISOString()});
+  localStorage.setItem("cc_servicios", JSON.stringify(servicios));
+  showToast(`✓ Servicio registrado · $${precio}`);
+  renderServicios();
+};
+
+window.renderAlumnas=()=>{
+  // Alertas globales
+  const vencidos=alumnas.filter(a=>(a.paquetes||[]).some(p=>pagoVencido(p)));
+  const pendientes=alumnas.filter(a=>(a.paquetes||[]).some(p=>pagoPendiente(p)));
+  const renovar=alumnas.filter(a=>necesitaRenovar(a));
+  let alertas="";
+  if(vencidos.length)alertas+=`<div class="pago-vencido" style="margin-bottom:10px">🔴 ${vencidos.length} alumna${vencidos.length!==1?"s":""} con pago vencido: ${vencidos.map(a=>a.nombre.split(" ")[0]).join(", ")}</div>`;
+  if(pendientes.length)alertas+=`<div class="pago-pendiente" style="margin-bottom:10px">⏳ ${pendientes.length} alumna${pendientes.length!==1?"s":""} con pago pendiente: ${pendientes.map(a=>a.nombre.split(" ")[0]).join(", ")}</div>`;
+  if(renovar.length)alertas+=`<div class="renovar-aviso" style="margin-bottom:10px">🔔 ${renovar.length} alumna${renovar.length!==1?"s":""} por renovar paquete: ${renovar.map(a=>a.nombre.split(" ")[0]).join(", ")}</div>`;
+
+  let html=`<div class="row-space" style="margin-bottom:14px"><span style="font-weight:800;font-size:16px;font-family:'DM Serif Display',serif">${alumnas.length} alumna${alumnas.length!==1?"s":""}</span><button class="btn btn-primary btn-small" onclick="openModal('modal-nueva-alumna')">+ Nueva alumna</button></div>${alertas}`;
+  if(!alumnas.length)html+=`<div class="card empty-state"><div style="font-size:36px;margin-bottom:8px">👩‍🎨</div><div>Aún no hay alumnas.</div></div>`;
+  alumnas.forEach(a=>{
+    const act=getPaqueteActivo(a),pend=act?.clasesRestantes||0,diasExp=act?diasRestantes(act.expira):0;
+    const esMembresia=act?PAQUETES_DEF[act.paqueteDefId]?.tipo==="membresia":false;
+    const resFut=reservas.filter(r=>r.alumnaId===a.id&&r.fecha>=hoy()&&r.estado==="reservada").length;
+    const tieneVencido=(a.paquetes||[]).some(p=>pagoVencido(p));
+    const tienePendiente=(a.paquetes||[]).some(p=>pagoPendiente(p));
+    const border=tieneVencido?"border:2px solid var(--acento2)!important;":tienePendiente?"border:2px solid var(--oro)!important;":"";
+    html+=`<div class="card" style="margin-bottom:12px;${border}"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="flex:1"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif">${a.nombre}</div><div style="font-size:12px;color:var(--gris);margin-top:2px;display:flex;gap:12px;flex-wrap:wrap">${a.telefono?`<span>📱 ${a.telefono}</span>`:""} ${a.correo?`<span>✉️ ${a.correo}</span>`:""}</div><div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${act?`${badge(act.emoji+" "+pend+" clase"+(pend!==1?"s":""),pend>3?"var(--verde)":pend>0?"var(--oro)":"var(--acento2)")} ${badge("Expira en "+diasExp+"d",diasExp>14?"var(--gris)":"var(--acento2)")}`:badge("Sin paquete activo","var(--acento2)")} ${resFut>0?badge(resFut+" agendada"+(resFut!==1?"s":""),"var(--principal)"):""} ${tieneVencido?badge("💸 Pago vencido","var(--acento2)"):""} ${tienePendiente&&!tieneVencido?badge("⏳ Pago pendiente","var(--oro)"):""} ${necesitaRenovar(a)?badge("🔔 Renovar","var(--principal)"):""}</div></div><div style="display:flex;flex-direction:column;gap:5px;margin-left:10px;flex-shrink:0"><button class="btn btn-primary btn-small" onclick="openPaquete('${a.id}')">+ Paquete</button><button class="btn btn-ghost btn-small" onclick="verAlumna('${a.id}')">Ver</button></div></div></div>`;
+  });
+  document.getElementById("tab-alumnas").innerHTML=html;
+};
+
+window.renderIngresos=()=>{
+  const todos=alumnas.flatMap(a=>(a.paquetes||[]).map(p=>({...p,alumna:a.nombre})));
+  const porMes={};todos.forEach(p=>{const m=p.compradoEn.slice(0,7);if(!porMes[m])porMes[m]={total:0,paquetes:[]};porMes[m].total+=p.montoTotal||p.monto||0;porMes[m].paquetes.push(p);});
+  const meses=Object.keys(porMes).sort().reverse(),total=todos.reduce((s,p)=>s+(p.montoTotal||p.monto||0),0);
+  let html=`<div class="row-space" style="margin-bottom:16px"><span style="font-weight:800;font-size:16px;font-family:'DM Serif Display',serif">Ingresos</span><div style="text-align:right"><div style="font-size:11px;color:var(--gris)">Total acumulado</div><div class="display" style="font-weight:800;font-size:24px;color:var(--principal)">$${total.toLocaleString("es-MX")}</div></div></div>`;
+  if(!meses.length)html+=`<div class="card empty-state"><div style="font-size:36px;margin-bottom:8px">💰</div><div>Sin ingresos registrados aún.</div></div>`;
+  meses.forEach(mes=>{
+    const{total:t,paquetes:ps}=porMes[mes];
+    html+=`<div class="card" style="margin-bottom:14px"><div class="row-space" style="margin-bottom:10px"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif;text-transform:capitalize">${mesAnio(mes)}</div><div class="display" style="font-weight:800;font-size:18px;color:var(--principal)">$${t.toLocaleString("es-MX")}</div></div>${ps.map((p,i)=>{
+      const pendiente=p.segundoPago&&!p.segundoPago.pagado;
+      return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;${i<ps.length-1?"border-bottom:1px solid var(--hueso2)":""};font-size:13px"><div><span style="font-weight:600">${p.alumna}</span><span style="color:var(--gris)"> · ${p.emoji} ${p.nombre}</span><br><span style="font-size:11px;color:var(--gris)">${metodoLabel(p.metodoPago||"efectivo")}</span>${pendiente?`<span style="font-size:11px;color:var(--oro);font-weight:700"> · ⏳ Falta $${(p.segundoPago.monto||0).toLocaleString("es-MX")}</span>`:""}</div><span style="font-weight:700">$${(p.montoTotal||p.monto||0).toLocaleString("es-MX")}</span></div>`;
+    }).join("")}</div>`;
+  });
+  document.getElementById("tab-ingresos").innerHTML=html;
+};
+
+window.openModal=id=>document.getElementById(id).classList.add("open");
+window.closeModal=id=>document.getElementById(id).classList.remove("open");
+
+window.guardarAlumna=async()=>{
+  const nombre=document.getElementById("na-nombre").value.trim();if(!nombre)return;
+  const id=uid(),nueva={id,nombre,telefono:document.getElementById("na-tel").value,correo:document.getElementById("na-email").value,nota:document.getElementById("na-nota").value,paquetes:[],creadaEn:hoy()};
+  await fbSet("alumnas",id,nueva);alumnas.push(nueva);
+  closeModal("modal-nueva-alumna");["na-nombre","na-tel","na-email","na-nota"].forEach(x=>document.getElementById(x).value="");
+  renderAlumnas();showToast("✓ "+nombre+" agregada");
+};
+
+window.openPaquete=id=>{pkgAlumnaId=id;const a=alumnas.find(x=>x.id===id);document.getElementById("modal-paquete-title").textContent="Nuevo paquete — "+a.nombre;document.getElementById("pkg-fecha1").value=hoy();document.getElementById("pkg-monto1").value="";document.getElementById("pkg-monto2").value="";document.getElementById("pkg-fecha2").value=addDias(hoy(),15);document.getElementById("pkg-metodo").value="efectivo";document.getElementById("segundo-pago-section").style.display="none";document.getElementById("pkg-clases-field").style.display="block";document.getElementById("pkg-clases-restantes").value="";updatePkgInfo();openModal("modal-paquete");};
+window.toggleSegundoPago=()=>{const m=document.getElementById("pkg-metodo").value;document.getElementById("segundo-pago-section").style.display=m==="dos_pagos"?"block":"none";};
+window.updatePkgInfo=()=>{const def=PAQUETES_DEF[document.getElementById("pkg-def").value],f=document.getElementById("pkg-fecha1").value||hoy();document.getElementById("pkg-info").innerHTML=`Precio sugerido: <strong>$${def.precio.toLocaleString("es-MX")}</strong> · Expira el <strong>${fmtFecha(addDias(f,def.dias))}</strong>`;document.getElementById("pkg-monto1").value=def.precio;};
+
+window.guardarPaquete=async()=>{
+  const monto1=parseFloat(document.getElementById("pkg-monto1").value)||0;
+  const defId=document.getElementById("pkg-def").value,def=PAQUETES_DEF[defId],fc=document.getElementById("pkg-fecha1").value,metodo=document.getElementById("pkg-metodo").value;
+  let segundoPago=null,montoTotal=monto1;
+  if(metodo==="dos_pagos"){
+    const monto2=parseFloat(document.getElementById("pkg-monto2").value)||0;
+    montoTotal=monto1+monto2;
+    segundoPago={monto:monto2,fechaLimite:document.getElementById("pkg-fecha2").value,metodo:document.getElementById("pkg-metodo2").value,pagado:false};
+  }
+  const clasesRestantesInput = parseInt(document.getElementById("pkg-clases-restantes")?.value||"");
+  const clasesRestantes = !isNaN(clasesRestantesInput) && clasesRestantesInput > 0 ? clasesRestantesInput : def.clases;
+  const nuevo={id:uid(),paqueteDefId:defId,nombre:def.nombre,emoji:def.emoji,clasesTotal:def.clases,clasesRestantes,monto:monto1,montoTotal,metodoPago:metodo,compradoEn:fc,expira:addDias(fc,def.dias),segundoPago};
+  const a=alumnas.find(x=>x.id===pkgAlumnaId);a.paquetes=[...(a.paquetes||[]),nuevo];
+  await fbUpdate("alumnas",pkgAlumnaId,{paquetes:a.paquetes});
+  closeModal("modal-paquete");renderAlumnas();showToast("✓ Paquete "+def.nombre+" agregado");
+};
+
+window.verAlumna=id=>{
+  const a=alumnas.find(x=>x.id===id);document.getElementById("ver-alumna-nombre").textContent=a.nombre;
+  const asistA=asistencias.filter(x=>x.alumnaId===id);
+  let html=`<div style="font-size:13px;color:var(--gris);margin-bottom:12px;display:flex;flex-direction:column;gap:4px">${a.telefono?`<span>📱 ${a.telefono}</span>`:""} ${a.correo?`<span>✉️ ${a.correo}</span>`:""} ${a.nota?`<span>📝 ${a.nota}</span>`:""}</div><div style="font-weight:800;margin-bottom:8px;font-family:'DM Serif Display',serif">Paquetes</div>`;
+  if(!(a.paquetes||[]).length)html+=`<div style="font-size:13px;color:var(--gris);margin-bottom:12px">Sin paquetes.</div>`;
+  (a.paquetes||[]).forEach(p=>{
+    const dias=diasRestantes(p.expira),venc=pagoVencido(p),pend=pagoPendiente(p);
+    html+=`<div style="background:var(--fondo);border-radius:10px;padding:10px 14px;margin-bottom:8px;border:${venc?"2px solid var(--acento2)":pend?"2px solid var(--oro)":"1px solid var(--hueso2)"}"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div style="font-weight:700;font-family:'DM Serif Display',serif">${p.emoji} ${p.nombre}</div>${badge(p.clasesRestantes+"/"+p.clasesTotal,p.clasesRestantes>0?"var(--verde)":"var(--acento2)")}</div><div style="font-size:12px;color:var(--gris)">Comprado ${fmtFecha(p.compradoEn)} · ${metodoLabel(p.metodoPago||"efectivo")}</div><div style="font-size:12px;color:var(--gris)">Pagado: $${(p.monto||0).toLocaleString("es-MX")} · Total: $${(p.montoTotal||p.monto||0).toLocaleString("es-MX")}</div><div style="font-size:12px;color:${dias<14?"var(--acento2)":"var(--gris)"}">Expira ${fmtFecha(p.expira)} (${dias}d)</div>${venc?`<div class="pago-vencido">🔴 Pago vencido desde ${fmtFecha(p.segundoPago.fechaLimite)} · $${(p.segundoPago.monto||0).toLocaleString("es-MX")}</div>`:""}${pend?`<div class="pago-pendiente">⏳ Segundo pago: $${(p.segundoPago.monto||0).toLocaleString("es-MX")} · Límite: ${fmtFecha(p.segundoPago.fechaLimite)} <button onclick="marcarSegundoPago('${a.id}','${p.id}')" style="margin-left:8px;background:var(--verde);color:white;border:none;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;font-family:inherit">✓ Marcar pagado</button></div>`:""}</div>`;
+  });
+  html+=`<div style="font-weight:800;margin:14px 0 8px;font-family:'DM Serif Display',serif">Clases tomadas</div>`;
+  if(!asistA.length)html+=`<div style="font-size:13px;color:var(--gris)">Sin asistencias registradas.</div>`;
+  [...asistA].reverse().slice(0,8).forEach(x=>{const h=HORARIOS.find(hh=>hh.id===x.horarioId);html+=`<div style="font-size:13px;padding:6px 0;border-bottom:1px solid var(--hueso2)"><div style="display:flex;justify-content:space-between"><span>${fmtFecha(x.fecha)}</span><span style="color:var(--gris)">${h?.label||"—"}</span></div>${x.nota?`<div style="font-size:11px;color:var(--gris);margin-top:2px">📝 ${x.nota}</div>`:""}</div>`;});
+  html+=`<div style="display:flex;gap:8px;justify-content:space-between;margin-top:20px"><button class="btn btn-danger btn-small" onclick="eliminarAlumna('${id}')">Eliminar alumna</button><button class="btn btn-ghost btn-small" onclick="closeModal('modal-ver-alumna')">Cerrar</button></div>`;
+  document.getElementById("ver-alumna-content").innerHTML=html;openModal("modal-ver-alumna");
+};
+
+window.marcarSegundoPago=async(alumnaId,pkgId)=>{
+  const a=alumnas.find(x=>x.id===alumnaId);
+  a.paquetes=a.paquetes.map(p=>p.id===pkgId?{...p,segundoPago:{...p.segundoPago,pagado:true,fechaPago:hoy()}}:p);
+  await fbUpdate("alumnas",alumnaId,{paquetes:a.paquetes});
+  closeModal("modal-ver-alumna");renderAlumnas();showToast("✓ Segundo pago registrado");
+};
+
+window.eliminarAlumna=async id=>{
+  const a=alumnas.find(x=>x.id===id);if(!confirm("¿Eliminar a "+a.nombre+"?"))return;
+  await fbDelete("alumnas",id);
+  const rIds=reservas.filter(r=>r.alumnaId===id).map(r=>r.id);await Promise.all(rIds.map(rid=>fbDelete("reservas",rid)));
+  const aIds=asistencias.filter(x=>x.alumnaId===id).map(x=>x.id);await Promise.all(aIds.map(aid=>fbDelete("asistencias",aid)));
+  alumnas=alumnas.filter(x=>x.id!==id);reservas=reservas.filter(r=>r.alumnaId!==id);asistencias=asistencias.filter(x=>x.alumnaId!==id);
+  closeModal("modal-ver-alumna");renderAlumnas();showToast("Alumna eliminada");
+};
+
+window.abrirNotaAsistencia=rId=>{
+  asistenciaReservaId=rId;
+  document.getElementById("asistencia-nota-content").innerHTML=`<div style="font-size:14px;color:var(--gris);margin-bottom:14px">¿Qué trabajó en esta clase? (opcional)</div><div class="field"><textarea id="nota-clase" placeholder="Ej. Taza con técnica pellizco, cuenco grande, proyecto personal…" rows="3"></textarea></div><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-ghost btn-small" onclick="closeModal('modal-asistencia-nota')">Cancelar</button><button class="btn btn-primary btn-small" onclick="confirmarAsistencia()">Registrar asistencia</button></div>`;
+  openModal("modal-asistencia-nota");
+};
+
+window.confirmarAsistencia=async()=>{
+  const nota=document.getElementById("nota-clase")?.value||"";
+  closeModal("modal-asistencia-nota");
+  await marcarAsistencia(asistenciaReservaId,true,nota);
+};
+
+window.marcarAsistencia=async(rId,asistio,nota="")=>{
+  const r=reservas.find(x=>x.id===rId);if(!r)return;
+  r.estado=asistio?"asistida":"falta";await fbUpdate("reservas",rId,{estado:r.estado});
+  if(asistio){
+    const a=alumnas.find(x=>x.id===r.alumnaId),p=(a.paquetes||[]).find(x=>x.id===r.paqueteId);
+    if(p){p.clasesRestantes=Math.max(0,p.clasesRestantes-1);await fbUpdate("alumnas",a.id,{paquetes:a.paquetes});}
+    const reg={id:uid(),reservaId:rId,alumnaId:r.alumnaId,paqueteId:r.paqueteId,horarioId:r.horarioId,fecha:r.fecha,nota};
+    asistencias.push(reg);await fbSet("asistencias",reg.id,reg);
+    if(necesitaRenovar(a))showToast("✓ Asistencia registrada · ⚠️ "+a.nombre.split(" ")[0]+" necesita renovar paquete");
+    else showToast("✓ Asistencia registrada");
+  }else showToast("Falta registrada");
+  renderAgenda();
+};
+
+window.renderVistaAlumna=()=>{
+  const a=alumnaActiva;document.getElementById("alumna-saludo").textContent="Hola, "+a.nombre.split(" ")[0]+" 👋";
+  const paquete=getPaqueteActivo(a),misRes=reservas.filter(r=>r.alumnaId===a.id&&r.fecha>=hoy()&&r.estado==="reservada").sort((x,y)=>x.fecha.localeCompare(y.fecha)),misAsist=asistencias.filter(x=>x.alumnaId===a.id),diasExp=paquete?diasRestantes(paquete.expira):0,pct=paquete?(paquete.clasesRestantes/paquete.clasesTotal*100):0;
+  let html="";
+  if(paquete){
+    html+=`<div class="card" style="margin-bottom:14px;border:2px solid var(--secundario)"><div style="font-size:11px;color:var(--principal);font-weight:800;letter-spacing:1px;margin-bottom:6px">TU PAQUETE</div><div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="font-weight:700;font-size:17px;font-family:'DM Serif Display',serif">${paquete.emoji} ${paquete.nombre}</div><div style="text-align:right"><div class="display" style="font-size:32px;font-weight:900;color:var(--principal);line-height:1">${paquete.clasesRestantes}</div><div style="font-size:11px;color:var(--gris)">de ${paquete.clasesTotal} clases</div></div></div><div class="progress-bg"><div class="progress-fill" style="width:${pct}%"></div></div><div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--gris)">Expira: ${fmtFecha(paquete.expira)}</span><span style="color:${diasExp<=14?"var(--acento2)":"var(--gris)"};font-weight:700">${diasExp>0?diasExp+" días restantes":"⚠️ Vencido"}</span></div></div>`;
+    if(necesitaRenovar(a))html+=`<div class="renovar-aviso" style="margin-bottom:14px">🔔 Te quedan pocas clases — ¡contáctanos para renovar tu paquete a tiempo!</div>`;
+    if(pagoVencido(paquete))html+=`<div class="pago-vencido" style="margin-bottom:14px">🔴 Tienes un pago pendiente vencido desde ${fmtFecha(paquete.segundoPago.fechaLimite)}. Por favor contáctanos para regularizarlo.</div>`;
+    else if(pagoPendiente(paquete))html+=`<div class="pago-pendiente" style="margin-bottom:14px">⏳ Recuerda que tienes un segundo pago pendiente de $${(paquete.segundoPago.monto||0).toLocaleString("es-MX")} antes del ${fmtFecha(paquete.segundoPago.fechaLimite)}.</div>`;
+  }else{
+    html+=`<div class="card" style="background:#d1362610;border:1px solid #d1362630;margin-bottom:14px"><div style="font-weight:700;color:var(--acento2)">Sin paquete activo</div><div style="font-size:13px;color:var(--gris);margin-top:4px">Contáctanos para adquirir o renovar tu paquete.</div></div>`;
+  }
+  html+=`<div class="aviso aviso-rosa" style="margin-bottom:16px"><div style="font-weight:700;color:var(--principal);margin-bottom:4px">⚠️ Política de cancelación</div><div style="color:var(--grafito);line-height:1.6">Cancela con <strong>mínimo 24 horas de anticipación</strong>. Las cancelaciones tardías o inasistencias sin aviso <strong>se descuentan como clase tomada</strong>.</div></div>`;
+  html+=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif">Mis clases agendadas</div>${paquete?`<button class="btn btn-primary btn-small" id="btn-agendar-alumna">+ Agendar</button>`:`<button class="btn btn-primary btn-small" disabled>+ Agendar</button>`}</div>`;
+  if(!misRes.length)html+=`<div class="card" style="text-align:center;color:var(--gris);padding:28px;margin-bottom:16px"><div style="font-size:28px;margin-bottom:6px">📅</div><div>${paquete?"¡Agenda tu próxima clase!":"Sin clases agendadas."}</div></div>`;
+  misRes.forEach(r=>{const h=HORARIOS.find(hh=>hh.id===r.horarioId),puede=puedeCancel24h(r);html+=`<div class="card" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700;font-size:14px;font-family:'DM Serif Display',serif">${h?.dia}</div><div style="font-size:13px;color:var(--gris)">${h?.hora} · ${fmtFecha(r.fecha)}</div></div>${puede?`<button data-cancel="${r.id}" style="background:none;border:1.5px solid var(--acento2);color:var(--acento2);border-radius:7px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Cancelar</button>`:`<span style="font-size:11px;color:var(--acento2);font-weight:700;text-align:right;max-width:110px">Ya no puedes cancelar</span>`}</div></div>`;});
+  if(misAsist.length){html+=`<div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif;margin:20px 0 10px">Mis clases tomadas</div>`;[...misAsist].reverse().slice(0,10).forEach(x=>{const h=HORARIOS.find(hh=>hh.id===x.horarioId);html+=`<div style="font-size:13px;padding:6px 0;border-bottom:1px solid var(--hueso2)"><div style="display:flex;justify-content:space-between;align-items:center"><span>${fmtFecha(x.fecha)}</span><span style="color:var(--gris)">${h?.label||"—"}</span>${badge("✓","var(--verde)")}</div>${x.nota?`<div style="font-size:11px;color:var(--gris);margin-top:2px">📝 ${x.nota}</div>`:""}</div>`;});}
+  document.getElementById("alumna-content").innerHTML=html;
+  const btnAgendar=document.getElementById("btn-agendar-alumna");
+  if(btnAgendar)btnAgendar.addEventListener("click",()=>openAgendarAlumna());
+  document.querySelectorAll("[data-cancel]").forEach(btn=>{btn.addEventListener("click",async()=>{if(!confirm("¿Cancelar esta clase?"))return;const rId=btn.getAttribute("data-cancel");reservas=reservas.map(r=>r.id===rId?{...r,estado:"cancelada"}:r);await fbUpdate("reservas",rId,{estado:"cancelada"});renderVistaAlumna();showToast("Clase cancelada");});});
+};
+
+window.openAgendarAlumna=()=>{
+  const paquete=getPaqueteActivo(alumnaActiva);
+  const def=paquete?PAQUETES_DEF[paquete.paqueteDefId]:null;
+  const tipo=def?.tipo||"paquete";
+  const horariosDisp=HORARIOS.filter(h=>h.tipo===tipo);
+  agendarHorarioSel=horariosDisp[0]?.id||HORARIOS[0].id;
+  agendarFechaSel="";renderAgendarContent();openModal("modal-agendar");
+};
+window.renderAgendarContent=()=>{
+  const paquete=getPaqueteActivo(alumnaActiva);
+  const def=paquete?PAQUETES_DEF[paquete.paqueteDefId]:null;
+  const tipo=def?.tipo||"paquete";
+  const horariosDisp=HORARIOS.filter(h=>h.tipo===tipo);
+  const h=horariosDisp.find(hh=>hh.id===agendarHorarioSel)||horariosDisp[0];
+  if(!agendarHorarioSel||!horariosDisp.find(hh=>hh.id===agendarHorarioSel))agendarHorarioSel=h?.id;
+  const fechas=proximasFechas(h.diaN);
+  let html=`<div class="field"><label>Horario</label><select id="sel-horario">${horariosDisp.map(hh=>`<option value="${hh.id}"${hh.id===agendarHorarioSel?" selected":""}>${hh.label}</option>`).join("")}</select></div><div style="font-size:12px;color:var(--gris);margin-bottom:8px;font-weight:700;letter-spacing:.3px">ELIGE FECHA</div><div id="fechas-container" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">`;
+  fechas.forEach(f=>{const c=cupoDisponible(agendarHorarioSel,f),sel=agendarFechaSel===f;html+=`<button class="fecha-btn${sel?" sel":c===0?" lleno":""}" data-fecha="${f}" data-cupo="${c}"><div style="font-weight:700;font-size:13px">${new Date(f+"T12:00:00").toLocaleDateString("es-MX",{day:"numeric",month:"short"})}</div><div style="font-size:10px;margin-top:2px">${c>0?c+" lugar"+(c!==1?"es":""):"Lleno"}</div></button>`;});
+  html+=`</div>${agendarFechaSel?`<div class="aviso aviso-rosa" style="font-size:13px;margin-bottom:14px">📅 ${new Date(agendarFechaSel+"T12:00:00").toLocaleDateString("es-MX",{weekday:"long",day:"numeric",month:"long"})}<br>⏰ ${h?.hora}</div>`:""}<div class="aviso aviso-oro" style="font-size:12px;line-height:1.5;margin-bottom:16px">⚠️ Recuerda cancelar con al menos <strong>24 horas de anticipación</strong>.</div><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-ghost btn-small" id="btn-cancelar-agendar">Cancelar</button><button class="btn btn-primary btn-small" id="btn-confirmar-agendar"${!agendarFechaSel?" disabled":""}>Confirmar</button></div>`;
+  document.getElementById("agendar-content").innerHTML=html;
+  document.getElementById("sel-horario").addEventListener("change",function(){agendarHorarioSel=this.value;agendarFechaSel="";renderAgendarContent();});
+  document.getElementById("btn-cancelar-agendar").addEventListener("click",()=>closeModal("modal-agendar"));
+  document.getElementById("btn-confirmar-agendar").addEventListener("click",()=>confirmarReserva());
+  document.querySelectorAll(".fecha-btn[data-fecha]").forEach(btn=>{btn.addEventListener("click",function(){const f=this.getAttribute("data-fecha"),c=parseInt(this.getAttribute("data-cupo"));if(c>0){agendarFechaSel=f;renderAgendarContent();}});});
+};
+window.confirmarReserva=async()=>{
+  if(!agendarFechaSel)return;
+  const paquete=getPaqueteActivo(alumnaActiva);if(!paquete)return;
+  if(reservas.some(r=>r.alumnaId===alumnaActiva.id&&r.horarioId===agendarHorarioSel&&r.fecha===agendarFechaSel&&r.estado!=="cancelada")){showToast("Ya tienes reserva en ese horario");return;}
+  if(cupoDisponible(agendarHorarioSel,agendarFechaSel)<=0){showToast("❌ Sin cupo");return;}
+  const nueva={id:uid(),alumnaId:alumnaActiva.id,paqueteId:paquete.id,horarioId:agendarHorarioSel,fecha:agendarFechaSel,estado:"reservada",creadaEn:new Date().toISOString()};
+  reservas.push(nueva);await fbSet("reservas",nueva.id,nueva);
+  closeModal("modal-agendar");renderVistaAlumna();showToast("✓ Clase agendada");
+};
+
+document.getElementById("pkg-fecha1").value=hoy();
+document.getElementById("pkg-fecha2").value=addDias(hoy(),15);
+updatePkgInfo();
+
+// Global click handler - works reliably in Safari
+document.addEventListener("click", function(e) {
+  const target = e.target.closest("[data-fecha]");
+  if (target) {
+    const f = target.getAttribute("data-fecha");
+    const c = parseInt(target.getAttribute("data-cupo"));
+    if (c > 0) { agendarFechaSel = f; renderAgendarContent(); }
+    return;
+  }
+  if (e.target.id === "btn-confirmar-agendar" || e.target.closest("#btn-confirmar-agendar")) {
+    confirmarReserva(); return;
+  }
+  if (e.target.id === "btn-cancelar-agendar" || e.target.closest("#btn-cancelar-agendar")) {
+    closeModal("modal-agendar"); return;
+  }
+  if (e.target.id === "sel-horario") {
+    agendarHorarioSel = e.target.value; agendarFechaSel = ""; renderAgendarContent(); return;
+  }
+  if (e.target.id === "btn-agendar-alumna" || e.target.closest("#btn-agendar-alumna")) {
+    openAgendarAlumna(); return;
+  }
+  if (e.target.id === "btn-semana-prev" || e.target.closest("#btn-semana-prev")) {
+    semanaOffset--; renderAgenda(); return;
+  }
+  if (e.target.id === "btn-semana-next" || e.target.closest("#btn-semana-next")) {
+    semanaOffset++; renderAgenda(); return;
+  }
+  const cancelBtn = e.target.closest("[data-cancel]");
+  if (cancelBtn) {
+    const rId = cancelBtn.getAttribute("data-cancel");
+    if (!confirm("¿Cancelar esta clase?")) return;
+    reservas = reservas.map(r => r.id === rId ? {...r, estado:"cancelada"} : r);
+    fbUpdate("reservas", rId, {estado:"cancelada"});
+    renderVistaAlumna();
+    showToast("Clase cancelada");
+    return;
+  }
+});
+
+cargarDatos();
+</script>
+</body>
+</html>
