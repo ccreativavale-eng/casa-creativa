@@ -391,15 +391,20 @@ const CATEGORIAS_GASTOS = [
 
 window.renderGastos = () => {
   const gastos = JSON.parse(localStorage.getItem("cc_gastos")||"[]");
-  const totalGastos = gastos.reduce((s,g)=>s+g.monto,0);
+  const totalGastos = gastos.reduce((s,g)=>s+g.monto,0); // keep for categories
   const porCategoria = {};
   CATEGORIAS_GASTOS.forEach(c=>porCategoria[c.id]={...c,total:0,items:[]});
   gastos.forEach(g=>{if(porCategoria[g.categoria]){porCategoria[g.categoria].total+=g.monto;porCategoria[g.categoria].items.push(g);}});
 
+  const totalPagado = gastos.filter(g=>g.pagado).reduce((s,g)=>s+g.monto,0);
+  const totalPendiente = gastos.filter(g=>!g.pagado).reduce((s,g)=>s+g.monto,0);
   let html = `<div class="row-space" style="margin-bottom:16px">
     <span style="font-weight:800;font-size:16px;font-family:'DM Serif Display',serif">Gastos</span>
-    <div style="text-align:right"><div style="font-size:11px;color:var(--gris)">Total gastos</div>
-    <div class="display" style="font-weight:800;font-size:24px;color:var(--acento2)">$${totalGastos.toLocaleString("es-MX")}</div></div>
+    <div style="text-align:right">
+      <div style="font-size:11px;color:var(--gris)">Pagado</div>
+      <div class="display" style="font-weight:800;font-size:20px;color:var(--acento2)">$${totalPagado.toLocaleString("es-MX")}</div>
+      ${totalPendiente>0?`<div style="font-size:11px;color:var(--oro);font-weight:700">📋 Pendiente: $${totalPendiente.toLocaleString("es-MX")}</div>`:""}
+    </div>
   </div>`;
 
   // Form
@@ -413,6 +418,12 @@ window.renderGastos = () => {
     </div>
     <div class="field"><label>Monto ($)</label><input type="number" id="gasto-monto" placeholder="Ej. 450"></div>
     <div class="field"><label>Fecha</label><input type="date" id="gasto-fecha"></div>
+    <div class="field"><label>Estado</label>
+      <select id="gasto-pagado">
+        <option value="pendiente">📋 Pendiente de pagar</option>
+        <option value="pagado">✅ Ya pagado</option>
+      </select>
+    </div>
     <button class="btn btn-primary btn-full" id="btn-guardar-gasto">Registrar gasto</button>
   </div>`;
 
@@ -427,7 +438,8 @@ window.renderGastos = () => {
           <div style="font-weight:800;color:var(--acento2)">$${c.total.toLocaleString("es-MX")}</div>
         </div>`;
       c.items.reverse().forEach(g=>{
-        html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-top:1px solid var(--hueso2);font-size:13px"><div><span style="font-weight:600">${g.desc}</span><span style="color:var(--gris)"> · ${fmtFecha(g.fecha)}</span></div><div style="display:flex;align-items:center;gap:6px"><span style="font-weight:700">$${g.monto.toLocaleString("es-MX")}</span><button data-gasto-del="${g.id}" style="font-size:10px;background:var(--acento2);color:white;border:none;border-radius:5px;padding:2px 6px;cursor:pointer;font-family:inherit">✕</button></div></div>`;
+        const isPagado = g.pagado===true||g.pagado==="pagado";
+        html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--hueso2);font-size:13px;background:${isPagado?"":"#B8860B08"};border-radius:6px;padding:6px 4px"><div><span style="font-weight:600">${g.desc}</span><span style="color:var(--gris)"> · ${fmtFecha(g.fecha)}</span><br><span style="font-size:10px;font-weight:700;color:${isPagado?"var(--verde)":"var(--oro)"}">${isPagado?"✅ Pagado":"📋 Pendiente"}</span></div><div style="display:flex;align-items:center;gap:4px;flex-direction:column"><span style="font-weight:700">$${g.monto.toLocaleString("es-MX")}</span>${!isPagado?`<button data-gasto-pagar="${g.id}" style="font-size:9px;background:var(--verde);color:white;border:none;border-radius:4px;padding:2px 5px;cursor:pointer;font-family:inherit">✓ Pagar</button>`:""}<button data-gasto-del="${g.id}" style="font-size:9px;background:var(--acento2);color:white;border:none;border-radius:4px;padding:2px 5px;cursor:pointer;font-family:inherit">✕</button></div></div>`;
       });
       html += `</div>`;
     });
@@ -445,7 +457,8 @@ window.renderGastos = () => {
     const fecha = document.getElementById("gasto-fecha")?.value;
     if(!desc||!monto) { showToast("Completa todos los campos"); return; }
     const gastos = JSON.parse(localStorage.getItem("cc_gastos")||"[]");
-    const nuevo = {id:uid(), desc, categoria:cat, monto, fecha, creadoEn:new Date().toISOString()};
+    const pagadoVal = document.getElementById("gasto-pagado")?.value==="pagado";
+    const nuevo = {id:uid(), desc, categoria:cat, monto, fecha, pagado:pagadoVal, creadoEn:new Date().toISOString()};
     gastos.push(nuevo);
     localStorage.setItem("cc_gastos", JSON.stringify(gastos));
     fbSet("gastos", nuevo.id, nuevo);
@@ -453,6 +466,17 @@ window.renderGastos = () => {
     renderGastos();
   });
 
+  document.querySelectorAll("[data-gasto-pagar]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const id = btn.getAttribute("data-gasto-pagar");
+      const gastos = JSON.parse(localStorage.getItem("cc_gastos")||"[]");
+      const updated = gastos.map(g=>g.id===id?{...g,pagado:true}:g);
+      localStorage.setItem("cc_gastos", JSON.stringify(updated));
+      fbSet("gastos", id, {...gastos.find(g=>g.id===id), pagado:true});
+      showToast("✅ Gasto marcado como pagado");
+      renderGastos();
+    });
+  });
   document.querySelectorAll("[data-gasto-del]").forEach(btn=>{
     btn.addEventListener("click", ()=>{
       const id = btn.getAttribute("data-gasto-del");
