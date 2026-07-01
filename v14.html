@@ -255,6 +255,37 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-editar-paquete">
+  <div class="modal">
+    <div class="modal-header"><span class="serif" style="font-weight:800;font-size:17px">✏️ Editar paquete</span><button class="modal-close" onclick="closeModal('modal-editar-paquete')">×</button></div>
+    <div class="field"><label>Paquete</label>
+      <select id="edit-pkg-def">
+        <optgroup label="── Paquetes de Curso ──">
+          <option value="previo1">📦 Paquete previo · 1 clase · $320</option>
+          <option value="previo4">📦 Paquete previo · 4 clases · $1,160</option>
+          <option value="previo6">📦 Paquete previo · 6 clases · $1,640</option>
+          <option value="previo10">📦 Paquete previo · 10 clases · $2,560</option>
+          <option value="primera">🌱 Primera Pieza · 1 clase · $390</option>
+          <option value="proceso">🌿 Proceso Completo · 2 clases · $750</option>
+          <option value="habilidades">🏺 Desarrolla tus Habilidades · 6 clases · $2,250</option>
+          <option value="intensivo">✨ Curso Intensivo · 12 clases · $4,500</option>
+        </optgroup>
+        <optgroup label="── Membresías ──">
+          <option value="mem_esencial">🎨 Membresía Esencial · 4 sesiones · $1,600</option>
+          <option value="mem_plus">💎 Membresía Plus · 8 sesiones · $2,900</option>
+        </optgroup>
+      </select>
+    </div>
+    <div class="field"><label>Clases restantes</label><input type="number" id="edit-pkg-clases" placeholder="Ej. 4"></div>
+    <div class="field"><label>Monto pagado ($)</label><input type="number" id="edit-pkg-monto" placeholder="Ej. 2250"></div>
+    <div class="field"><label>Fecha de vencimiento</label><input type="date" id="edit-pkg-expira"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost btn-small" onclick="closeModal('modal-editar-paquete')">Cancelar</button>
+      <button class="btn btn-primary btn-small" id="btn-guardar-edicion-paquete">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-agendar">
   <div class="modal">
     <div class="modal-header"><span class="serif" style="font-weight:800;font-size:17px">Agendar clase</span><button class="modal-close" onclick="closeModal('modal-agendar')">×</button></div>
@@ -942,6 +973,9 @@ window.renderAlumnas=()=>{
   document.querySelectorAll("[data-ver-alumna]").forEach(btn=>{
     btn.addEventListener("click",()=>verAlumna(btn.getAttribute("data-ver-alumna")));
   });
+  document.querySelectorAll("[data-agendar-maestra]").forEach(btn=>{
+    btn.addEventListener("click",()=>abrirAgendarMaestra(btn.getAttribute("data-agendar-maestra")));
+  });
   document.querySelectorAll("[data-open-paquete]").forEach(btn=>{
     btn.addEventListener("click",()=>openPaquete(btn.getAttribute("data-open-paquete")));
   });
@@ -1086,7 +1120,7 @@ window.verAlumna=id=>{
   if(!(a.paquetes||[]).length)html+=`<div style="font-size:13px;color:var(--gris);margin-bottom:12px">Sin paquetes.</div>`;
   (a.paquetes||[]).forEach(p=>{
     const dias=diasRestantes(p.expira),venc=pagoVencido(p),pend=pagoPendiente(p);
-    html+=`<div style="background:var(--fondo);border-radius:10px;padding:10px 14px;margin-bottom:8px;border:${venc?"2px solid var(--acento2)":pend?"2px solid var(--oro)":"1px solid var(--hueso2)"}"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div style="font-weight:700;font-family:'DM Serif Display',serif">${p.emoji} ${p.nombre}</div>${badge(p.clasesRestantes+"/"+p.clasesTotal,p.clasesRestantes>0?"var(--verde)":"var(--acento2)")}</div><div style="font-size:12px;color:var(--gris)">Comprado ${fmtFecha(p.compradoEn)} · ${metodoLabel(p.metodoPago||"efectivo")}</div><div style="font-size:12px;color:var(--gris)">Pagado: $${(p.monto||0).toLocaleString("es-MX")} · Total: $${(p.montoTotal||p.monto||0).toLocaleString("es-MX")}</div><div style="font-size:12px;color:${dias<14?"var(--acento2)":"var(--gris)"}">Expira ${fmtFecha(p.expira)} (${dias}d)</div>${venc?`<div class="pago-vencido">🔴 Pago vencido desde ${fmtFecha(p.segundoPago.fechaLimite)} · $${(p.segundoPago.monto||0).toLocaleString("es-MX")}</div>`:""}${pend?`<div class="pago-pendiente">⏳ Segundo pago: $${(p.segundoPago.monto||0).toLocaleString("es-MX")} · Límite: ${fmtFecha(p.segundoPago.fechaLimite)} <button onclick="marcarSegundoPago('${a.id}','${p.id}')" style="margin-left:8px;background:var(--verde);color:white;border:none;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;font-family:inherit">✓ Marcar pagado</button></div>`:""}</div>`;
+    html+=`<div style="background:var(--fondo);border-radius:10px;padding:10px 14px;margin-bottom:8px;border:${venc?"2px solid var(--acento2)":pend?"2px solid var(--oro)":"1px solid var(--hueso2)"}"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div style="font-weight:700;font-family:'DM Serif Display',serif">${p.emoji} ${p.nombre}</div><div style="display:flex;gap:6px;align-items:center">${badge(p.clasesRestantes+"/"+p.clasesTotal,p.clasesRestantes>0?"var(--verde)":"var(--acento2)")}<button data-edit-pkg="${p.id}" data-edit-alumna="${a.id}" style="font-size:11px;background:var(--principal);color:white;border:none;border-radius:6px;padding:2px 8px;cursor:pointer;font-family:inherit">✏️</button></div></div><div style="font-size:12px;color:var(--gris)">Comprado ${fmtFecha(p.compradoEn)} · ${metodoLabel(p.metodoPago||"efectivo")}</div><div style="font-size:12px;color:var(--gris)">Pagado: $${(p.monto||0).toLocaleString("es-MX")} · Total: $${(p.montoTotal||p.monto||0).toLocaleString("es-MX")}</div><div style="font-size:12px;color:${dias<14?"var(--acento2)":"var(--gris)"}">Expira ${fmtFecha(p.expira)} (${dias}d)</div>${venc?`<div class="pago-vencido">🔴 Pago vencido desde ${fmtFecha(p.segundoPago.fechaLimite)} · $${(p.segundoPago.monto||0).toLocaleString("es-MX")}</div>`:""}${pend?`<div class="pago-pendiente">⏳ Segundo pago: $${(p.segundoPago.monto||0).toLocaleString("es-MX")} · Límite: ${fmtFecha(p.segundoPago.fechaLimite)} <button onclick="marcarSegundoPago('${a.id}','${p.id}')" style="margin-left:8px;background:var(--verde);color:white;border:none;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;font-family:inherit">✓ Marcar pagado</button></div>`:""}</div>`;
   });
   html+=`<div style="font-weight:800;margin:14px 0 8px;font-family:'DM Serif Display',serif">Clases tomadas</div>`;
   if(!asistA.length)html+=`<div style="font-size:13px;color:var(--gris)">Sin asistencias registradas.</div>`;
@@ -1106,6 +1140,22 @@ window.verAlumna=id=>{
   }
   html+=`<div style="display:flex;gap:8px;justify-content:space-between;margin-top:12px"><button class="btn btn-danger btn-small" onclick="eliminarAlumna('${id}')">Eliminar alumna</button><button class="btn btn-ghost btn-small" onclick="closeModal('modal-ver-alumna')">Cerrar</button></div>`;
   document.getElementById("ver-alumna-content").innerHTML=html;openModal("modal-ver-alumna");
+  document.querySelectorAll("[data-edit-pkg]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const pkgId=btn.getAttribute("data-edit-pkg");
+      const alumnaId=btn.getAttribute("data-edit-alumna");
+      const al=alumnas.find(x=>x.id===alumnaId);
+      const p=al?.paquetes?.find(x=>x.id===pkgId);
+      if(!p)return;
+      document.getElementById("edit-pkg-def").value=p.paqueteDefId||"primera";
+      document.getElementById("edit-pkg-clases").value=p.clasesRestantes;
+      document.getElementById("edit-pkg-monto").value=p.monto||0;
+      document.getElementById("edit-pkg-expira").value=p.expira;
+      window._editPkgId=pkgId;
+      window._editAlumnaId=alumnaId;
+      openModal("modal-editar-paquete");
+    });
+  });
   const btnClaseHoy = document.getElementById("btn-clase-hoy-"+id);
   if(btnClaseHoy){
     btnClaseHoy.addEventListener("click", async ()=>{
@@ -1125,6 +1175,23 @@ window.verAlumna=id=>{
       else showToast("✓ Clase de hoy registrada para "+a.nombre.split(" ")[0]);
     });
   }
+};
+
+window.guardarEdicionPaquete=async()=>{
+  const alumnaId=window._editAlumnaId,pkgId=window._editPkgId;
+  const a=alumnas.find(x=>x.id===alumnaId);
+  if(!a)return;
+  const defId=document.getElementById("edit-pkg-def").value;
+  const def=PAQUETES_DEF[defId];
+  const clases=parseInt(document.getElementById("edit-pkg-clases").value)||0;
+  const monto=parseFloat(document.getElementById("edit-pkg-monto").value)||0;
+  const expira=document.getElementById("edit-pkg-expira").value;
+  a.paquetes=a.paquetes.map(p=>p.id===pkgId?{...p,paqueteDefId:defId,nombre:def?.nombre||p.nombre,emoji:def?.emoji||p.emoji,clasesRestantes:clases,clasesTotal:Math.max(clases,p.clasesTotal),monto,montoTotal:monto,expira}:p);
+  await fbUpdate("alumnas",alumnaId,{paquetes:a.paquetes});
+  closeModal("modal-editar-paquete");
+  closeModal("modal-ver-alumna");
+  renderAlumnas();
+  showToast("✓ Paquete actualizado");
 };
 
 window.marcarSegundoPago=async(alumnaId,pkgId)=>{
@@ -1192,7 +1259,18 @@ window.renderVistaAlumna=()=>{
   document.querySelectorAll("[data-cancel]").forEach(btn=>{btn.addEventListener("click",async()=>{if(!confirm("¿Cancelar esta clase?"))return;const rId=btn.getAttribute("data-cancel");reservas=reservas.map(r=>r.id===rId?{...r,estado:"cancelada"}:r);await fbUpdate("reservas",rId,{estado:"cancelada"});renderVistaAlumna();showToast("Clase cancelada");});});
 };
 
+window.abrirAgendarMaestra=id=>{
+  alumnaActiva=alumnas.find(x=>x.id===id);
+  agendarHorarioSel=HORARIOS[0].id;
+  agendarFechaSel="";
+  // Temporarily allow scheduling without package
+  window._agendarDesdeMaestra=true;
+  renderAgendarContent();
+  openModal("modal-agendar");
+};
+
 window.openAgendarAlumna=()=>{
+  window._agendarDesdeMaestra=false;
   const paquete=getPaqueteActivo(alumnaActiva);
   const def=paquete?PAQUETES_DEF[paquete.paqueteDefId]:null;
   const tipo=def?.tipo||"paquete";
@@ -1203,8 +1281,8 @@ window.openAgendarAlumna=()=>{
 window.renderAgendarContent=()=>{
   const paquete=getPaqueteActivo(alumnaActiva);
   const def=paquete?PAQUETES_DEF[paquete.paqueteDefId]:null;
-  const tipo=def?.tipo||"paquete";
-  const horariosDisp=HORARIOS.filter(h=>h.tipo===tipo);
+  const tipo=window._agendarDesdeMaestra?"todos":(def?.tipo||"paquete");
+  const horariosDisp=tipo==="todos"?HORARIOS:HORARIOS.filter(h=>h.tipo===tipo);
   const h=horariosDisp.find(hh=>hh.id===agendarHorarioSel)||horariosDisp[0];
   if(!agendarHorarioSel||!horariosDisp.find(hh=>hh.id===agendarHorarioSel))agendarHorarioSel=h?.id;
   const fechas=proximasFechas(h.diaN);
@@ -1236,10 +1314,11 @@ window.renderAgendarContent=()=>{
 };
 window.confirmarReserva=async()=>{
   if(!agendarFechaSel)return;
-  const paquete=getPaqueteActivo(alumnaActiva);if(!paquete)return;
-  if(reservas.some(r=>r.alumnaId===alumnaActiva.id&&r.horarioId===agendarHorarioSel&&r.fecha===agendarFechaSel&&r.estado!=="cancelada")){showToast("Ya tienes reserva en ese horario");return;}
+  const paquete=getPaqueteActivo(alumnaActiva);
+  if(!paquete&&!window._agendarDesdeMaestra)return;
+  if(reservas.some(r=>r.alumnaId===alumnaActiva.id&&r.horarioId===agendarHorarioSel&&r.fecha===agendarFechaSel&&r.estado!=="cancelada")){showToast("Ya hay reserva en ese horario");return;}
   if(cupoDisponible(agendarHorarioSel,agendarFechaSel)<=0){showToast("❌ Sin cupo");return;}
-  const nueva={id:uid(),alumnaId:alumnaActiva.id,paqueteId:paquete.id,horarioId:agendarHorarioSel,fecha:agendarFechaSel,estado:"reservada",creadaEn:new Date().toISOString()};
+  const nueva={id:uid(),alumnaId:alumnaActiva.id,paqueteId:paquete?.id||"sin-paquete",horarioId:agendarHorarioSel,fecha:agendarFechaSel,estado:"reservada",creadaEn:new Date().toISOString()};
   reservas.push(nueva);await fbSet("reservas",nueva.id,nueva);
   closeModal("modal-agendar");renderVistaAlumna();showToast("✓ Clase agendada");
 };
@@ -1271,6 +1350,9 @@ document.addEventListener("click", function(e) {
   }
   if (e.target.id === "btn-guardar-migracion" || e.target.closest("#btn-guardar-migracion")) {
     guardarMigracion(); return;
+  }
+  if (e.target.id === "btn-guardar-edicion-paquete" || e.target.closest("#btn-guardar-edicion-paquete")) {
+    guardarEdicionPaquete(); return;
   }
   if (e.target.id === "btn-semana-prev" || e.target.closest("#btn-semana-prev")) {
     semanaOffset--; renderAgenda(); return;
