@@ -946,18 +946,40 @@ window.verDiaDetalle = (fecha) => {
     html += `<div style="font-weight:800;font-size:13px;color:var(--principal);margin-bottom:6px;margin-top:12px">${h?h.hora:"—"} · ${res.length}/${CUPO_MAX} lugares</div>`;
     res.forEach(r=>{
       const al = alumnas.find(a=>a.id===r.alumnaId);
-      const yaA = r.estado==="asistida";
-      html += `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--hueso2)">
-        <span style="font-size:18px">${yaA?"✅":"👩‍🎨"}</span>
-        <div>
-          <div style="font-weight:700;font-size:14px">${al?.nombre||"—"}</div>
-          <div style="font-size:11px;color:var(--gris)">${yaA?"Asistió":"Reservada"}</div>
+      const yaA = r.estado==="asistida", esFalta = r.estado==="falta";
+      html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--hueso2)">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:18px">${yaA?"✅":esFalta?"❌":"👩‍🎨"}</span>
+          <div>
+            <div style="font-weight:700;font-size:14px">${al?.nombre||"—"}</div>
+            <div style="font-size:11px;color:${yaA?"var(--verde)":esFalta?"var(--acento2)":"var(--gris)"};font-weight:700">${yaA?"Asistió":esFalta?"Falta":"Reservada"}</div>
+          </div>
         </div>
+        ${!yaA&&!esFalta?`<div style="display:flex;gap:4px">
+          <button data-dia-asistio="${r.id}" style="font-size:11px;background:var(--verde);color:white;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;font-family:inherit;font-weight:700">✓ Asistió</button>
+          <button data-dia-falta="${r.id}" style="font-size:11px;background:var(--acento2);color:white;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;font-family:inherit;font-weight:700">✗ Falta</button>
+        </div>`:""}
       </div>`;
     });
   });
   document.getElementById("dia-detalle-content").innerHTML = html;
   openModal("modal-dia-detalle");
+  document.querySelectorAll("[data-dia-asistio]").forEach(btn=>{
+    btn.addEventListener("click",async()=>{
+      const rId=btn.getAttribute("data-dia-asistio");
+      closeModal("modal-dia-detalle");
+      await abrirNotaAsistencia(rId);
+    });
+  });
+  document.querySelectorAll("[data-dia-falta]").forEach(btn=>{
+    btn.addEventListener("click",async()=>{
+      const rId=btn.getAttribute("data-dia-falta");
+      await marcarAsistencia(rId,false);
+      closeModal("modal-dia-detalle");
+      renderAgendaMes();
+      showToast("Falta registrada");
+    });
+  });
 };
 
 window.renderAlumnas=()=>{
