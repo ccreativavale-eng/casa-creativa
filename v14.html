@@ -685,7 +685,7 @@ const TARIFAS_ESMALTADO_GRANDE = [{max:300,precio:150},{max:400,precio:200},{max
 const TARIFAS_SANCOCHO_LOTE = [{max:100,precio:40},{max:200,precio:50},{max:300,precio:70}];
 const TARIFAS_ESMALTADO_LOTE = [{max:100,precio:50},{max:200,precio:70},{max:300,precio:90}];
 // Tarifas pulido + esmaltado
-const TARIFAS_PULIDO = [{max:400,precio:120},{max:1000,precio:180},{max:999999,precio:300}];
+const TARIFAS_PULIDO = [{max:200,precio:90},{max:400,precio:120},{max:700,precio:160},{max:1000,precio:200},{max:2000,precio:280},{max:3000,precio:350},{max:4000,precio:450},{max:999999,precio:-1}];
 
 const calcPrecio = (val, tarifas) => {
   for(const t of tarifas) if(val <= t.max) return t.precio;
@@ -884,6 +884,11 @@ window.calcServicio = () => {
     detalle = `🌈 Clase de esmalte 3hrs (precio fijo)`;
   } else if(tipo==="pulido_esmaltado"){
     precio = calcPrecio(val, TARIFAS_PULIDO);
+    if(precio===-1){
+      const preview = document.getElementById("srv-precio-preview");
+      if(preview){ preview.style.display="block"; preview.innerHTML=`<div style="font-weight:700;color:var(--oro)">🌈 Pulido + esmaltado ${val}g</div><div style="color:var(--grafito)">Precio: <strong>Cotización especial</strong> — consulta con Vale</div>`; }
+      return;
+    }
     detalle = `🌈 Pulido + esmaltado ${val}g`;
   } else {
     const tarifas = tipo==="sancocho"?TARIFAS_SANCOCHO:TARIFAS_ESMALTADO;
@@ -911,7 +916,7 @@ window.guardarServicio = () => {
   else if(tipo==="esmaltado_lote") precio=val>300?calcPrecio(val,TARIFAS_ESMALTADO):calcPrecio(val,TARIFAS_ESMALTADO_LOTE);
   else if(tipo==="ambos_lote") precio=val>300?calcPrecio(val,TARIFAS_SANCOCHO)+calcPrecio(val,TARIFAS_ESMALTADO):(calcPrecio(val,TARIFAS_SANCOCHO_LOTE)+calcPrecio(val,TARIFAS_ESMALTADO_LOTE));
   else if(tipo==="clase_esmalte") precio=300;
-  else if(tipo==="pulido_esmaltado") precio=calcPrecio(val,TARIFAS_PULIDO);
+  else if(tipo==="pulido_esmaltado"){precio=calcPrecio(val,TARIFAS_PULIDO);if(precio===-1){showToast("Esta pieza requiere cotización especial");return;}}
   else { const t=tipo==="sancocho"?TARIFAS_SANCOCHO:TARIFAS_ESMALTADO; precio=calcPrecio(val,t); }
   const servicios = JSON.parse(localStorage.getItem("cc_servicios")||"[]");
   const pagado = document.getElementById("srv-pagado")?.value === "si";
