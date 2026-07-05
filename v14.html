@@ -806,10 +806,10 @@ window.renderServicios = () => {
     btn.addEventListener("click", () => {
       const id = btn.getAttribute("data-srv-id");
       const servicios = JSON.parse(localStorage.getItem("cc_servicios")||"[]");
+      const srvToUpdate = servicios.find(s=>s.id===id);
       const updated = servicios.map(s => s.id === id ? {...s, pagado: true} : s);
       localStorage.setItem("cc_servicios", JSON.stringify(updated));
-      // Save to Firebase too
-      fbSet("servicios", id, {...servicios.find(s=>s.id===id), pagado:true});
+      if(srvToUpdate) await fbSet("servicios", id, {...srvToUpdate, pagado: true});
       showToast("✅ Servicio marcado como pagado");
       renderServicios();
       if(document.getElementById("tab-ingresos").style.display!=="none") renderIngresos();
@@ -920,11 +920,10 @@ window.guardarServicio = () => {
   else { const t=tipo==="sancocho"?TARIFAS_SANCOCHO:TARIFAS_ESMALTADO; precio=calcPrecio(val,t); }
   const servicios = JSON.parse(localStorage.getItem("cc_servicios")||"[]");
   const pagado = document.getElementById("srv-pagado")?.value === "si";
-  const nuevoSrv = {id:uid(),nombre,tipo,gramos,precio,fecha,pagado,creadoEn:new Date().toISOString()};
+  const nuevoSrv = {id:uid(),nombre,tipo,gramos,precio,fecha,pagado:!!pagado,creadoEn:new Date().toISOString()};
   servicios.push(nuevoSrv);
   localStorage.setItem("cc_servicios", JSON.stringify(servicios));
-  // Save to Firebase
-  fbSet("servicios", nuevoSrv.id, nuevoSrv);
+  await fbSet("servicios", nuevoSrv.id, nuevoSrv);
   showToast(`✓ Servicio registrado · $${precio}`);
   renderServicios();
   if(document.getElementById("tab-ingresos").style.display!=="none") renderIngresos();
