@@ -809,7 +809,7 @@ window.renderServicios = () => {
       const srvToUpdate = servicios.find(s=>s.id===id);
       const updated = servicios.map(s => s.id === id ? {...s, pagado: true} : s);
       localStorage.setItem("cc_servicios", JSON.stringify(updated));
-      if(srvToUpdate) await fbSet("servicios", id, {...srvToUpdate, pagado: true});
+      if(srvToUpdate) fbSet("servicios", id, {...srvToUpdate, pagado: true});
       showToast("✅ Servicio marcado como pagado");
       renderServicios();
       if(document.getElementById("tab-ingresos").style.display!=="none") renderIngresos();
@@ -923,7 +923,7 @@ window.guardarServicio = () => {
   const nuevoSrv = {id:uid(),nombre,tipo,gramos,precio,fecha,pagado:!!pagado,creadoEn:new Date().toISOString()};
   servicios.push(nuevoSrv);
   localStorage.setItem("cc_servicios", JSON.stringify(servicios));
-  await fbSet("servicios", nuevoSrv.id, nuevoSrv);
+  fbSet("servicios", nuevoSrv.id, nuevoSrv);
   showToast(`✓ Servicio registrado · $${precio}`);
   renderServicios();
   if(document.getElementById("tab-ingresos").style.display!=="none") renderIngresos();
