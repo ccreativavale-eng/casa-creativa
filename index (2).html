@@ -174,6 +174,19 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-editar-alumna">
+  <div class="modal">
+    <div class="modal-header"><span class="serif" style="font-weight:800;font-size:17px">✏️ Editar alumna</span><button class="modal-close" onclick="closeModal('modal-editar-alumna')">×</button></div>
+    <div class="field"><label>Nombre completo *</label><input type="text" id="ea-nombre" placeholder="Ej. María García"></div>
+    <div class="field"><label>Teléfono / WhatsApp</label><input type="text" id="ea-tel" placeholder="55 1234 5678"></div>
+    <div class="field"><label>Correo electrónico</label><input type="email" id="ea-email" placeholder="maria@email.com"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost btn-small" onclick="closeModal('modal-editar-alumna')">Cancelar</button>
+      <button class="btn btn-primary btn-small" id="btn-guardar-edicion-alumna">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-migrar-alumna">
   <div class="modal">
     <div class="modal-header"><span class="serif" style="font-weight:800;font-size:17px">📦 Migrar alumna</span><button class="modal-close" onclick="closeModal('modal-migrar-alumna')">×</button></div>
@@ -199,6 +212,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
         <option value="previo4">📦 Paquete previo · 4 clases · 60 días · $1,160</option>
         <option value="previo6">📦 Paquete previo · 6 clases · 75 días · $1,640</option>
         <option value="previo10">📦 Paquete previo · 10 clases · 105 días · $2,560</option>
+        <option value="prueba">🎁 Clase prueba · 1 clase · 7 días · $0</option>
         <option value="primera">🌱 Primera Pieza · 1 clase · 15 días · $390</option>
         <option value="proceso">🌿 Proceso Completo · 2 clases · 15 días · $750</option>
         <option value="habilidades">🏺 Desarrolla tus Habilidades · 6 clases · 90 días · $2,250</option>
@@ -250,7 +264,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
 
 <div class="modal-overlay" id="modal-ver-alumna">
   <div class="modal" style="max-width:480px">
-    <div class="modal-header"><span class="serif" id="ver-alumna-nombre" style="font-weight:800;font-size:17px"></span><button class="modal-close" onclick="closeModal('modal-ver-alumna')">×</button></div>
+    <div class="modal-header"><span class="serif" id="ver-alumna-nombre" style="font-weight:800;font-size:17px"></span><div style="display:flex;gap:6px"><button id="btn-abrir-editar-alumna" style="background:var(--principal);color:white;border:none;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-family:inherit">✏️ Editar</button><button class="modal-close" onclick="closeModal('modal-ver-alumna')">×</button></div></div>
     <div id="ver-alumna-content"></div>
   </div>
 </div>
@@ -265,6 +279,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
           <option value="previo4">📦 Paquete previo · 4 clases · $1,160</option>
           <option value="previo6">📦 Paquete previo · 6 clases · $1,640</option>
           <option value="previo10">📦 Paquete previo · 10 clases · $2,560</option>
+          <option value="prueba">🎁 Clase prueba · 1 clase · $0</option>
           <option value="primera">🌱 Primera Pieza · 1 clase · $390</option>
           <option value="proceso">🌿 Proceso Completo · 2 clases · $750</option>
           <option value="habilidades">🏺 Desarrolla tus Habilidades · 6 clases · $2,250</option>
@@ -290,6 +305,20 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
   <div class="modal">
     <div class="modal-header"><span class="serif" style="font-weight:800;font-size:17px">Agendar clase</span><button class="modal-close" onclick="closeModal('modal-agendar')">×</button></div>
     <div id="agendar-content"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-bloquear">
+  <div class="modal">
+    <div class="modal-header"><span class="serif" style="font-weight:800;font-size:17px">🚫 Bloquear fechas</span><button class="modal-close" onclick="closeModal('modal-bloquear')">×</button></div>
+    <div style="font-size:13px;color:var(--gris);margin-bottom:16px">Nadie podrá agendar en los días bloqueados.</div>
+    <div class="field"><label>Fecha inicio</label><input type="date" id="bloqueo-inicio"></div>
+    <div class="field"><label>Fecha fin (deja igual si es un solo día)</label><input type="date" id="bloqueo-fin"></div>
+    <div class="field"><label>Motivo (opcional)</label><input type="text" id="bloqueo-motivo" placeholder="Ej. Vacaciones, evento privado…"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost btn-small" onclick="closeModal('modal-bloquear')">Cancelar</button>
+      <button class="btn btn-danger btn-small" id="btn-guardar-bloqueo">Bloquear</button>
+    </div>
   </div>
 </div>
 
@@ -329,6 +358,7 @@ const PAQUETES_DEF = {
   previo4:     {nombre:"Paquete previo · 4 clases",  clases:4,  dias:60,  precio:1160, emoji:"📦", tipo:"paquete"},
   previo6:     {nombre:"Paquete previo · 6 clases",  clases:6,  dias:75,  precio:1640, emoji:"📦", tipo:"paquete"},
   previo10:    {nombre:"Paquete previo · 10 clases", clases:10, dias:105, precio:2560, emoji:"📦", tipo:"paquete"},
+  prueba:      {nombre:"Clase prueba",              clases:1, dias:7,  precio:0,    emoji:"🎁", tipo:"paquete"},
   primera:     {nombre:"Primera Pieza",             clases:1, dias:15, precio:390,  emoji:"🌱", tipo:"paquete"},
   proceso:     {nombre:"Proceso Completo",           clases:2, dias:15, precio:750,  emoji:"🌿", tipo:"paquete"},
   habilidades: {nombre:"Desarrolla tus Habilidades",clases:6, dias:90, precio:2250, emoji:"🏺", tipo:"paquete"},
@@ -352,10 +382,14 @@ const HORARIOS = [
 
 let alumnas=[],reservas=[],asistencias=[];
 let alumnaActiva=null,semanaOffset=0,pkgAlumnaId=null,vistaAgenda="mes",mesOffset=0;
+let bloqueos=[];
+let clasesCerradas=[];
 let agendarHorarioSel=HORARIOS[0].id,agendarFechaSel="";
 let asistenciaReservaId=null;
 
 const hoy=()=>new Date().toISOString().split("T")[0];
+const esBloqueado=f=>bloqueos.some(b=>f>=b.inicio&&f<=b.fin);
+const esCerrada=(hId,f)=>clasesCerradas.some(c=>c.horarioId===hId&&c.fecha===f);
 const addDias=(f,d)=>{const dt=new Date(f+"T12:00:00");dt.setDate(dt.getDate()+d);return dt.toISOString().split("T")[0];};
 const diasRestantes=f=>Math.ceil((new Date(f+"T12:00:00")-new Date())/86400000);
 const fmtFecha=d=>new Date(d+"T12:00:00").toLocaleDateString("es-MX",{day:"numeric",month:"short",year:"numeric"});
@@ -503,6 +537,15 @@ const db = getFirestore(app);
 async function cargarDatos(){
   const[aSnap,rSnap,asSnap,srvSnap,gastosSnap]=await Promise.all([getDocs(collection(db,"alumnas")),getDocs(collection(db,"reservas")),getDocs(collection(db,"asistencias")),getDocs(collection(db,"servicios")),getDocs(collection(db,"gastos"))]);
   alumnas=aSnap.docs.map(d=>({id:d.id,...d.data()}));
+  // Load bloqueos
+  try {
+    const bSnap = await getDocs(collection(db,"bloqueos"));
+    bloqueos = bSnap.docs.map(d=>({id:d.id,...d.data()}));
+  } catch(e) { bloqueos=[]; }
+  try {
+    const ccSnap = await getDocs(collection(db,"clases_cerradas"));
+    clasesCerradas = ccSnap.docs.map(d=>({id:d.id,...d.data()}));
+  } catch(e) { clasesCerradas=[]; }
   reservas=rSnap.docs.map(d=>({id:d.id,...d.data()}));
   asistencias=asSnap.docs.map(d=>({id:d.id,...d.data()}));
   // Merge Firebase services with localStorage
@@ -622,7 +665,8 @@ window.renderAgendaMes=()=>{
   let html=``;
   
   // Month nav
-  html+=`<div class="semana-nav"><button class="nav-btn" id="btn-mes-prev">‹</button><div style="text-align:center"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif;text-transform:capitalize">${nombreMes}</div></div><button class="nav-btn" id="btn-mes-next">›</button></div>`;
+  html+=`<div class="semana-nav"><button class="nav-btn" id="btn-mes-prev">‹</button><div style="text-align:center"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif;text-transform:capitalize">${nombreMes}</div></div><button class="nav-btn" id="btn-mes-next">›</button></div>
+  <div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn btn-danger btn-small" id="btn-abrir-bloqueo">🚫 Bloquear fechas</button></div>`;
   
   // Stats bar
   const totalMes=Object.entries(counts).filter(([f])=>new Date(f+"T12:00:00").getMonth()===mes).reduce((s,[,v])=>s+v.total,0);
@@ -650,8 +694,9 @@ window.renderAgendaMes=()=>{
     const c=counts[fecha];
     const total=c?.total||0;
     const bgIntensity=total===0?"":total<=2?"var(--secundario)33":total<=5?"var(--principal)22":"var(--principal)44";
-    html+=`<div class="cal-day${esHoy?" hoy":""}" style="cursor:pointer;${bgIntensity?"background:"+bgIntensity:""}" data-fecha-dia="${fecha}">`;
-    html+=`<div class="cal-day-num" style="color:${esHoy?"var(--principal)":"var(--grafito)"}">${d}</div>`;
+    const bloq=esBloqueado(fecha);
+    html+=`<div class="cal-day${esHoy?" hoy":""}" style="cursor:pointer;${bloq?"background:#d1362618;border:1px solid #d1362644":bgIntensity?"background:"+bgIntensity:""}" data-fecha-dia="${fecha}">`;
+    html+=`<div class="cal-day-num" style="color:${bloq?"var(--acento2)":esHoy?"var(--principal)":"var(--grafito)"}">${d}${bloq?"🚫":""}</div>`;
     if(c){
       Object.values(c.horarios).forEach(h=>{
         const color=h.tipo==="membresia"?"var(--oro)":"var(--principal)";
@@ -668,10 +713,14 @@ window.renderAgendaMes=()=>{
   
   document.getElementById("tab-agenda").innerHTML=html;
   
-  document.getElementById("btn-vista-semana2")?.addEventListener("click",()=>{vistaAgenda="semana";renderAgenda();});
-  document.getElementById("btn-vista-mes2")?.addEventListener("click",()=>{vistaAgenda="mes";renderAgendaMes();});
   document.getElementById("btn-mes-prev")?.addEventListener("click",()=>{mesOffset--;renderAgendaMes();});
   document.getElementById("btn-mes-next")?.addEventListener("click",()=>{mesOffset++;renderAgendaMes();});
+  document.getElementById("btn-abrir-bloqueo")?.addEventListener("click",()=>{
+    document.getElementById("bloqueo-inicio").value=hoy();
+    document.getElementById("bloqueo-fin").value=hoy();
+    document.getElementById("bloqueo-motivo").value="";
+    openModal("modal-bloquear");
+  });
   document.querySelectorAll("[data-fecha-dia]").forEach(d=>{
     d.addEventListener("click",()=>verDiaDetalle(d.getAttribute("data-fecha-dia")));
   });
@@ -766,8 +815,8 @@ window.renderServicios = () => {
           </div>
           <div style="text-align:right;display:flex;flex-direction:column;gap:4px;align-items:flex-end">
             <div style="font-weight:800;font-size:16px;color:var(--principal)">$${s.precio}</div>
-            ${!s.pagado?`<button data-srv-id="${s.id}" style="font-size:11px;background:var(--verde);color:white;border:none;border-radius:6px;padding:2px 8px;cursor:pointer;font-family:inherit">✓ Pagado</button>`:""}
-            <button data-srv-del="${s.id}" style="font-size:11px;background:var(--acento2);color:white;border:none;border-radius:6px;padding:2px 8px;cursor:pointer;font-family:inherit">✕ Borrar</button>
+            ${!s.pagado?`<button data-srv-id="${s.id}" style="font-size:11px;background:var(--verde);color:white;border:none;border-radius:6px;padding:2px 8px;cursor:pointer;font-family:inherit">✓ Pagado</button>
+            <button data-srv-del="${s.id}" style="font-size:11px;background:var(--acento2);color:white;border:none;border-radius:6px;padding:2px 8px;cursor:pointer;font-family:inherit">✕ Borrar</button>`:""}
           </div>
         </div>
       </div>`;
@@ -936,6 +985,20 @@ window.verDiaDetalle = (fecha) => {
   const resDelDia = reservas.filter(r=>r.fecha===fecha&&r.estado!=="cancelada");
   const fechaFmt = new Date(fecha+"T12:00:00").toLocaleDateString("es-MX",{weekday:"long",day:"numeric",month:"long"});
   document.getElementById("dia-detalle-titulo").textContent = "📅 "+fechaFmt;
+  const bloqDia = bloqueos.find(b=>fecha>=b.inicio&&fecha<=b.fin);
+  if(bloqDia){
+    document.getElementById("dia-detalle-content").innerHTML = `<div style="text-align:center;padding:20px"><div style="font-size:40px;margin-bottom:8px">🚫</div><div style="font-weight:700;color:var(--acento2)">Día bloqueado</div>${bloqDia.motivo?`<div style="font-size:13px;color:var(--gris);margin-top:4px">${bloqDia.motivo}</div>`:""}<button id="btn-desbloquear-dia" data-bloqueo-id="${bloqDia.id}" style="margin-top:16px;background:var(--verde);color:white;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-family:inherit;font-weight:700">✓ Desbloquear</button></div>`;
+    openModal("modal-dia-detalle");
+    document.getElementById("btn-desbloquear-dia")?.addEventListener("click",async()=>{
+      const bId=document.getElementById("btn-desbloquear-dia").getAttribute("data-bloqueo-id");
+      bloqueos=bloqueos.filter(b=>b.id!==bId);
+      await fbDelete("bloqueos",bId);
+      closeModal("modal-dia-detalle");
+      renderAgendaMes();
+      showToast("✓ Día desbloqueado");
+    });
+    return;
+  }
   if(!resDelDia.length){
     document.getElementById("dia-detalle-content").innerHTML = `<div class="empty-state"><div style="font-size:32px;margin-bottom:8px">📅</div><div>Sin reservas este día</div></div>`;
     openModal("modal-dia-detalle");
@@ -950,7 +1013,15 @@ window.verDiaDetalle = (fecha) => {
   let html = "";
   Object.entries(porHorario).forEach(([hId, res])=>{
     const h = HORARIOS.find(hh=>hh.id===hId);
-    html += `<div style="font-weight:800;font-size:13px;color:var(--principal);margin-bottom:6px;margin-top:12px">${h?h.hora:"—"} · ${res.length}/${CUPO_MAX} lugares</div>`;
+    const cerrada = esCerrada(hId, fecha);
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;margin-top:12px">
+      <div style="font-weight:800;font-size:13px;color:${cerrada?"var(--acento2)":"var(--principal)"}">
+        ${cerrada?"🔒 ":""}${h?h.hora:"—"} · ${res.length}/${CUPO_MAX} lugares
+      </div>
+      <button data-toggle-clase="${hId}|${fecha}" style="font-size:11px;background:${cerrada?"var(--verde)":"var(--acento2)"};color:white;border:none;border-radius:6px;padding:3px 8px;cursor:pointer;font-family:inherit;font-weight:700">
+        ${cerrada?"🔓 Abrir":"🔒 Cerrar"}
+      </button>
+    </div>`;
     res.forEach(r=>{
       const al = alumnas.find(a=>a.id===r.alumnaId);
       const yaA = r.estado==="asistida", esFalta = r.estado==="falta";
@@ -971,6 +1042,24 @@ window.verDiaDetalle = (fecha) => {
   });
   document.getElementById("dia-detalle-content").innerHTML = html;
   openModal("modal-dia-detalle");
+  document.querySelectorAll("[data-toggle-clase]").forEach(btn=>{
+    btn.addEventListener("click",async()=>{
+      const [hId,fecha]=btn.getAttribute("data-toggle-clase").split("|");
+      const existing=clasesCerradas.find(c=>c.horarioId===hId&&c.fecha===fecha);
+      if(existing){
+        clasesCerradas=clasesCerradas.filter(c=>!(c.horarioId===hId&&c.fecha===fecha));
+        await fbDelete("clases_cerradas",existing.id);
+        showToast("🔓 Clase abierta");
+      } else {
+        const nuevo={id:uid(),horarioId:hId,fecha,creadoEn:new Date().toISOString()};
+        clasesCerradas.push(nuevo);
+        await fbSet("clases_cerradas",nuevo.id,nuevo);
+        showToast("🔒 Clase cerrada — los ya agendados se quedan");
+      }
+      closeModal("modal-dia-detalle");
+      renderAgendaMes();
+    });
+  });
   document.querySelectorAll("[data-dia-asistio]").forEach(btn=>{
     btn.addEventListener("click",async()=>{
       const rId=btn.getAttribute("data-dia-asistio");
@@ -1111,6 +1200,19 @@ window.updateMigFecha = () => {
   preview.innerHTML=`${clases} clase${clases!==1?"s":""} pendiente${clases!==1?"s":""} · Expira el <strong>${fmtFecha(expira)}</strong>`;
 };
 
+window.guardarBloqueo = async() => {
+  const inicio = document.getElementById("bloqueo-inicio")?.value;
+  const fin = document.getElementById("bloqueo-fin")?.value||inicio;
+  const motivo = document.getElementById("bloqueo-motivo")?.value||"";
+  if(!inicio)return;
+  const nuevo = {id:uid(), inicio, fin:fin>=inicio?fin:inicio, motivo, creadoEn:new Date().toISOString()};
+  bloqueos.push(nuevo);
+  await fbSet("bloqueos", nuevo.id, nuevo);
+  closeModal("modal-bloquear");
+  renderAgendaMes();
+  showToast("🚫 Fechas bloqueadas: "+inicio+(fin!==inicio?" → "+fin:""));
+};
+
 window.guardarMigracion = async() => {
   const nombre = document.getElementById("mig-nombre")?.value?.trim();
   const tel = document.getElementById("mig-tel")?.value?.trim();
@@ -1222,6 +1324,12 @@ window.verAlumna=id=>{
   }
   html+=`<div style="display:flex;gap:8px;justify-content:space-between;margin-top:12px"><button class="btn btn-danger btn-small" onclick="eliminarAlumna('${id}')">Eliminar alumna</button><button class="btn btn-ghost btn-small" onclick="closeModal('modal-ver-alumna')">Cerrar</button></div>`;
   document.getElementById("ver-alumna-content").innerHTML=html;openModal("modal-ver-alumna");
+  document.getElementById("btn-abrir-editar-alumna")?.addEventListener("click",()=>{
+    document.getElementById("ea-nombre").value=a.nombre||"";
+    document.getElementById("ea-tel").value=a.telefono||"";
+    document.getElementById("ea-email").value=a.correo||"";
+    openModal("modal-editar-alumna");
+  });
   
   // Guardar nota
   document.querySelectorAll("[data-guardar-nota]").forEach(btn=>{
@@ -1301,6 +1409,22 @@ window.verAlumna=id=>{
       else showToast("✓ Clase de hoy registrada para "+a.nombre.split(" ")[0]);
     });
   }
+};
+
+window.guardarEdicionAlumna=async()=>{
+  const id=window._editAlumnaActualId;
+  const nombre=document.getElementById("ea-nombre")?.value?.trim();
+  if(!nombre)return;
+  const a=alumnas.find(x=>x.id===id);
+  if(!a)return;
+  a.nombre=nombre;
+  a.telefono=document.getElementById("ea-tel")?.value||"";
+  a.correo=document.getElementById("ea-email")?.value||"";
+  await fbUpdate("alumnas",id,{nombre:a.nombre,telefono:a.telefono,correo:a.correo});
+  closeModal("modal-editar-alumna");
+  closeModal("modal-ver-alumna");
+  renderAlumnas();
+  showToast("✓ Alumna actualizada");
 };
 
 window.guardarEdicionPaquete=async()=>{
@@ -1424,7 +1548,7 @@ window.renderAgendarContent=()=>{
       <div style="font-size:10px;margin-top:1px">${hh.hora}</div>
     </button>`).join("")}
   </div><div style="font-size:12px;color:var(--gris);margin-bottom:8px;font-weight:700;letter-spacing:.3px">ELIGE FECHA</div><div id="fechas-container" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">`;
-  fechas.forEach(f=>{const c=cupoDisponible(agendarHorarioSel,f),sel=agendarFechaSel===f;html+=`<button class="fecha-btn${sel?" sel":c===0?" lleno":""}" data-fecha="${f}" data-cupo="${c}"><div style="font-weight:700;font-size:13px">${new Date(f+"T12:00:00").toLocaleDateString("es-MX",{day:"numeric",month:"short"})}</div><div style="font-size:10px;margin-top:2px">${c>0?c+" lugar"+(c!==1?"es":""):"Lleno"}</div></button>`;});
+  fechas.forEach(f=>{const c=cupoDisponible(agendarHorarioSel,f),sel=agendarFechaSel===f,bloq=esBloqueado(f),cerr=esCerrada(agendarHorarioSel,f);html+=`<button class="fecha-btn${sel?" sel":c===0||bloq||cerr?" lleno":""}" data-fecha="${f}" data-cupo="${bloq||cerr?0:c}"><div style="font-weight:700;font-size:13px">${new Date(f+"T12:00:00").toLocaleDateString("es-MX",{day:"numeric",month:"short"})}</div><div style="font-size:10px;margin-top:2px">${bloq?"🚫 Bloqueado":cerr?"🔒 Cerrada":c>0?c+" lugar"+(c!==1?"es":""):"Lleno"}</div></button>`;});
   html+=`</div>${agendarFechaSel?`<div class="aviso aviso-rosa" style="font-size:13px;margin-bottom:14px">📅 ${new Date(agendarFechaSel+"T12:00:00").toLocaleDateString("es-MX",{weekday:"long",day:"numeric",month:"long"})}<br>⏰ ${h?.hora}</div>`:""}<div class="aviso aviso-oro" style="font-size:12px;line-height:1.5;margin-bottom:16px">⚠️ Recuerda cancelar con al menos <strong>24 horas de anticipación</strong>.</div><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-ghost btn-small" id="btn-cancelar-agendar">Cancelar</button><button class="btn btn-primary btn-small" id="btn-confirmar-agendar"${!agendarFechaSel?" disabled":""}>Confirmar</button></div>`;
   document.getElementById("agendar-content").innerHTML=html;
   document.querySelectorAll("[data-horario]").forEach(btn=>{
@@ -1442,6 +1566,8 @@ window.confirmarReserva=async()=>{
   if(!agendarFechaSel)return;
   const paquete=getPaqueteActivo(alumnaActiva);
   if(!paquete&&!window._agendarDesdeMaestra)return;
+  if(esBloqueado(agendarFechaSel)){showToast("❌ Esa fecha está bloqueada");return;}
+  if(esCerrada(agendarHorarioSel,agendarFechaSel)){showToast("❌ Esa clase está cerrada");return;}
   if(reservas.some(r=>r.alumnaId===alumnaActiva.id&&r.horarioId===agendarHorarioSel&&r.fecha===agendarFechaSel&&r.estado!=="cancelada")){showToast("Ya hay reserva en ese horario");return;}
   if(cupoDisponible(agendarHorarioSel,agendarFechaSel)<=0){showToast("❌ Sin cupo");return;}
   const nueva={id:uid(),alumnaId:alumnaActiva.id,paqueteId:paquete?.id||"sin-paquete",horarioId:agendarHorarioSel,fecha:agendarFechaSel,estado:"reservada",creadaEn:new Date().toISOString()};
@@ -1479,6 +1605,12 @@ document.addEventListener("click", function(e) {
   }
   if (e.target.id === "btn-guardar-edicion-paquete" || e.target.closest("#btn-guardar-edicion-paquete")) {
     guardarEdicionPaquete(); return;
+  }
+  if (e.target.id === "btn-guardar-edicion-alumna" || e.target.closest("#btn-guardar-edicion-alumna")) {
+    guardarEdicionAlumna(); return;
+  }
+  if (e.target.id === "btn-guardar-bloqueo" || e.target.closest("#btn-guardar-bloqueo")) {
+    guardarBloqueo(); return;
   }
   if (e.target.id === "btn-semana-prev" || e.target.closest("#btn-semana-prev")) {
     semanaOffset--; renderAgenda(); return;
