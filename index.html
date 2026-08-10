@@ -40,6 +40,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
 .field textarea{resize:vertical;min-height:70px;}
 .badge{display:inline-block;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:700;white-space:nowrap;}
 .modal-overlay{display:none;position:fixed;inset:0;background:#00000077;z-index:200;align-items:center;justify-content:center;padding:16px;}
+.modal-overlay.open{display:flex;z-index:300;}
 .modal-overlay.open{display:flex;}
 .modal{background:var(--blanco);border-radius:18px;padding:24px;width:100%;max-width:420px;max-height:92vh;overflow-y:auto;box-shadow:0 16px 60px #00000025;}
 .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
@@ -133,6 +134,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
       <button class="tab" onclick="setTab('ingresos')">💰 Ingresos</button>
       <button class="tab" onclick="setTab('servicios')">🔥 Servicios</button>
       <button class="tab" onclick="setTab('gastos')">📊 Gastos</button>
+      <button class="tab" onclick="setTab('estadisticas')">📈 Stats</button>
     </div>
   </div>
   <div class="max" style="padding-top:16px;padding-bottom:80px;flex:1">
@@ -141,6 +143,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
     <div id="tab-ingresos" style="display:none"></div>
     <div id="tab-servicios" style="display:none"></div>
     <div id="tab-gastos" style="display:none"></div>
+    <div id="tab-estadisticas" style="display:none"></div>
   </div>
   <button class="fab" onclick="goLogin()">🌸 Vista alumna</button>
 </div>
@@ -174,6 +177,19 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-editar-alumna">
+  <div class="modal">
+    <div class="modal-header"><span class="serif" style="font-weight:800;font-size:17px">✏️ Editar alumna</span><button class="modal-close" onclick="closeModal('modal-editar-alumna')">×</button></div>
+    <div class="field"><label>Nombre completo *</label><input type="text" id="ea-nombre" placeholder="Ej. María García"></div>
+    <div class="field"><label>Teléfono / WhatsApp</label><input type="text" id="ea-tel" placeholder="55 1234 5678"></div>
+    <div class="field"><label>Correo electrónico</label><input type="email" id="ea-email" placeholder="maria@email.com"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost btn-small" onclick="closeModal('modal-editar-alumna')">Cancelar</button>
+      <button class="btn btn-primary btn-small" id="btn-guardar-edicion-alumna">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-migrar-alumna">
   <div class="modal">
     <div class="modal-header"><span class="serif" style="font-weight:800;font-size:17px">📦 Migrar alumna</span><button class="modal-close" onclick="closeModal('modal-migrar-alumna')">×</button></div>
@@ -199,6 +215,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
         <option value="previo4">📦 Paquete previo · 4 clases · 60 días · $1,160</option>
         <option value="previo6">📦 Paquete previo · 6 clases · 75 días · $1,640</option>
         <option value="previo10">📦 Paquete previo · 10 clases · 105 días · $2,560</option>
+        <option value="prueba">🎁 Clase prueba · 1 clase · 7 días · $0</option>
         <option value="primera">🌱 Primera Pieza · 1 clase · 15 días · $390</option>
         <option value="proceso">🌿 Proceso Completo · 2 clases · 15 días · $750</option>
         <option value="habilidades">🏺 Desarrolla tus Habilidades · 6 clases · 90 días · $2,250</option>
@@ -250,7 +267,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
 
 <div class="modal-overlay" id="modal-ver-alumna">
   <div class="modal" style="max-width:480px">
-    <div class="modal-header"><span class="serif" id="ver-alumna-nombre" style="font-weight:800;font-size:17px"></span><button class="modal-close" onclick="closeModal('modal-ver-alumna')">×</button></div>
+    <div class="modal-header"><span class="serif" id="ver-alumna-nombre" style="font-weight:800;font-size:17px"></span><div style="display:flex;gap:6px"><button id="btn-abrir-editar-alumna" style="background:var(--principal);color:white;border:none;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-family:inherit">✏️ Editar</button><button class="modal-close" onclick="closeModal('modal-ver-alumna')">×</button></div></div>
     <div id="ver-alumna-content"></div>
   </div>
 </div>
@@ -265,6 +282,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
           <option value="previo4">📦 Paquete previo · 4 clases · $1,160</option>
           <option value="previo6">📦 Paquete previo · 6 clases · $1,640</option>
           <option value="previo10">📦 Paquete previo · 10 clases · $2,560</option>
+          <option value="prueba">🎁 Clase prueba · 1 clase · $0</option>
           <option value="primera">🌱 Primera Pieza · 1 clase · $390</option>
           <option value="proceso">🌿 Proceso Completo · 2 clases · $750</option>
           <option value="habilidades">🏺 Desarrolla tus Habilidades · 6 clases · $2,250</option>
@@ -279,6 +297,13 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
     <div class="field"><label>Clases restantes</label><input type="number" id="edit-pkg-clases" placeholder="Ej. 4"></div>
     <div class="field"><label>Monto pagado ($)</label><input type="number" id="edit-pkg-monto" placeholder="Ej. 2250"></div>
     <div class="field"><label>Fecha de vencimiento</label><input type="date" id="edit-pkg-expira"></div>
+    <div class="field"><label>Método de pago</label>
+      <select id="edit-pkg-metodo">
+        <option value="efectivo">💵 Efectivo</option>
+        <option value="transferencia">🏦 Transferencia</option>
+        <option value="mixto">🔀 Mixto</option>
+      </select>
+    </div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="btn btn-ghost btn-small" onclick="closeModal('modal-editar-paquete')">Cancelar</button>
       <button class="btn btn-primary btn-small" id="btn-guardar-edicion-paquete">Guardar cambios</button>
@@ -290,6 +315,45 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
   <div class="modal">
     <div class="modal-header"><span class="serif" style="font-weight:800;font-size:17px">Agendar clase</span><button class="modal-close" onclick="closeModal('modal-agendar')">×</button></div>
     <div id="agendar-content"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-ingreso-libre">
+  <div class="modal">
+    <div class="modal-header"><span class="serif" style="font-weight:800;font-size:17px">💰 Ingreso libre</span><button class="modal-close" onclick="closeModal('modal-ingreso-libre')">×</button></div>
+    <div class="field">
+      <label>Nombre</label>
+      <input type="text" id="il-nombre" placeholder="Ej. María García" autocomplete="off">
+      <div id="il-sugerencias" style="background:var(--blanco);border:1.5px solid var(--hueso2);border-radius:9px;margin-top:2px;display:none;max-height:120px;overflow-y:auto;"></div>
+    </div>
+    <div class="field"><label>Concepto</label><input type="text" id="il-concepto" placeholder="Ej. Clase extra, material, etc."></div>
+    <div class="field"><label>Monto ($)</label><input type="number" id="il-monto" placeholder="Ej. 300"></div>
+    <div class="field"><label>Método de pago</label>
+      <select id="il-metodo">
+        <option value="efectivo">💵 Efectivo</option>
+        <option value="transferencia">🏦 Transferencia</option>
+        <option value="mixto">🔀 Mixto</option>
+      </select>
+    </div>
+    <div class="field"><label>Fecha</label><input type="date" id="il-fecha"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost btn-small" onclick="closeModal('modal-ingreso-libre')">Cancelar</button>
+      <button class="btn btn-primary btn-small" id="btn-guardar-ingreso-libre">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-bloquear">
+  <div class="modal">
+    <div class="modal-header"><span class="serif" style="font-weight:800;font-size:17px">🚫 Bloquear fechas</span><button class="modal-close" onclick="closeModal('modal-bloquear')">×</button></div>
+    <div style="font-size:13px;color:var(--gris);margin-bottom:16px">Nadie podrá agendar en los días bloqueados.</div>
+    <div class="field"><label>Fecha inicio</label><input type="date" id="bloqueo-inicio"></div>
+    <div class="field"><label>Fecha fin (deja igual si es un solo día)</label><input type="date" id="bloqueo-fin"></div>
+    <div class="field"><label>Motivo (opcional)</label><input type="text" id="bloqueo-motivo" placeholder="Ej. Vacaciones, evento privado…"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost btn-small" onclick="closeModal('modal-bloquear')">Cancelar</button>
+      <button class="btn btn-danger btn-small" id="btn-guardar-bloqueo">Bloquear</button>
+    </div>
   </div>
 </div>
 
@@ -307,9 +371,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
   </div>
 </div>
 
-<script>
-// Firebase loaded dynamically
-let db, collection, doc, getDocs, setDoc, updateDoc, deleteDoc;
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+import { getFirestore, collection, doc, getDocs, setDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAY-ZGwYfqWbTRI7BL6xGp87SxiGt15OU8",
@@ -323,12 +387,13 @@ const firebaseConfig = {
 // Firebase initialized in cargarDatos
 
 const CLAVE = "1512";
-const CUPO_MAX = 8;
+const CUPO_MAX = 6;
 const PAQUETES_DEF = {
   previo1:     {nombre:"Paquete previo · 1 clase",   clases:1,  dias:15,  precio:320,  emoji:"📦", tipo:"paquete"},
   previo4:     {nombre:"Paquete previo · 4 clases",  clases:4,  dias:60,  precio:1160, emoji:"📦", tipo:"paquete"},
   previo6:     {nombre:"Paquete previo · 6 clases",  clases:6,  dias:75,  precio:1640, emoji:"📦", tipo:"paquete"},
   previo10:    {nombre:"Paquete previo · 10 clases", clases:10, dias:105, precio:2560, emoji:"📦", tipo:"paquete"},
+  prueba:      {nombre:"Clase prueba",              clases:1, dias:7,  precio:0,    emoji:"🎁", tipo:"paquete"},
   primera:     {nombre:"Primera Pieza",             clases:1, dias:15, precio:390,  emoji:"🌱", tipo:"paquete"},
   proceso:     {nombre:"Proceso Completo",           clases:2, dias:15, precio:750,  emoji:"🌿", tipo:"paquete"},
   habilidades: {nombre:"Desarrolla tus Habilidades",clases:6, dias:90, precio:2250, emoji:"🏺", tipo:"paquete"},
@@ -352,10 +417,14 @@ const HORARIOS = [
 
 let alumnas=[],reservas=[],asistencias=[];
 let alumnaActiva=null,semanaOffset=0,pkgAlumnaId=null,vistaAgenda="mes",mesOffset=0;
+let bloqueos=[];
+let clasesCerradas=[];
 let agendarHorarioSel=HORARIOS[0].id,agendarFechaSel="";
 let asistenciaReservaId=null;
 
 const hoy=()=>new Date().toISOString().split("T")[0];
+const esBloqueado=f=>bloqueos.some(b=>f>=b.inicio&&f<=b.fin);
+const esCerrada=(hId,f)=>clasesCerradas.some(c=>c.horarioId===hId&&c.fecha===f);
 const addDias=(f,d)=>{const dt=new Date(f+"T12:00:00");dt.setDate(dt.getDate()+d);return dt.toISOString().split("T")[0];};
 const diasRestantes=f=>Math.ceil((new Date(f+"T12:00:00")-new Date())/86400000);
 const fmtFecha=d=>new Date(d+"T12:00:00").toLocaleDateString("es-MX",{day:"numeric",month:"short",year:"numeric"});
@@ -373,6 +442,13 @@ const metodoLabel=m=>m==="efectivo"?"💵 Efectivo":m==="transferencia"?"🏦 Tr
 const pagoVencido=p=>p.segundoPago&&!p.segundoPago.pagado&&p.segundoPago.fechaLimite&&diasRestantes(p.segundoPago.fechaLimite)<0;
 const pagoPendiente=p=>p.segundoPago&&!p.segundoPago.pagado&&p.segundoPago.fechaLimite&&diasRestantes(p.segundoPago.fechaLimite)>=0;
 const necesitaRenovar=a=>{const act=getPaqueteActivo(a);return act&&act.clasesRestantes<=2;};
+const alertaPiezaAlumna=a=>{
+  if(!a.piezaLista)return null;
+  const dias=Math.ceil((new Date(a.piezaLista.expira+"T12:00:00")-new Date())/86400000);
+  if(dias<0)return "vencida";
+  if(dias<=7)return "pronto";
+  return null;
+};
 
 let toastTimer;
 const showToast=msg=>{const t=document.getElementById("toast");t.textContent=msg;t.style.display="block";clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.display="none",2400);};
@@ -490,16 +566,121 @@ window.renderGastos = () => {
   });
 };
 
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+window.guardarIngresoLibre = async() => {
+  const nombre = document.getElementById("il-nombre")?.value?.trim();
+  const concepto = document.getElementById("il-concepto")?.value?.trim();
+  const monto = parseFloat(document.getElementById("il-monto")?.value||0);
+  const fecha = document.getElementById("il-fecha")?.value;
+  if(!nombre||!concepto||!monto) { showToast("Completa todos los campos"); return; }
+  const metodo = document.getElementById("il-metodo")?.value||"efectivo";
+  const editId = window._editLibreId;
+  if(editId){
+    // Edit existing
+    const srvs=JSON.parse(localStorage.getItem("cc_servicios")||"[]");
+    const updated=srvs.map(s=>s.id===editId?{...s,nombre,concepto,monto,fecha,metodo,fechaISO:fecha}:s);
+    localStorage.setItem("cc_servicios",JSON.stringify(updated));
+    const updatedItem=updated.find(s=>s.id===editId);
+    await fbSet("servicios",editId,updatedItem);
+    if(window._serviciosFirebase) window._serviciosFirebase=window._serviciosFirebase.map(s=>s.id===editId?updatedItem:s);
+    window._editLibreId=null;
+    closeModal("modal-ingreso-libre");
+    showToast("✓ Ingreso actualizado");
+    renderIngresosInterno();
+    return;
+  }
+  const nuevo = {id:uid(), nombre, concepto, monto, fecha, tipo:"libre", metodo, pagado:true, fechaISO:fecha, creadoEn:new Date().toISOString()};
+  // Save to localStorage and Firebase
+  const servicios = JSON.parse(localStorage.getItem("cc_servicios")||"[]");
+  servicios.push(nuevo);
+  localStorage.setItem("cc_servicios", JSON.stringify(servicios));
+  await fbSet("servicios", nuevo.id, nuevo);
+  // Update _serviciosFirebase immediately
+  if(!window._serviciosFirebase) window._serviciosFirebase=[];
+  window._serviciosFirebase.push(nuevo);
+  closeModal("modal-ingreso-libre");
+  showToast("✓ Ingreso registrado · $"+monto.toLocaleString("es-MX"));
+  renderIngresosInterno();
+};
+
+window.renderEstadisticas=()=>{
+  const hoyStr=hoy();
+  const semanaAtras=addDias(hoyStr,-7);
+  const mesActual=hoyStr.slice(0,7);
+  const mesAnterior=new Date(new Date().getFullYear(),new Date().getMonth()-1,1).toISOString().slice(0,7);
+
+  // Alumnas activas
+  const activas=alumnas.filter(a=>getPaqueteActivo(a));
+  const nuevasEsteMes=alumnas.filter(a=>a.creadaEn&&a.creadaEn.slice(0,7)===mesActual);
+
+  // Reservas esta semana y este mes
+  const resSemana=reservas.filter(r=>r.estado!=="cancelada"&&r.fecha>=semanaAtras&&r.fecha<=hoyStr);
+  const resMes=reservas.filter(r=>r.estado!=="cancelada"&&r.fecha&&r.fecha.slice(0,7)===mesActual);
+  const resMesAnt=reservas.filter(r=>r.estado!=="cancelada"&&r.fecha&&r.fecha.slice(0,7)===mesAnterior);
+
+  // Paquetes activos por tipo
+  const pkgCount={};
+  activas.forEach(a=>{
+    const p=getPaqueteActivo(a);
+    if(p){
+      const nombre=PAQUETES_DEF[p.paqueteDefId]?.nombre||PAQUETES_DEF[p.tipo]?.nombre||PAQUETES_DEF[p.paquete]?.nombre||p.nombre||p.paqueteDefId||p.tipo||p.paquete||"Sin tipo";
+      pkgCount[nombre]=(pkgCount[nombre]||0)+1;
+    }
+  });
+
+  // Asistencias este mes
+  const asisEstesMes=Object.values(asistencias||{}).filter(v=>v.fecha&&v.fecha.slice(0,7)===mesActual&&v.asistio).length;
+
+  let html=`<div style="font-weight:800;font-size:16px;font-family:'DM Serif Display',serif;margin-bottom:16px">📈 Estadísticas</div>`;
+
+  // Summary cards
+  html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">
+    <div class="card" style="text-align:center"><div style="font-size:28px;font-weight:800;color:var(--principal)">${activas.length}</div><div style="font-size:12px;color:var(--gris)">Alumnas activas</div></div>
+    <div class="card" style="text-align:center"><div style="font-size:28px;font-weight:800;color:var(--verde)">${nuevasEsteMes.length}</div><div style="font-size:12px;color:var(--gris)">Nuevas este mes</div></div>
+    <div class="card" style="text-align:center"><div style="font-size:28px;font-weight:800;color:var(--oro)">${resSemana.length}</div><div style="font-size:12px;color:var(--gris)">Clases última semana</div></div>
+    <div class="card" style="text-align:center"><div style="font-size:28px;font-weight:800;color:var(--complemento)">${resMes.length}</div><div style="font-size:12px;color:var(--gris)">Clases este mes</div></div>
+  </div>`;
+
+  // Clases por mes comparison
+  html+=`<div class="card" style="margin-bottom:14px"><div style="font-weight:700;margin-bottom:10px">📅 Clases por mes</div>
+    <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--hueso2);font-size:13px"><span>Este mes</span><span style="font-weight:700">${resMes.length} clases</span></div>
+    <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px"><span>Mes anterior</span><span style="font-weight:700">${resMesAnt.length} clases</span></div>
+  </div>`;
+
+  // Paquetes por tipo
+  html+=`<div class="card" style="margin-bottom:14px"><div style="font-weight:700;margin-bottom:10px">🏺 Paquetes activos por tipo</div>`;
+  if(Object.keys(pkgCount).length===0){
+    html+=`<div style="color:var(--gris);font-size:13px">No hay paquetes activos</div>`;
+  } else {
+    Object.entries(pkgCount).sort((a,b)=>b[1]-a[1]).forEach(([tipo,count])=>{
+      html+=`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--hueso2);font-size:13px"><span>${tipo}</span><span style="font-weight:700;color:var(--principal)">${count} alumna${count!==1?"s":""}</span></div>`;
+    });
+  }
+  html+=`</div>`;
+
+  // Asistencias
+  html+=`<div class="card"><div style="font-weight:700;margin-bottom:10px">✅ Asistencias este mes</div>
+    <div style="font-size:28px;font-weight:800;color:var(--verde);text-align:center">${asisEstesMes}</div>
+    <div style="font-size:12px;color:var(--gris);text-align:center">clases registradas</div>
+  </div>`;
+
+  document.getElementById("tab-estadisticas").innerHTML=html;
+};
+
 async function cargarDatos(){
-  // Dynamic Firebase import
-  const fbApp = await import("https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js");
-  const fbStore = await import("https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js");
-  collection = fbStore.collection; doc = fbStore.doc; getDocs = fbStore.getDocs;
-  setDoc = fbStore.setDoc; updateDoc = fbStore.updateDoc; deleteDoc = fbStore.deleteDoc;
-  const app = fbApp.initializeApp(firebaseConfig);
-  db = fbStore.getFirestore(app);
   const[aSnap,rSnap,asSnap,srvSnap,gastosSnap]=await Promise.all([getDocs(collection(db,"alumnas")),getDocs(collection(db,"reservas")),getDocs(collection(db,"asistencias")),getDocs(collection(db,"servicios")),getDocs(collection(db,"gastos"))]);
   alumnas=aSnap.docs.map(d=>({id:d.id,...d.data()}));
+  // Load bloqueos
+  try {
+    const bSnap = await getDocs(collection(db,"bloqueos"));
+    bloqueos = bSnap.docs.map(d=>({id:d.id,...d.data()}));
+  } catch(e) { bloqueos=[]; }
+  try {
+    const ccSnap = await getDocs(collection(db,"clases_cerradas"));
+    clasesCerradas = ccSnap.docs.map(d=>({id:d.id,...d.data()}));
+  } catch(e) { clasesCerradas=[]; }
   reservas=rSnap.docs.map(d=>({id:d.id,...d.data()}));
   asistencias=asSnap.docs.map(d=>({id:d.id,...d.data()}));
   // Merge Firebase services with localStorage
@@ -540,9 +721,9 @@ window.entrarAlumna=()=>{if(!alumnaLoginSel)return;alumnaActiva=alumnas.find(x=>
 window.entrarMaestra=()=>{if(document.getElementById("input-clave").value===CLAVE){renderMaestra();showScreen("maestra");}else{document.getElementById("error-clave").style.display="block";setTimeout(()=>document.getElementById("error-clave").style.display="none",2000);}};
 
 window.setTab=name=>{
-  ["agenda","alumnas","ingresos","servicios","gastos"].forEach(t=>{document.getElementById("tab-"+t).style.display=t===name?"block":"none";});
-  document.querySelectorAll(".tab").forEach((b,i)=>b.classList.toggle("active",["agenda","alumnas","ingresos","servicios","gastos"][i]===name));
-  if(name==="agenda")renderAgenda();if(name==="alumnas")renderAlumnas();if(name==="ingresos")renderIngresos();if(name==="servicios")renderServicios();if(name==="gastos")renderGastos();
+  ["agenda","alumnas","ingresos","servicios","gastos","estadisticas"].forEach(t=>{document.getElementById("tab-"+t).style.display=t===name?"block":"none";});
+  document.querySelectorAll(".tab").forEach((b,i)=>b.classList.toggle("active",["agenda","alumnas","ingresos","servicios","gastos","estadisticas"][i]===name));
+  if(name==="agenda")renderAgenda();if(name==="alumnas")renderAlumnas();if(name==="ingresos")renderIngresos();if(name==="servicios")renderServicios();if(name==="gastos")renderGastos();if(name==="estadisticas")renderEstadisticas();
 };
 const renderMaestra=()=>renderAgenda();
 
@@ -619,7 +800,8 @@ window.renderAgendaMes=()=>{
   let html=``;
   
   // Month nav
-  html+=`<div class="semana-nav"><button class="nav-btn" id="btn-mes-prev">‹</button><div style="text-align:center"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif;text-transform:capitalize">${nombreMes}</div></div><button class="nav-btn" id="btn-mes-next">›</button></div>`;
+  html+=`<div class="semana-nav"><button class="nav-btn" id="btn-mes-prev">‹</button><div style="text-align:center"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif;text-transform:capitalize">${nombreMes}</div></div><button class="nav-btn" id="btn-mes-next">›</button></div>
+  <div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn btn-danger btn-small" id="btn-abrir-bloqueo">🚫 Bloquear fechas</button></div>`;
   
   // Stats bar
   const totalMes=Object.entries(counts).filter(([f])=>new Date(f+"T12:00:00").getMonth()===mes).reduce((s,[,v])=>s+v.total,0);
@@ -647,8 +829,9 @@ window.renderAgendaMes=()=>{
     const c=counts[fecha];
     const total=c?.total||0;
     const bgIntensity=total===0?"":total<=2?"var(--secundario)33":total<=5?"var(--principal)22":"var(--principal)44";
-    html+=`<div class="cal-day${esHoy?" hoy":""}" style="cursor:pointer;${bgIntensity?"background:"+bgIntensity:""}" data-fecha-dia="${fecha}">`;
-    html+=`<div class="cal-day-num" style="color:${esHoy?"var(--principal)":"var(--grafito)"}">${d}</div>`;
+    const bloq=esBloqueado(fecha);
+    html+=`<div class="cal-day${esHoy?" hoy":""}" style="cursor:pointer;${bloq?"background:#d1362618;border:1px solid #d1362644":bgIntensity?"background:"+bgIntensity:""}" data-fecha-dia="${fecha}">`;
+    html+=`<div class="cal-day-num" style="color:${bloq?"var(--acento2)":esHoy?"var(--principal)":"var(--grafito)"}">${d}${bloq?"🚫":""}</div>`;
     if(c){
       Object.values(c.horarios).forEach(h=>{
         const color=h.tipo==="membresia"?"var(--oro)":"var(--principal)";
@@ -665,10 +848,14 @@ window.renderAgendaMes=()=>{
   
   document.getElementById("tab-agenda").innerHTML=html;
   
-  document.getElementById("btn-vista-semana2")?.addEventListener("click",()=>{vistaAgenda="semana";renderAgenda();});
-  document.getElementById("btn-vista-mes2")?.addEventListener("click",()=>{vistaAgenda="mes";renderAgendaMes();});
   document.getElementById("btn-mes-prev")?.addEventListener("click",()=>{mesOffset--;renderAgendaMes();});
   document.getElementById("btn-mes-next")?.addEventListener("click",()=>{mesOffset++;renderAgendaMes();});
+  document.getElementById("btn-abrir-bloqueo")?.addEventListener("click",()=>{
+    document.getElementById("bloqueo-inicio").value=hoy();
+    document.getElementById("bloqueo-fin").value=hoy();
+    document.getElementById("bloqueo-motivo").value="";
+    openModal("modal-bloquear");
+  });
   document.querySelectorAll("[data-fecha-dia]").forEach(d=>{
     d.addEventListener("click",()=>verDiaDetalle(d.getAttribute("data-fecha-dia")));
   });
@@ -685,7 +872,7 @@ const TARIFAS_ESMALTADO_GRANDE = [{max:300,precio:150},{max:400,precio:200},{max
 const TARIFAS_SANCOCHO_LOTE = [{max:100,precio:40},{max:200,precio:50},{max:300,precio:70}];
 const TARIFAS_ESMALTADO_LOTE = [{max:100,precio:50},{max:200,precio:70},{max:300,precio:90}];
 // Tarifas pulido + esmaltado
-const TARIFAS_PULIDO = [{max:400,precio:120},{max:1000,precio:180},{max:999999,precio:300}];
+const TARIFAS_PULIDO = [{max:200,precio:90},{max:400,precio:120},{max:700,precio:160},{max:1000,precio:200},{max:2000,precio:280},{max:3000,precio:350},{max:4000,precio:450},{max:999999,precio:-1}];
 
 const calcPrecio = (val, tarifas) => {
   for(const t of tarifas) if(val <= t.max) return t.precio;
@@ -693,9 +880,10 @@ const calcPrecio = (val, tarifas) => {
 };
 
 window.renderServicios = () => {
-  const serviciosGuardados = JSON.parse(localStorage.getItem("cc_servicios")||"[]");
-  const totalServicios = serviciosGuardados.filter(x=>x.pagado).reduce((s,x)=>s+x.precio,0);
-  const totalPendienteServ = serviciosGuardados.filter(x=>!x.pagado).reduce((s,x)=>s+x.precio,0);
+  const serviciosGuardados = JSON.parse(localStorage.getItem("cc_servicios")||"[]").filter(s=>s.tipo!=="libre");
+  const _isPag=x=>x.pagado&&x.pagado!==false&&x.pagado!=="no"&&x.pagado!=="pendiente"&&x.pagado!=="Pendiente";
+  const totalServicios = serviciosGuardados.filter(x=>_isPag(x)).reduce((s,x)=>s+(x.precio||x.monto||0),0);
+  const totalPendienteServ = serviciosGuardados.filter(x=>!_isPag(x)).reduce((s,x)=>s+(x.precio||x.monto||0),0);
   
   let html = `<div class="row-space" style="margin-bottom:16px">
     <span style="font-weight:800;font-size:16px;font-family:'DM Serif Display',serif">Servicios de quema</span>
@@ -704,7 +892,8 @@ window.renderServicios = () => {
       <div class="display" style="font-weight:800;font-size:20px;color:var(--principal)">$${totalServicios.toLocaleString("es-MX")}</div>
       ${totalPendienteServ>0?`<div style="font-size:11px;color:var(--oro);font-weight:700">⏳ Por cobrar: $${totalPendienteServ.toLocaleString("es-MX")}</div>`:""}
     </div>
-  </div>`;
+  </div>
+  <button id="btn-migrar-servicios" style="font-size:11px;background:var(--gris);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-family:inherit;margin-bottom:10px">🔧 Marcar todos como pagados</button>`;
 
   // Formulario nuevo servicio
   html += `<div class="card" style="margin-bottom:16px;border:2px solid var(--secundario)">
@@ -764,7 +953,7 @@ window.renderServicios = () => {
           <div style="text-align:right;display:flex;flex-direction:column;gap:4px;align-items:flex-end">
             <div style="font-weight:800;font-size:16px;color:var(--principal)">$${s.precio}</div>
             ${!s.pagado?`<button data-srv-id="${s.id}" style="font-size:11px;background:var(--verde);color:white;border:none;border-radius:6px;padding:2px 8px;cursor:pointer;font-family:inherit">✓ Pagado</button>`:""}
-            <button data-srv-del="${s.id}" style="font-size:11px;background:var(--acento2);color:white;border:none;border-radius:6px;padding:2px 8px;cursor:pointer;font-family:inherit">✕ Borrar</button>
+            <button data-srv-del="${s.id}" style="font-size:13px;background:none;color:var(--acento2);border:none;cursor:pointer;font-family:inherit;padding:2px 4px">✕</button>
           </div>
         </div>
       </div>`;
@@ -779,6 +968,19 @@ window.renderServicios = () => {
   document.getElementById("srv-gramos").addEventListener("input", calcServicio);
   document.getElementById("srv-tipo").addEventListener("change", toggleSrvInput);
   document.getElementById("btn-guardar-servicio").addEventListener("click", guardarServicio);
+  
+  document.getElementById("btn-migrar-servicios")?.addEventListener("click", async()=>{
+    if(!confirm("¿Marcar TODOS los servicios como pagados?")) return;
+    const servicios = JSON.parse(localStorage.getItem("cc_servicios")||"[]");
+    const updated = servicios.map(s=>({...s, pagado:true, fechaISO:s.fechaISO||s.creadoEn?.slice(0,10)||hoy()}));
+    localStorage.setItem("cc_servicios", JSON.stringify(updated));
+    // Update Firebase
+    for(const s of updated){
+      await fbSet("servicios", s.id, s);
+    }
+    showToast("✅ Todos los servicios marcados como pagados");
+    renderServicios();
+  });
   
   // Autocomplete nombre
   const inputNombre = document.getElementById("srv-nombre");
@@ -803,13 +1005,13 @@ window.renderServicios = () => {
     document.addEventListener("click", e => { if(!inputNombre.contains(e.target)) sugerencias.style.display="none"; });
   }
   document.querySelectorAll("[data-srv-id]").forEach(btn => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async() => {
       const id = btn.getAttribute("data-srv-id");
       const servicios = JSON.parse(localStorage.getItem("cc_servicios")||"[]");
+      const srvToUpdate = servicios.find(s=>s.id===id);
       const updated = servicios.map(s => s.id === id ? {...s, pagado: true} : s);
       localStorage.setItem("cc_servicios", JSON.stringify(updated));
-      // Save to Firebase too
-      fbSet("servicios", id, {...servicios.find(s=>s.id===id), pagado:true});
+      if(srvToUpdate) await fbSet("servicios", id, {...srvToUpdate, pagado: true});
       showToast("✅ Servicio marcado como pagado");
       renderServicios();
       if(document.getElementById("tab-ingresos").style.display!=="none") renderIngresos();
@@ -818,7 +1020,7 @@ window.renderServicios = () => {
   document.querySelectorAll("[data-srv-del]").forEach(btn => {
     btn.addEventListener("click", () => {
       const id = btn.getAttribute("data-srv-del");
-      if(!confirm("¿Borrar este servicio?")) return;
+      if(!confirm("¿Borrar este servicio? Se eliminará también de Ingresos.")) return;
       const servicios = JSON.parse(localStorage.getItem("cc_servicios")||"[]");
       const updated = servicios.filter(s => s.id !== id);
       localStorage.setItem("cc_servicios", JSON.stringify(updated));
@@ -884,6 +1086,11 @@ window.calcServicio = () => {
     detalle = `🌈 Clase de esmalte 3hrs (precio fijo)`;
   } else if(tipo==="pulido_esmaltado"){
     precio = calcPrecio(val, TARIFAS_PULIDO);
+    if(precio===-1){
+      const preview = document.getElementById("srv-precio-preview");
+      if(preview){ preview.style.display="block"; preview.innerHTML=`<div style="font-weight:700;color:var(--oro)">🌈 Pulido + esmaltado ${val}g</div><div style="color:var(--grafito)">Precio: <strong>Cotización especial</strong> — consulta con Vale</div>`; }
+      return;
+    }
     detalle = `🌈 Pulido + esmaltado ${val}g`;
   } else {
     const tarifas = tipo==="sancocho"?TARIFAS_SANCOCHO:TARIFAS_ESMALTADO;
@@ -895,7 +1102,7 @@ window.calcServicio = () => {
   if(preview){ preview.style.display="block"; preview.innerHTML=`<div style="font-size:12px;color:var(--gris)">${detalle}</div><div>Total: <strong style="font-size:20px;color:var(--principal)">$${precio}</strong></div>`; }
 };
 
-window.guardarServicio = () => {
+window.guardarServicio = async() => {
   const nombre = document.getElementById("srv-nombre")?.value?.trim();
   const tipo = document.getElementById("srv-tipo")?.value;
   const gramos = parseInt(document.getElementById("srv-gramos")?.value||0);
@@ -911,15 +1118,14 @@ window.guardarServicio = () => {
   else if(tipo==="esmaltado_lote") precio=val>300?calcPrecio(val,TARIFAS_ESMALTADO):calcPrecio(val,TARIFAS_ESMALTADO_LOTE);
   else if(tipo==="ambos_lote") precio=val>300?calcPrecio(val,TARIFAS_SANCOCHO)+calcPrecio(val,TARIFAS_ESMALTADO):(calcPrecio(val,TARIFAS_SANCOCHO_LOTE)+calcPrecio(val,TARIFAS_ESMALTADO_LOTE));
   else if(tipo==="clase_esmalte") precio=300;
-  else if(tipo==="pulido_esmaltado") precio=calcPrecio(val,TARIFAS_PULIDO);
+  else if(tipo==="pulido_esmaltado"){precio=calcPrecio(val,TARIFAS_PULIDO);if(precio===-1){showToast("Esta pieza requiere cotización especial");return;}}
   else { const t=tipo==="sancocho"?TARIFAS_SANCOCHO:TARIFAS_ESMALTADO; precio=calcPrecio(val,t); }
   const servicios = JSON.parse(localStorage.getItem("cc_servicios")||"[]");
   const pagado = document.getElementById("srv-pagado")?.value === "si";
-  const nuevoSrv = {id:uid(),nombre,tipo,gramos,precio,fecha,pagado,creadoEn:new Date().toISOString()};
+  const nuevoSrv = {id:uid(),nombre,tipo,gramos,precio,fecha,pagado:!!pagado,creadoEn:new Date().toISOString()};
   servicios.push(nuevoSrv);
   localStorage.setItem("cc_servicios", JSON.stringify(servicios));
-  // Save to Firebase
-  fbSet("servicios", nuevoSrv.id, nuevoSrv);
+  await fbSet("servicios", nuevoSrv.id, nuevoSrv);
   showToast(`✓ Servicio registrado · $${precio}`);
   renderServicios();
   if(document.getElementById("tab-ingresos").style.display!=="none") renderIngresos();
@@ -929,6 +1135,20 @@ window.verDiaDetalle = (fecha) => {
   const resDelDia = reservas.filter(r=>r.fecha===fecha&&r.estado!=="cancelada");
   const fechaFmt = new Date(fecha+"T12:00:00").toLocaleDateString("es-MX",{weekday:"long",day:"numeric",month:"long"});
   document.getElementById("dia-detalle-titulo").textContent = "📅 "+fechaFmt;
+  const bloqDia = bloqueos.find(b=>fecha>=b.inicio&&fecha<=b.fin);
+  if(bloqDia){
+    document.getElementById("dia-detalle-content").innerHTML = `<div style="text-align:center;padding:20px"><div style="font-size:40px;margin-bottom:8px">🚫</div><div style="font-weight:700;color:var(--acento2)">Día bloqueado</div>${bloqDia.motivo?`<div style="font-size:13px;color:var(--gris);margin-top:4px">${bloqDia.motivo}</div>`:""}<button id="btn-desbloquear-dia" data-bloqueo-id="${bloqDia.id}" style="margin-top:16px;background:var(--verde);color:white;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-family:inherit;font-weight:700">✓ Desbloquear</button></div>`;
+    openModal("modal-dia-detalle");
+    document.getElementById("btn-desbloquear-dia")?.addEventListener("click",async()=>{
+      const bId=document.getElementById("btn-desbloquear-dia").getAttribute("data-bloqueo-id");
+      bloqueos=bloqueos.filter(b=>b.id!==bId);
+      await fbDelete("bloqueos",bId);
+      closeModal("modal-dia-detalle");
+      renderAgendaMes();
+      showToast("✓ Día desbloqueado");
+    });
+    return;
+  }
   if(!resDelDia.length){
     document.getElementById("dia-detalle-content").innerHTML = `<div class="empty-state"><div style="font-size:32px;margin-bottom:8px">📅</div><div>Sin reservas este día</div></div>`;
     openModal("modal-dia-detalle");
@@ -943,7 +1163,15 @@ window.verDiaDetalle = (fecha) => {
   let html = "";
   Object.entries(porHorario).forEach(([hId, res])=>{
     const h = HORARIOS.find(hh=>hh.id===hId);
-    html += `<div style="font-weight:800;font-size:13px;color:var(--principal);margin-bottom:6px;margin-top:12px">${h?h.hora:"—"} · ${res.length}/${CUPO_MAX} lugares</div>`;
+    const cerrada = esCerrada(hId, fecha);
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;margin-top:12px">
+      <div style="font-weight:800;font-size:13px;color:${cerrada?"var(--acento2)":"var(--principal)"}">
+        ${cerrada?"🔒 ":""}${h?h.hora:"—"} · ${res.length}/${CUPO_MAX} lugares
+      </div>
+      <button data-toggle-clase="${hId}|${fecha}" style="font-size:11px;background:${cerrada?"var(--verde)":"var(--acento2)"};color:white;border:none;border-radius:6px;padding:3px 8px;cursor:pointer;font-family:inherit;font-weight:700">
+        ${cerrada?"🔓 Abrir":"🔒 Cerrar"}
+      </button>
+    </div>`;
     res.forEach(r=>{
       const al = alumnas.find(a=>a.id===r.alumnaId);
       const yaA = r.estado==="asistida", esFalta = r.estado==="falta";
@@ -955,15 +1183,34 @@ window.verDiaDetalle = (fecha) => {
             <div style="font-size:11px;color:${yaA?"var(--verde)":esFalta?"var(--acento2)":"var(--gris)"};font-weight:700">${yaA?"Asistió":esFalta?"Falta":"Reservada"}</div>
           </div>
         </div>
-        ${!yaA&&!esFalta?`<div style="display:flex;gap:4px">
-          <button data-dia-asistio="${r.id}" style="font-size:11px;background:var(--verde);color:white;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;font-family:inherit;font-weight:700">✓ Asistió</button>
-          <button data-dia-falta="${r.id}" style="font-size:11px;background:var(--acento2);color:white;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;font-family:inherit;font-weight:700">✗ Falta</button>
-        </div>`:""}
+        <div style="display:flex;gap:4px;margin-top:4px">
+          ${!yaA?`<button data-dia-asistio="${r.id}" style="font-size:11px;background:var(--verde);color:white;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;font-family:inherit;font-weight:700">✓ Asistió</button>`:""}
+          ${!esFalta?`<button data-dia-falta="${r.id}" style="font-size:11px;background:var(--acento2);color:white;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;font-family:inherit;font-weight:700">✗ Falta</button>`:""}
+          ${esFalta?`<button data-dia-asistio="${r.id}" style="font-size:11px;background:var(--gris);color:white;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;font-family:inherit;font-weight:700">↩ Deshacer falta</button>`:""}
+        </div>
       </div>`;
     });
   });
   document.getElementById("dia-detalle-content").innerHTML = html;
   openModal("modal-dia-detalle");
+  document.querySelectorAll("[data-toggle-clase]").forEach(btn=>{
+    btn.addEventListener("click",async()=>{
+      const [hId,fecha]=btn.getAttribute("data-toggle-clase").split("|");
+      const existing=clasesCerradas.find(c=>c.horarioId===hId&&c.fecha===fecha);
+      if(existing){
+        clasesCerradas=clasesCerradas.filter(c=>!(c.horarioId===hId&&c.fecha===fecha));
+        await fbDelete("clases_cerradas",existing.id);
+        showToast("🔓 Clase abierta");
+      } else {
+        const nuevo={id:uid(),horarioId:hId,fecha,creadoEn:new Date().toISOString()};
+        clasesCerradas.push(nuevo);
+        await fbSet("clases_cerradas",nuevo.id,nuevo);
+        showToast("🔒 Clase cerrada — los ya agendados se quedan");
+      }
+      closeModal("modal-dia-detalle");
+      renderAgendaMes();
+    });
+  });
   document.querySelectorAll("[data-dia-asistio]").forEach(btn=>{
     btn.addEventListener("click",async()=>{
       const rId=btn.getAttribute("data-dia-asistio");
@@ -994,7 +1241,20 @@ window.renderAlumnas=()=>{
 
   // Keep search value if exists
   const buscarExistente = document.getElementById("buscar-alumna")?.value||"";
-  let html=`<div class="row-space" style="margin-bottom:10px"><span style="font-weight:800;font-size:16px;font-family:'DM Serif Display',serif">${alumnas.length} alumna${alumnas.length!==1?"s":""}</span><div style="display:flex;gap:6px"><button class="btn btn-ghost btn-small" id="btn-abrir-migracion">📦 Migrar</button><button class="btn btn-primary btn-small" onclick="openModal('modal-nueva-alumna')">+ Nueva</button></div></div><div style="margin-bottom:14px"><input type="text" id="buscar-alumna" placeholder="🔍 Buscar alumna..." value="${buscarExistente}" style="width:100%;padding:10px 13px;border:1.5px solid var(--hueso2);border-radius:9px;font-size:14px;font-family:inherit;background:var(--blanco);color:var(--grafito);outline:none"></div>${alertas}`;
+  // Stats
+  const activas = alumnas.filter(a=>getPaqueteActivo(a)).length;
+  const nuevasEsteMes = alumnas.filter(a=>a.creadaEn&&a.creadaEn.slice(0,7)===hoy().slice(0,7)).length;
+  const resUltSemana = reservas.filter(r=>r.estado!=="cancelada"&&r.fecha>=addDias(hoy(),-7)&&r.fecha<=hoy()).length;
+  const resSemana = reservas.filter(r=>r.estado!=="cancelada"&&r.fecha>=hoy()&&r.fecha<=addDias(hoy(),7)).length;
+
+  let html=`<div class="row-space" style="margin-bottom:10px"><span style="font-weight:800;font-size:16px;font-family:'DM Serif Display',serif">${alumnas.length} alumna${alumnas.length!==1?"s":""}</span><div style="display:flex;gap:6px"><button class="btn btn-ghost btn-small" id="btn-abrir-migracion">📦 Migrar</button><button class="btn btn-primary btn-small" onclick="openModal('modal-nueva-alumna')">+ Nueva</button></div></div>
+  <div style="display:flex;gap:8px;margin-bottom:14px">
+    <div style="flex:1;background:var(--blanco);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--hueso2)"><div style="font-size:22px;font-weight:800;color:var(--principal)">${activas}</div><div style="font-size:10px;color:var(--gris)">Activas</div></div>
+    <div style="flex:1;background:var(--blanco);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--hueso2)"><div style="font-size:22px;font-weight:800;color:var(--verde)">${resUltSemana}</div><div style="font-size:10px;color:var(--gris)">Clases esta semana</div></div>
+    <div style="flex:1;background:var(--blanco);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--hueso2)"><div style="font-size:22px;font-weight:800;color:var(--oro)">${resSemana}</div><div style="font-size:10px;color:var(--gris)">Próxima semana</div></div>
+    <div style="flex:1;background:var(--blanco);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--hueso2)"><div style="font-size:22px;font-weight:800;color:var(--complemento)">${nuevasEsteMes}</div><div style="font-size:10px;color:var(--gris)">Nuevas este mes</div></div>
+  </div>
+  <div style="margin-bottom:14px"><input type="text" id="buscar-alumna" placeholder="🔍 Buscar alumna..." value="${buscarExistente}" style="width:100%;padding:10px 13px;border:1.5px solid var(--hueso2);border-radius:9px;font-size:14px;font-family:inherit;background:var(--blanco);color:var(--grafito);outline:none"></div>${alertas}`;
   if(!alumnas.length)html+=`<div class="card empty-state"><div style="font-size:36px;margin-bottom:8px">👩‍🎨</div><div>Aún no hay alumnas.</div></div>`;
   const busqueda = buscarExistente.toLowerCase();
   const alumnasFiltradas = [...alumnas].filter(a=>a.nombre.toLowerCase().includes(busqueda)).sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
@@ -1005,7 +1265,7 @@ window.renderAlumnas=()=>{
     const tieneVencido=(a.paquetes||[]).some(p=>pagoVencido(p));
     const tienePendiente=(a.paquetes||[]).some(p=>pagoPendiente(p));
     const border=tieneVencido?"border:2px solid var(--acento2)!important;":tienePendiente?"border:2px solid var(--oro)!important;":"";
-    html+=`<div class="card" style="margin-bottom:12px;${border}"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="flex:1"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif">${a.nombre}</div><div style="font-size:12px;color:var(--gris);margin-top:2px;display:flex;gap:12px;flex-wrap:wrap">${a.telefono?`<span>📱 ${a.telefono}</span>`:""} ${a.correo?`<span>✉️ ${a.correo}</span>`:""}</div><div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${act?`${badge(act.emoji+" "+pend+" clase"+(pend!==1?"s":""),pend>3?"var(--verde)":pend>0?"var(--oro)":"var(--acento2)")} ${badge("Expira en "+diasExp+"d",diasExp>14?"var(--gris)":"var(--acento2)")}`:badge("Sin paquete activo","var(--acento2)")} ${resFut>0?badge(resFut+" agendada"+(resFut!==1?"s":""),"var(--principal)"):""} ${tieneVencido?badge("💸 Pago vencido","var(--acento2)"):""} ${tienePendiente&&!tieneVencido?badge("⏳ Pago pendiente","var(--oro)"):""} ${necesitaRenovar(a)?badge("🔔 Renovar","var(--principal)"):""}</div></div><div style="display:flex;flex-direction:column;gap:5px;margin-left:10px;flex-shrink:0"><button class="btn btn-primary btn-small" onclick="window.openPaquete('${a.id}')">+ Paquete</button><button class="btn btn-ghost btn-small" onclick="try{window.verAlumna('${a.id}')}catch(e){alert('Error: '+e.message)}">Ver</button></div></div></div>`;
+    html+=`<div class="card" style="margin-bottom:12px;${border}"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="flex:1"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif">${a.nombre}</div><div style="font-size:12px;color:var(--gris);margin-top:2px;display:flex;gap:12px;flex-wrap:wrap">${a.telefono?`<span>📱 ${a.telefono}</span>`:""} ${a.correo?`<span>✉️ ${a.correo}</span>`:""}</div><div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${act?`${badge(act.emoji+" "+pend+" clase"+(pend!==1?"s":""),pend>3?"var(--verde)":pend>0?"var(--oro)":"var(--acento2)")} ${badge("Expira en "+diasExp+"d",diasExp>14?"var(--gris)":"var(--acento2)")}`:badge("Sin paquete activo","var(--acento2)")} ${resFut>0?badge(resFut+" agendada"+(resFut!==1?"s":""),"var(--principal)"):""} ${tieneVencido?badge("💸 Pago vencido","var(--acento2)"):""} ${tienePendiente&&!tieneVencido?badge("⏳ Pago pendiente","var(--oro)"):""} ${necesitaRenovar(a)?badge("🔔 Renovar","var(--principal)"):""} ${alertaPiezaAlumna(a)==="vencida"?badge("⚠️ Pieza vencida","var(--acento2)"):alertaPiezaAlumna(a)==="pronto"?badge("🏺 Recoger pronto","var(--oro)"):""}</div></div><div style="display:flex;flex-direction:column;gap:5px;margin-left:10px;flex-shrink:0"><button class="btn btn-primary btn-small" onclick="window.openPaquete('${a.id}')">+ Paquete</button><button class="btn btn-ghost btn-small" onclick="try{window.verAlumna('${a.id}')}catch(e){alert('Error: '+e.message)}">Ver</button></div></div></div>`;
   });
   document.getElementById("tab-alumnas").innerHTML=html;
   const searchInput = document.getElementById("buscar-alumna");
@@ -1036,21 +1296,56 @@ window.renderAlumnas=()=>{
 
 const tipoLabelSimple=(t)=>({sancocho:"Sancocho",esmaltado:"Esmaltado",ambos:"Sancocho+Esmaltado",sancocho_grande:"Sancocho grande",esmaltado_grande:"Esmaltado grande",ambos_grande:"Ambos grande",sancocho_lote:"Sancocho lote",esmaltado_lote:"Esmaltado lote",ambos_lote:"Ambos lote",clase_esmalte:"Clase esmalte",pulido_esmaltado:"Pulido+esmaltado"}[t]||t);
 
-window.renderIngresos=()=>{
+window.renderIngresos=async()=>{
+  // Read DIRECTLY from Firebase - bypass localStorage completely
+  try {
+    const snap = await getDocs(collection(db,"servicios"));
+    window._serviciosFirebase = snap.docs.map(d=>({id:d.id,...d.data()}));
+  } catch(e){ window._serviciosFirebase = []; }
+  renderIngresosInterno();
+};
+const normalizarMes=(fecha,creadoEn,fechaISO)=>{
+  // Use fechaISO first (always correct format)
+  if(fechaISO) return fechaISO.slice(0,7);
+  if(!fecha&&!creadoEn) return hoy().slice(0,7);
+  const f=fecha||"";
+  // Already in ISO format
+  if(f && f.length>=7 && f[4]==='-') return f.slice(0,7);
+  // Try parsing as date string
+  try {
+    const d=new Date(f);
+    if(!isNaN(d.getTime())) return d.toISOString().slice(0,7);
+  } catch(e){}
+  // Fall back to creadoEn
+  if(creadoEn) return creadoEn.slice(0,7);
+  return hoy().slice(0,7);
+};
+
+window.renderIngresosInterno=()=>{
   const todos=alumnas.flatMap(a=>(a.paquetes||[]).map(p=>({...p,alumna:a.nombre})));
-  const serviciosGuardados=JSON.parse(localStorage.getItem("cc_servicios")||"[]");
+  // Read directly from Firebase (set by renderIngresos)
+  const todosServicios=window._serviciosFirebase||JSON.parse(localStorage.getItem("cc_servicios")||"[]");
+  const esPagado2=s=>s.pagado&&s.pagado!==false&&s.pagado!=="no"&&s.pagado!=="pendiente"&&s.pagado!=="Pendiente";
+  const serviciosGuardados=todosServicios.filter(s=>esPagado2(s));
   const porMes={};
   todos.forEach(p=>{const m=p.compradoEn.slice(0,7);if(!porMes[m])porMes[m]={total:0,paquetes:[],servicios:[]};porMes[m].total+=p.montoTotal||p.monto||0;porMes[m].paquetes.push(p);});
-  serviciosGuardados.filter(s=>s.pagado).forEach(s=>{const m=s.fecha.slice(0,7);if(!porMes[m])porMes[m]={total:0,paquetes:[],servicios:[]};porMes[m].total+=s.precio;if(!porMes[m].servicios)porMes[m].servicios=[];porMes[m].servicios.push(s);});
-  const meses=Object.keys(porMes).sort().reverse(),total=todos.reduce((s,p)=>s+(p.montoTotal||p.monto||0),0)+serviciosGuardados.filter(s=>s.pagado).reduce((s,x)=>s+x.precio,0);
+  serviciosGuardados.forEach(s=>{
+    const m=normalizarMes(s.fecha,s.creadoEn,s.fechaISO);
+    if(!porMes[m])porMes[m]={total:0,paquetes:[],servicios:[]};
+    porMes[m].total+=(s.precio||s.monto||0);
+    if(!porMes[m].servicios)porMes[m].servicios=[];
+    porMes[m].servicios.push(s);
+  });
+  const meses=Object.keys(porMes).sort().reverse(),total=todos.reduce((s,p)=>s+(p.montoTotal||p.monto||0),0)+serviciosGuardados.filter(s=>s.pagado).reduce((s,x)=>s+(x.precio||x.monto||0),0);
 
   // Deudas
   const deudasPaquetes=alumnas.flatMap(a=>(a.paquetes||[]).filter(p=>p.segundoPago&&!p.segundoPago.pagado).map(p=>({alumna:a.nombre,monto:p.segundoPago.monto,tipo:"paquete",detalle:p.nombre,fecha:p.segundoPago.fechaLimite})));
-  const deudasServicios=serviciosGuardados.filter(s=>!s.pagado).map(s=>({alumna:s.nombre,monto:s.precio,tipo:"servicio",detalle:tipoLabelSimple(s.tipo),fecha:s.fecha}));
+  const esPagado=s=>s.pagado&&s.pagado!==false&&s.pagado!=="no"&&s.pagado!=="pendiente"&&s.pagado!=="Pendiente";
+  const deudasServicios=todosServicios.filter(s=>!esPagado(s)).map(s=>({alumna:s.nombre,monto:s.precio,tipo:"servicio",detalle:tipoLabelSimple(s.tipo),fecha:s.fecha}));
   const todasDeudas=[...deudasPaquetes,...deudasServicios];
   const totalDeudas=todasDeudas.reduce((s,d)=>s+d.monto,0);
 
-  let html=`<div class="row-space" style="margin-bottom:16px"><span style="font-weight:800;font-size:16px;font-family:'DM Serif Display',serif">Ingresos</span><div style="text-align:right"><div style="font-size:11px;color:var(--gris)">Total cobrado</div><div class="display" style="font-weight:800;font-size:24px;color:var(--principal)">$${total.toLocaleString("es-MX")}</div></div></div>`;
+  let html=`<div class="row-space" style="margin-bottom:16px"><span style="font-weight:800;font-size:16px;font-family:'DM Serif Display',serif">Ingresos</span><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px"><button id="btn-abrir-ingreso-libre" class="btn btn-primary btn-small">+ Ingreso libre</button><div style="text-align:right"><div style="font-size:11px;color:var(--gris)">Total cobrado</div><div class="display" style="font-weight:800;font-size:24px;color:var(--principal)">$${total.toLocaleString("es-MX")}</div></div></div></div>`;
 
   // Sección deudas
   if(todasDeudas.length){
@@ -1067,9 +1362,36 @@ window.renderIngresos=()=>{
     html+=`<div class="card" style="margin-bottom:14px"><div class="row-space" style="margin-bottom:10px"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif;text-transform:capitalize">${mesAnio(mes)}</div><div class="display" style="font-weight:800;font-size:18px;color:var(--principal)">$${t.toLocaleString("es-MX")}</div></div>${ps.map((p,i)=>{
       const pendiente=p.segundoPago&&!p.segundoPago.pagado;
       return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;${i<ps.length-1?"border-bottom:1px solid var(--hueso2)":""};font-size:13px"><div><span style="font-weight:600">${p.alumna}</span><span style="color:var(--gris)"> · ${p.emoji} ${p.nombre}</span><br><span style="font-size:11px;color:var(--gris)">${metodoLabel(p.metodoPago||"efectivo")}</span>${pendiente?`<span style="font-size:11px;color:var(--oro);font-weight:700"> · ⏳ Falta $${(p.segundoPago.monto||0).toLocaleString("es-MX")}</span>`:""}</div><span style="font-weight:700">$${(p.montoTotal||p.monto||0).toLocaleString("es-MX")}</span></div>`;
-    }).join("")}</div>`;
+    }).join("")}${srvMes.map(s=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--hueso2);font-size:13px"><div><span style="font-weight:600">${s.nombre}</span><br><span style="color:var(--gris)">${s.tipo==="libre"?`💰 ${s.concepto} · ${fmtFecha(s.fechaISO||s.fecha)} · ${s.metodo==="efectivo"?"💵":s.metodo==="transferencia"?"🏦":"🔀"}`:`🔥 ${tipoLabelSimple2(s.tipo)}`}</span></div><span style="font-weight:700">$${(s.precio||s.monto||0).toLocaleString("es-MX")}</span></div>`).join("")}</div>`;
   });
   document.getElementById("tab-ingresos").innerHTML=html;
+  
+  // + Ingreso libre button
+  document.getElementById("btn-abrir-ingreso-libre")?.addEventListener("click",()=>{
+    document.getElementById("il-nombre").value="";
+    document.getElementById("il-concepto").value="";
+    document.getElementById("il-monto").value="";
+    document.getElementById("il-fecha").value=hoy();
+    document.getElementById("il-sugerencias").style.display="none";
+    openModal("modal-ingreso-libre");
+    
+    // Autocomplete
+    setTimeout(()=>{
+      const input = document.getElementById("il-nombre");
+      const sugs = document.getElementById("il-sugerencias");
+      if(input) input.addEventListener("input",()=>{
+        const q=input.value.toLowerCase();
+        if(q.length<1){sugs.style.display="none";return;}
+        const matches=alumnas.filter(a=>a.nombre.toLowerCase().includes(q)).slice(0,5);
+        if(!matches.length){sugs.style.display="none";return;}
+        sugs.style.display="block";
+        sugs.innerHTML=matches.map(a=>`<div data-il-nombre="${a.nombre}" style="padding:8px 13px;cursor:pointer;font-size:14px;border-bottom:1px solid var(--hueso2)">${a.nombre}</div>`).join("");
+        sugs.querySelectorAll("[data-il-nombre]").forEach(d=>{
+          d.addEventListener("click",()=>{input.value=d.getAttribute("data-il-nombre");sugs.style.display="none";});
+        });
+      });
+    }, 100);
+  });
 };
 
 window.openModal=id=>document.getElementById(id).classList.add("open");
@@ -1090,6 +1412,19 @@ window.updateMigFecha = () => {
   const expira = addDias(hoy(), dias);
   preview.style.display="block";
   preview.innerHTML=`${clases} clase${clases!==1?"s":""} pendiente${clases!==1?"s":""} · Expira el <strong>${fmtFecha(expira)}</strong>`;
+};
+
+window.guardarBloqueo = async() => {
+  const inicio = document.getElementById("bloqueo-inicio")?.value;
+  const fin = document.getElementById("bloqueo-fin")?.value||inicio;
+  const motivo = document.getElementById("bloqueo-motivo")?.value||"";
+  if(!inicio)return;
+  const nuevo = {id:uid(), inicio, fin:fin>=inicio?fin:inicio, motivo, creadoEn:new Date().toISOString()};
+  bloqueos.push(nuevo);
+  await fbSet("bloqueos", nuevo.id, nuevo);
+  closeModal("modal-bloquear");
+  renderAgendaMes();
+  showToast("🚫 Fechas bloqueadas: "+inicio+(fin!==inicio?" → "+fin:""));
 };
 
 window.guardarMigracion = async() => {
@@ -1158,21 +1493,33 @@ window.guardarPaquete=async()=>{
   closeModal("modal-paquete");renderAlumnas();showToast("✓ Paquete "+def.nombre+" agregado");
 };
 
-window.verAlumna=id=>{
+window.verAlumna=async id=>{
   const a=alumnas.find(x=>x.id===id);if(!a)return;
+  // Sync services from Firebase to localStorage
+  try {
+    const snap=await getDocs(collection(db,"servicios"));
+    const fbSrvs=snap.docs.map(d=>({id:d.id,...d.data()}));
+    const local=JSON.parse(localStorage.getItem("cc_servicios")||"[]");
+    const merged=[...fbSrvs];
+    local.forEach(s=>{if(!merged.find(x=>x.id===s.id))merged.push(s);});
+    localStorage.setItem("cc_servicios",JSON.stringify(merged));
+  } catch(e){}
   const act=getPaqueteActivo(a);document.getElementById("ver-alumna-nombre").textContent=a.nombre;
   const asistA=asistencias.filter(x=>x.alumnaId===id);
-  let html=`<div style="font-size:13px;color:var(--gris);margin-bottom:12px;display:flex;flex-direction:column;gap:4px">${a.telefono?`<span>📱 ${a.telefono}</span>`:""} ${a.correo?`<span>✉️ ${a.correo}</span>`:""} ${a.nota?`<span>📝 ${a.nota}</span>`:""}</div><div style="font-weight:800;margin-bottom:8px;font-family:'DM Serif Display',serif">Paquetes</div>`;
+  let html=`<div style="font-size:13px;color:var(--gris);margin-bottom:12px;display:flex;flex-direction:column;gap:4px">${a.telefono?`<span>📱 ${a.telefono}</span>`:""} ${a.correo?`<span>✉️ ${a.correo}</span>`:""}</div>
+  <div class="field" style="margin-bottom:12px"><label>📝 Notas de seguimiento</label><textarea id="notas-alumna-${a.id}" style="width:100%;padding:8px 12px;border:1.5px solid var(--hueso2);border-radius:9px;font-size:13px;font-family:inherit;background:var(--blanco);color:var(--grafito);resize:vertical;min-height:60px">${a.nota||""}</textarea><button data-guardar-nota="${a.id}" style="margin-top:4px;font-size:11px;background:var(--principal);color:white;border:none;border-radius:6px;padding:3px 10px;cursor:pointer;font-family:inherit">Guardar nota</button></div><div style="font-weight:800;margin-bottom:8px;font-family:'DM Serif Display',serif">Paquetes</div>`;
   if(!(a.paquetes||[]).length)html+=`<div style="font-size:13px;color:var(--gris);margin-bottom:12px">Sin paquetes.</div>`;
   (a.paquetes||[]).forEach(p=>{
     const dias=diasRestantes(p.expira),venc=pagoVencido(p),pend=pagoPendiente(p);
-    html+=`<div style="background:var(--fondo);border-radius:10px;padding:10px 14px;margin-bottom:8px;border:${venc?"2px solid var(--acento2)":pend?"2px solid var(--oro)":"1px solid var(--hueso2)"}"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div style="font-weight:700;font-family:'DM Serif Display',serif">${p.emoji} ${p.nombre}</div><div style="display:flex;gap:6px;align-items:center">${badge(p.clasesRestantes+"/"+p.clasesTotal,p.clasesRestantes>0?"var(--verde)":"var(--acento2)")}<button data-edit-pkg="${p.id}" data-edit-alumna="${a.id}" style="font-size:11px;background:var(--principal);color:white;border:none;border-radius:6px;padding:2px 8px;cursor:pointer;font-family:inherit">✏️</button></div></div><div style="font-size:12px;color:var(--gris)">Comprado ${fmtFecha(p.compradoEn)} · ${metodoLabel(p.metodoPago||"efectivo")}</div><div style="font-size:12px;color:var(--gris)">Pagado: $${(p.monto||0).toLocaleString("es-MX")} · Total: $${(p.montoTotal||p.monto||0).toLocaleString("es-MX")}</div><div style="font-size:12px;color:${dias<14?"var(--acento2)":"var(--gris)"}">Expira ${fmtFecha(p.expira)} (${dias}d)</div>${venc?`<div class="pago-vencido">🔴 Pago vencido desde ${fmtFecha(p.segundoPago.fechaLimite)} · $${(p.segundoPago.monto||0).toLocaleString("es-MX")}</div>`:""}${pend?`<div class="pago-pendiente">⏳ Segundo pago: $${(p.segundoPago.monto||0).toLocaleString("es-MX")} · Límite: ${fmtFecha(p.segundoPago.fechaLimite)} <button onclick="marcarSegundoPago('${a.id}','${p.id}')" style="margin-left:8px;background:var(--verde);color:white;border:none;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;font-family:inherit">✓ Marcar pagado</button></div>`:""}</div>`;
+    html+=`<div style="background:var(--fondo);border-radius:10px;padding:10px 14px;margin-bottom:8px;border:${venc?"2px solid var(--acento2)":pend?"2px solid var(--oro)":"1px solid var(--hueso2)"}"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div style="font-weight:700;font-family:'DM Serif Display',serif">${p.emoji} ${p.nombre}</div><div style="display:flex;gap:6px;align-items:center">${badge(p.clasesRestantes+"/"+p.clasesTotal,p.clasesRestantes>0?"var(--verde)":"var(--acento2)")}<button data-edit-pkg="${p.id}" data-edit-alumna="${a.id}" style="font-size:11px;background:var(--principal);color:white;border:none;border-radius:6px;padding:2px 8px;cursor:pointer;font-family:inherit">✏️</button><button data-del-pkg="${p.id}" data-del-alumna="${a.id}" style="font-size:11px;background:var(--acento2);color:white;border:none;border-radius:6px;padding:2px 8px;cursor:pointer;font-family:inherit;margin-left:4px">✕</button></div></div><div style="font-size:12px;color:var(--gris)">Comprado ${fmtFecha(p.compradoEn)} · ${metodoLabel(p.metodoPago||"efectivo")}</div><div style="font-size:12px;color:var(--gris)">Pagado: $${(p.monto||0).toLocaleString("es-MX")} · Total: $${(p.montoTotal||p.monto||0).toLocaleString("es-MX")}</div><div style="font-size:12px;color:${dias<14?"var(--acento2)":"var(--gris)"}">Expira ${fmtFecha(p.expira)} (${dias}d)</div>${venc?`<div class="pago-vencido">🔴 Pago vencido desde ${fmtFecha(p.segundoPago.fechaLimite)} · $${(p.segundoPago.monto||0).toLocaleString("es-MX")}</div>`:""}${pend?`<div class="pago-pendiente">⏳ Segundo pago: $${(p.segundoPago.monto||0).toLocaleString("es-MX")} · Límite: ${fmtFecha(p.segundoPago.fechaLimite)} <button onclick="marcarSegundoPago('${a.id}','${p.id}')" style="margin-left:8px;background:var(--verde);color:white;border:none;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;font-family:inherit">✓ Marcar pagado</button></div>`:""}</div>`;
   });
   html+=`<div style="font-weight:800;margin:14px 0 8px;font-family:'DM Serif Display',serif">Clases tomadas</div>`;
   if(!asistA.length)html+=`<div style="font-size:13px;color:var(--gris)">Sin asistencias registradas.</div>`;
   [...asistA].reverse().slice(0,8).forEach(x=>{const h=HORARIOS.find(hh=>hh.id===x.horarioId);html+=`<div style="font-size:13px;padding:6px 0;border-bottom:1px solid var(--hueso2)"><div style="display:flex;justify-content:space-between"><span>${fmtFecha(x.fecha)}</span><span style="color:var(--gris)">${h?.label||"—"}</span></div>${x.nota?`<div style="font-size:11px;color:var(--gris);margin-top:2px">📝 ${x.nota}</div>`:""}</div>`;});
-  // Servicios de la alumna
-  const srvAlumna = JSON.parse(localStorage.getItem("cc_servicios")||"[]").filter(s=>s.nombre.toLowerCase()===a.nombre.toLowerCase());
+  // Servicios e ingresos libres de la alumna
+  const todosLocal = JSON.parse(localStorage.getItem("cc_servicios")||"[]");
+  const srvAlumna = todosLocal.filter(s=>s.nombre.toLowerCase()===a.nombre.toLowerCase()&&s.tipo!=="libre");
+  const libresAlumna = todosLocal.filter(s=>s.nombre.toLowerCase()===a.nombre.toLowerCase()&&s.tipo==="libre");
   if(srvAlumna.length){
     html+=`<div style="font-weight:800;margin:14px 0 8px;font-family:'DM Serif Display',serif">Servicios de quema</div>`;
     srvAlumna.reverse().forEach(s=>{
@@ -1180,12 +1527,153 @@ window.verAlumna=id=>{
       html+=`<div style="font-size:13px;padding:6px 0;border-bottom:1px solid var(--hueso2);display:flex;justify-content:space-between;align-items:center"><div><span>${fmtFecha(s.fecha)}</span><span style="color:var(--gris)"> · ${tl[s.tipo]||s.tipo}</span></div><div style="text-align:right"><span style="font-weight:700">$${s.precio}</span><br><span style="font-size:10px;color:${s.pagado?"var(--verde)":"var(--oro)"};font-weight:700">${s.pagado?"✅ Pagado":"⏳ Pendiente"}</span></div></div>`;
     });
   }
+  // Pieza lista
+  const piezaLista = a.piezaLista;
+  const diasParaRecoger = piezaLista ? Math.ceil((new Date(piezaLista.expira+"T12:00:00") - new Date()) / 86400000) : null;
+  const alertaPieza = diasParaRecoger !== null && diasParaRecoger <= 7 && diasParaRecoger >= 0;
+  const piezaVencida = diasParaRecoger !== null && diasParaRecoger < 0;
+  html+=`<div style="margin-top:12px;background:var(--fondo);border-radius:10px;padding:10px 14px;border:${alertaPieza?"2px solid var(--oro)":piezaVencida?"2px solid var(--acento2)":"1px solid var(--hueso2)"}">
+    <div style="font-weight:700;font-size:13px;margin-bottom:8px">🏺 Pieza lista para recoger</div>
+    ${piezaLista?`
+      <div style="font-size:12px;color:var(--gris)">Notificada: ${fmtFecha(piezaLista.fecha)}</div>
+      <div style="font-size:12px;color:${piezaVencida?"var(--acento2)":alertaPieza?"var(--oro)":"var(--gris)"};font-weight:700">
+        ${piezaVencida?"⚠️ Plazo vencido":"Vence: "+fmtFecha(piezaLista.expira)+" ("+diasParaRecoger+"d)"}
+      </div>
+      <button data-quitar-pieza="${a.id}" style="margin-top:6px;font-size:11px;background:var(--gris);color:white;border:none;border-radius:6px;padding:2px 8px;cursor:pointer;font-family:inherit">✓ Ya recogió</button>
+    `:`<button data-pieza-lista="${a.id}" style="font-size:12px;background:var(--principal);color:white;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-family:inherit;font-weight:700">+ Marcar pieza lista hoy</button>`}
+  </div>`;
+
   // Boton clase de hoy
   if(act){
     html+=`<div style="margin-top:16px"><button class="btn btn-verde btn-full" id="btn-clase-hoy-${id}" style="padding:12px;font-size:14px">📅 Registrar clase de hoy sin reserva</button></div>`;
   }
-  html+=`<div style="display:flex;gap:8px;justify-content:space-between;margin-top:12px"><button class="btn btn-danger btn-small" onclick="eliminarAlumna('${id}')">Eliminar alumna</button><button class="btn btn-ghost btn-small" onclick="closeModal('modal-ver-alumna')">Cerrar</button></div>`;
+  if(libresAlumna.length){
+    html+=`<div style="font-weight:800;margin:14px 0 8px;font-family:'DM Serif Display',serif">💰 Ingresos libres</div>`;
+    [...libresAlumna].reverse().forEach(x=>{
+      const ml=x.metodo==="efectivo"?"💵":x.metodo==="transferencia"?"🏦":"🔀";
+      html+=`<div style="font-size:13px;padding:5px 0;border-bottom:1px solid var(--hueso2);display:flex;justify-content:space-between;align-items:center"><div><span style="font-weight:600">${fmtFecha(x.fechaISO||x.fecha)}</span><br><span style="color:var(--gris)">${x.concepto} ${ml}</span></div><div style="display:flex;align-items:center;gap:4px"><span style="font-weight:700">$${(x.monto||0).toLocaleString("es-MX")}</span><button data-libre-edit="${x.id}" style="font-size:10px;background:var(--principal);color:white;border:none;border-radius:4px;padding:2px 5px;cursor:pointer">✏️</button><button data-libre-del="${x.id}" style="font-size:10px;background:var(--acento2);color:white;border:none;border-radius:4px;padding:2px 5px;cursor:pointer">✕</button></div></div>`;
+    });
+  }
+  html+=`<div style="display:flex;gap:8px;justify-content:space-between;margin-top:16px"><button class="btn btn-danger btn-small" onclick="eliminarAlumna('${id}')">Eliminar alumna</button><button class="btn btn-ghost btn-small" onclick="closeModal('modal-ver-alumna')">Cerrar</button></div>`;
   document.getElementById("ver-alumna-content").innerHTML=html;openModal("modal-ver-alumna");
+  // Libre delete
+  document.querySelectorAll("[data-libre-del]").forEach(btn=>{
+    btn.addEventListener("click",async()=>{
+      if(!confirm("¿Borrar este ingreso? Se eliminará también de Ingresos.")) return;
+      const libId=btn.getAttribute("data-libre-del");
+      const srvs=JSON.parse(localStorage.getItem("cc_servicios")||"[]").filter(s=>s.id!==libId);
+      localStorage.setItem("cc_servicios",JSON.stringify(srvs));
+      await fbDelete("servicios",libId).catch(()=>{});
+      if(window._serviciosFirebase) window._serviciosFirebase=window._serviciosFirebase.filter(s=>s.id!==libId);
+      showToast("✓ Ingreso eliminado");
+      verAlumna(id);
+    });
+  });
+
+  // Libre edit
+  document.querySelectorAll("[data-libre-edit]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const libId=btn.getAttribute("data-libre-edit");
+      const srvs=JSON.parse(localStorage.getItem("cc_servicios")||"[]");
+      const lib=srvs.find(s=>s.id===libId);
+      if(!lib)return;
+      document.getElementById("il-nombre").value=lib.nombre||"";
+      document.getElementById("il-concepto").value=lib.concepto||"";
+      document.getElementById("il-monto").value=lib.monto||"";
+      document.getElementById("il-metodo").value=lib.metodo||"efectivo";
+      document.getElementById("il-fecha").value=lib.fechaISO||lib.fecha||hoy();
+      window._editLibreId=libId;
+      closeModal("modal-ver-alumna");
+      setTimeout(()=>openModal("modal-ingreso-libre"),150);
+    });
+  });
+
+  document.getElementById("btn-abrir-editar-alumna")?.addEventListener("click",()=>{
+    const content = document.getElementById("ver-alumna-content");
+    const editForm = `<div style="background:var(--fondo);border-radius:10px;padding:14px;margin-bottom:12px;border:2px solid var(--principal)">
+      <div style="font-weight:700;margin-bottom:10px">✏️ Editar datos</div>
+      <div class="field"><label>Nombre *</label><input type="text" id="ea-nombre-inline" value="${a.nombre||""}" style="width:100%;padding:8px 12px;border:1.5px solid var(--hueso2);border-radius:9px;font-size:14px;font-family:inherit"></div>
+      <div class="field"><label>Teléfono</label><input type="text" id="ea-tel-inline" value="${a.telefono||""}" style="width:100%;padding:8px 12px;border:1.5px solid var(--hueso2);border-radius:9px;font-size:14px;font-family:inherit"></div>
+      <div class="field"><label>Correo</label><input type="email" id="ea-email-inline" value="${a.correo||""}" style="width:100%;padding:8px 12px;border:1.5px solid var(--hueso2);border-radius:9px;font-size:14px;font-family:inherit"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button id="btn-cancelar-edicion-inline" class="btn btn-ghost btn-small">Cancelar</button>
+        <button id="btn-guardar-edicion-inline" class="btn btn-primary btn-small">Guardar</button>
+      </div>
+    </div>` + content.innerHTML;
+    content.innerHTML = editForm;
+    
+    document.getElementById("btn-cancelar-edicion-inline")?.addEventListener("click",()=>verAlumna(id));
+    document.getElementById("btn-guardar-edicion-inline")?.addEventListener("click",async()=>{
+      const nombre=document.getElementById("ea-nombre-inline")?.value?.trim();
+      if(!nombre)return;
+      a.nombre=nombre;
+      a.telefono=document.getElementById("ea-tel-inline")?.value||"";
+      a.correo=document.getElementById("ea-email-inline")?.value||"";
+      await fbUpdate("alumnas",id,{nombre:a.nombre,telefono:a.telefono,correo:a.correo});
+      closeModal("modal-ver-alumna");
+      renderAlumnas();
+      showToast("✓ Alumna actualizada");
+    });
+  });
+  
+  // Guardar nota
+  document.querySelectorAll("[data-guardar-nota]").forEach(btn=>{
+    btn.addEventListener("click",async()=>{
+      const alumnaId=btn.getAttribute("data-guardar-nota");
+      const nota=document.getElementById("notas-alumna-"+alumnaId)?.value||"";
+      const al=alumnas.find(x=>x.id===alumnaId);
+      if(!al)return;
+      al.nota=nota;
+      await fbUpdate("alumnas",alumnaId,{nota});
+      showToast("✓ Nota guardada");
+    });
+  });
+
+  // Pieza lista
+  document.querySelectorAll("[data-pieza-lista]").forEach(btn=>{
+    btn.addEventListener("click",async()=>{
+      const alumnaId=btn.getAttribute("data-pieza-lista");
+      const al=alumnas.find(x=>x.id===alumnaId);
+      if(!al)return;
+      const hoyStr=hoy();
+      const expira=addDias(hoyStr,60);
+      al.piezaLista={fecha:hoyStr,expira};
+      await fbUpdate("alumnas",alumnaId,{piezaLista:al.piezaLista});
+      closeModal("modal-ver-alumna");
+      renderAlumnas();
+      showToast("🏺 Pieza marcada como lista · Expira "+fmtFecha(expira));
+    });
+  });
+
+  // Quitar pieza
+  document.querySelectorAll("[data-quitar-pieza]").forEach(btn=>{
+    btn.addEventListener("click",async()=>{
+      const alumnaId=btn.getAttribute("data-quitar-pieza");
+      const al=alumnas.find(x=>x.id===alumnaId);
+      if(!al)return;
+      al.piezaLista=null;
+      await fbUpdate("alumnas",alumnaId,{piezaLista:null});
+      closeModal("modal-ver-alumna");
+      renderAlumnas();
+      showToast("✓ Pieza recogida");
+    });
+  });
+
+  // Delete paquete
+  document.querySelectorAll("[data-del-pkg]").forEach(btn=>{
+    btn.addEventListener("click",async()=>{
+      if(!confirm("¿Borrar este paquete? Esta acción no se puede deshacer.")) return;
+      const pId=btn.getAttribute("data-del-pkg");
+      const aId=btn.getAttribute("data-del-alumna");
+      const alumna=alumnas.find(x=>x.id===aId);
+      if(!alumna)return;
+      alumna.paquetes=(alumna.paquetes||[]).filter(p=>p.id!==pId);
+      await fbUpdate("alumnas",aId,{paquetes:alumna.paquetes});
+      showToast("✓ Paquete eliminado");
+      verAlumna(aId);
+    });
+  });
+
   document.querySelectorAll("[data-edit-pkg]").forEach(btn=>{
     btn.addEventListener("click",()=>{
       const pkgId=btn.getAttribute("data-edit-pkg");
@@ -1221,6 +1709,22 @@ window.verAlumna=id=>{
       else showToast("✓ Clase de hoy registrada para "+a.nombre.split(" ")[0]);
     });
   }
+};
+
+window.guardarEdicionAlumna=async()=>{
+  const id=window._editAlumnaActualId;
+  const nombre=document.getElementById("ea-nombre")?.value?.trim();
+  if(!nombre)return;
+  const a=alumnas.find(x=>x.id===id);
+  if(!a)return;
+  a.nombre=nombre;
+  a.telefono=document.getElementById("ea-tel")?.value||"";
+  a.correo=document.getElementById("ea-email")?.value||"";
+  await fbUpdate("alumnas",id,{nombre:a.nombre,telefono:a.telefono,correo:a.correo});
+  closeModal("modal-editar-alumna");
+  closeModal("modal-ver-alumna");
+  renderAlumnas();
+  showToast("✓ Alumna actualizada");
 };
 
 window.guardarEdicionPaquete=async()=>{
@@ -1344,7 +1848,7 @@ window.renderAgendarContent=()=>{
       <div style="font-size:10px;margin-top:1px">${hh.hora}</div>
     </button>`).join("")}
   </div><div style="font-size:12px;color:var(--gris);margin-bottom:8px;font-weight:700;letter-spacing:.3px">ELIGE FECHA</div><div id="fechas-container" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">`;
-  fechas.forEach(f=>{const c=cupoDisponible(agendarHorarioSel,f),sel=agendarFechaSel===f;html+=`<button class="fecha-btn${sel?" sel":c===0?" lleno":""}" data-fecha="${f}" data-cupo="${c}"><div style="font-weight:700;font-size:13px">${new Date(f+"T12:00:00").toLocaleDateString("es-MX",{day:"numeric",month:"short"})}</div><div style="font-size:10px;margin-top:2px">${c>0?c+" lugar"+(c!==1?"es":""):"Lleno"}</div></button>`;});
+  fechas.forEach(f=>{const c=cupoDisponible(agendarHorarioSel,f),sel=agendarFechaSel===f,bloq=esBloqueado(f),cerr=esCerrada(agendarHorarioSel,f);const limitada=!puedeAgendarFecha(f);html+=`<button class="fecha-btn${sel?" sel":c===0||bloq||cerr||limitada?" lleno":""}" data-fecha="${f}" data-cupo="${bloq||cerr||limitada?0:c}"><div style="font-weight:700;font-size:13px">${new Date(f+"T12:00:00").toLocaleDateString("es-MX",{day:"numeric",month:"short"})}</div><div style="font-size:10px;margin-top:2px">${bloq?"🚫 Bloqueado":cerr?"🔒 Cerrada":limitada?"⏰ Cerrado":c>0?c+" lugar"+(c!==1?"es":""):"Lleno"}</div></button>`;});
   html+=`</div>${agendarFechaSel?`<div class="aviso aviso-rosa" style="font-size:13px;margin-bottom:14px">📅 ${new Date(agendarFechaSel+"T12:00:00").toLocaleDateString("es-MX",{weekday:"long",day:"numeric",month:"long"})}<br>⏰ ${h?.hora}</div>`:""}<div class="aviso aviso-oro" style="font-size:12px;line-height:1.5;margin-bottom:16px">⚠️ Recuerda cancelar con al menos <strong>24 horas de anticipación</strong>.</div><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-ghost btn-small" id="btn-cancelar-agendar">Cancelar</button><button class="btn btn-primary btn-small" id="btn-confirmar-agendar"${!agendarFechaSel?" disabled":""}>Confirmar</button></div>`;
   document.getElementById("agendar-content").innerHTML=html;
   document.querySelectorAll("[data-horario]").forEach(btn=>{
@@ -1362,6 +1866,8 @@ window.confirmarReserva=async()=>{
   if(!agendarFechaSel)return;
   const paquete=getPaqueteActivo(alumnaActiva);
   if(!paquete&&!window._agendarDesdeMaestra)return;
+  if(esBloqueado(agendarFechaSel)){showToast("❌ Esa fecha está bloqueada");return;}
+  if(esCerrada(agendarHorarioSel,agendarFechaSel)){showToast("❌ Esa clase está cerrada");return;}
   if(reservas.some(r=>r.alumnaId===alumnaActiva.id&&r.horarioId===agendarHorarioSel&&r.fecha===agendarFechaSel&&r.estado!=="cancelada")){showToast("Ya hay reserva en ese horario");return;}
   if(cupoDisponible(agendarHorarioSel,agendarFechaSel)<=0){showToast("❌ Sin cupo");return;}
   const nueva={id:uid(),alumnaId:alumnaActiva.id,paqueteId:paquete?.id||"sin-paquete",horarioId:agendarHorarioSel,fecha:agendarFechaSel,estado:"reservada",creadaEn:new Date().toISOString()};
@@ -1399,6 +1905,15 @@ document.addEventListener("click", function(e) {
   }
   if (e.target.id === "btn-guardar-edicion-paquete" || e.target.closest("#btn-guardar-edicion-paquete")) {
     guardarEdicionPaquete(); return;
+  }
+  if (e.target.id === "btn-guardar-edicion-alumna" || e.target.closest("#btn-guardar-edicion-alumna")) {
+    guardarEdicionAlumna(); return;
+  }
+  if (e.target.id === "btn-guardar-bloqueo" || e.target.closest("#btn-guardar-bloqueo")) {
+    guardarBloqueo(); return;
+  }
+  if (e.target.id === "btn-guardar-ingreso-libre" || e.target.closest("#btn-guardar-ingreso-libre")) {
+    guardarIngresoLibre(); return;
   }
   if (e.target.id === "btn-semana-prev" || e.target.closest("#btn-semana-prev")) {
     semanaOffset--; renderAgenda(); return;
