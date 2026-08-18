@@ -16,25 +16,26 @@
 <body>
 <div id="root"></div>
 
-<!-- Firebase (módulo aparte, expone funciones globales para que el script de React las use) -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-import { getFirestore, collection, doc, getDocs, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+<script type="text/babel" data-presets="react">
 
-const firebaseConfig = {
-  apiKey: "AIzaSyAY-ZGwYfqWbTRI7BL6xGp87SxiGt15OU8",
-  authDomain: "casa-creativa-6a1c1.firebaseapp.com",
-  projectId: "casa-creativa-6a1c1",
-  storageBucket: "casa-creativa-6a1c1.firebasestorage.app",
-  messagingSenderId: "874227781556",
-  appId: "1:874227781556:web:ceaf624a509bce0f4d2ce1"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const COL = "centro_control_items";
-
+/* Firebase, cargado con import() dinámico para no chocar con el transformador de Babel */
 window.__fbReady = (async () => {
+  const { initializeApp } = await import("https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js");
+  const { getFirestore, collection, doc, getDocs, setDoc, deleteDoc } = await import("https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js");
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAY-ZGwYfqWbTRI7BL6xGp87SxiGt15OU8",
+    authDomain: "casa-creativa-6a1c1.firebaseapp.com",
+    projectId: "casa-creativa-6a1c1",
+    storageBucket: "casa-creativa-6a1c1.firebasestorage.app",
+    messagingSenderId: "874227781556",
+    appId: "1:874227781556:web:ceaf624a509bce0f4d2ce1"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const COL = "centro_control_items";
+
   return {
     async getAll() {
       const snap = await getDocs(collection(db, COL));
@@ -48,9 +49,6 @@ window.__fbReady = (async () => {
     },
   };
 })();
-</script>
-
-<script type="text/babel" data-presets="react">
 const { useState, useEffect, useMemo, useCallback } = React;
 
 /* ------------------------------------------------------------------ */
