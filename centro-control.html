@@ -5,9 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Centro de Control</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap">
-<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
 <style>
   * { box-sizing: border-box; }
   body { margin:0; }
@@ -63,13 +62,10 @@
 <body>
 <div id="root"></div>
 
-<script type="text/babel" data-presets="react">
-
-/* Firebase, cargado con import() dinámico para no chocar con el transformador de Babel */
+<script>
 window.__fbReady = (async () => {
   const { initializeApp } = await import("https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js");
   const { getFirestore, collection, doc, getDocs, setDoc, deleteDoc } = await import("https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js");
-
   const firebaseConfig = {
     apiKey: "AIzaSyAY-ZGwYfqWbTRI7BL6xGp87SxiGt15OU8",
     authDomain: "casa-creativa-6a1c1.firebaseapp.com",
@@ -78,108 +74,97 @@ window.__fbReady = (async () => {
     messagingSenderId: "874227781556",
     appId: "1:874227781556:web:ceaf624a509bce0f4d2ce1"
   };
-
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
   const COL = "centro_control_items";
-
   return {
     async getAll() {
       const snap = await getDocs(collection(db, COL));
-      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     },
     async setItem(item) {
       await setDoc(doc(db, COL, item.id), item);
     },
     async deleteItem(id) {
       await deleteDoc(doc(db, COL, id));
-    },
+    }
   };
 })();
 const { useState, useEffect, useMemo, useCallback } = React;
-
-/* ------------------------------------------------------------------ */
-/* Iconos (SVG propios, sin dependencias externas)                     */
-/* ------------------------------------------------------------------ */
 function Icon({ size = 24, color = "currentColor", strokeWidth = 2, className, children }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color}
-      strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}>
-      {children}
-    </svg>
+  return /* @__PURE__ */ React.createElement(
+    "svg",
+    {
+      width: size,
+      height: size,
+      viewBox: "0 0 24 24",
+      fill: "none",
+      stroke: color,
+      strokeWidth,
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      className
+    },
+    children
   );
 }
-const Home = (p) => <Icon {...p}><path d="M4 11 L12 4 L20 11" /><path d="M6 10 V20 H18 V10" /><path d="M10 20 V14 H14 V20" /></Icon>;
-const CalendarIconEl = (p) => <Icon {...p}><rect x="3" y="5" width="18" height="16" rx="2" /><line x1="3" y1="10" x2="21" y2="10" /><line x1="8" y1="3" x2="8" y2="7" /><line x1="16" y1="3" x2="16" y2="7" /></Icon>;
-const CreditCard = (p) => <Icon {...p}><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /></Icon>;
-const Stethoscope = (p) => <Icon {...p}><path d="M6 4 V10 C6 13 9 15 12 15 C15 15 18 13 18 10 V4" /><circle cx="12" cy="19" r="2.3" /><line x1="12" y1="15" x2="12" y2="16.7" /></Icon>;
-const FileText = (p) => <Icon {...p}><path d="M6 3 H14 L18 7 V21 H6 Z" /><line x1="9" y1="12" x2="15" y2="12" /><line x1="9" y1="16" x2="15" y2="16" /></Icon>;
-const Plane = (p) => <Icon {...p}><path d="M2 12 L21 4 L13.5 21 L11 13.5 L2 12 Z" /></Icon>;
-const Plus = (p) => <Icon {...p}><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></Icon>;
-const X = (p) => <Icon {...p}><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></Icon>;
-const Check = (p) => <Icon {...p}><path d="M5 13 L10 18 L19 6" /></Icon>;
-const ChevronLeft = (p) => <Icon {...p}><path d="M15 5 L8 12 L15 19" /></Icon>;
-const ChevronRight = (p) => <Icon {...p}><path d="M9 5 L16 12 L9 19" /></Icon>;
-const RotateCcw = (p) => <Icon {...p}><path d="M4 4 V9 H9" /><path d="M4.6 15 A8 8 0 1 0 6 6.3" /></Icon>;
-const Trash2 = (p) => <Icon {...p}><path d="M4 7 H20" /><path d="M9 7 V4 H15 V7" /><path d="M6 7 L7 20 H17 L18 7" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></Icon>;
-const Pencil = (p) => <Icon {...p}><path d="M4 20 L4 16 L15 5 L19 9 L8 20 Z" /><line x1="14" y1="6" x2="18" y2="10" /></Icon>;
-const Clock = (p) => <Icon {...p}><circle cx="12" cy="12" r="9" /><line x1="12" y1="7" x2="12" y2="12" /><line x1="12" y1="12" x2="15" y2="14" /></Icon>;
-const Settings = (p) => <Icon {...p}><circle cx="12" cy="12" r="3" /><path d="M19 12 H21 M3 12 H5 M12 3 V5 M12 19 V21 M17.5 6.5 L19 5 M5 19 L6.5 17.5 M17.5 17.5 L19 19 M5 5 L6.5 6.5" /></Icon>;
-const Download = (p) => <Icon {...p}><path d="M12 3 V15" /><path d="M7 10 L12 15 L17 10" /><path d="M4 19 H20" /></Icon>;
-const Upload = (p) => <Icon {...p}><path d="M12 15 V3" /><path d="M7 8 L12 3 L17 8" /><path d="M4 19 H20" /></Icon>;
-
-/* ------------------------------------------------------------------ */
-/* Tokens                                                              */
-/* ------------------------------------------------------------------ */
+const Home = (p) => /* @__PURE__ */ React.createElement(Icon, { ...p }, /* @__PURE__ */ React.createElement("path", { d: "M4 11 L12 4 L20 11" }), /* @__PURE__ */ React.createElement("path", { d: "M6 10 V20 H18 V10" }), /* @__PURE__ */ React.createElement("path", { d: "M10 20 V14 H14 V20" }));
+const CalendarIconEl = (p) => /* @__PURE__ */ React.createElement(Icon, { ...p }, /* @__PURE__ */ React.createElement("rect", { x: "3", y: "5", width: "18", height: "16", rx: "2" }), /* @__PURE__ */ React.createElement("line", { x1: "3", y1: "10", x2: "21", y2: "10" }), /* @__PURE__ */ React.createElement("line", { x1: "8", y1: "3", x2: "8", y2: "7" }), /* @__PURE__ */ React.createElement("line", { x1: "16", y1: "3", x2: "16", y2: "7" }));
+const CreditCard = (p) => /* @__PURE__ */ React.createElement(Icon, { ...p }, /* @__PURE__ */ React.createElement("rect", { x: "2", y: "5", width: "20", height: "14", rx: "2" }), /* @__PURE__ */ React.createElement("line", { x1: "2", y1: "10", x2: "22", y2: "10" }));
+const Stethoscope = (p) => /* @__PURE__ */ React.createElement(Icon, { ...p }, /* @__PURE__ */ React.createElement("path", { d: "M6 4 V10 C6 13 9 15 12 15 C15 15 18 13 18 10 V4" }), /* @__PURE__ */ React.createElement("circle", { cx: "12", cy: "19", r: "2.3" }), /* @__PURE__ */ React.createElement("line", { x1: "12", y1: "15", x2: "12", y2: "16.7" }));
+const FileText = (p) => /* @__PURE__ */ React.createElement(Icon, { ...p }, /* @__PURE__ */ React.createElement("path", { d: "M6 3 H14 L18 7 V21 H6 Z" }), /* @__PURE__ */ React.createElement("line", { x1: "9", y1: "12", x2: "15", y2: "12" }), /* @__PURE__ */ React.createElement("line", { x1: "9", y1: "16", x2: "15", y2: "16" }));
+const Plane = (p) => /* @__PURE__ */ React.createElement(Icon, { ...p }, /* @__PURE__ */ React.createElement("path", { d: "M2 12 L21 4 L13.5 21 L11 13.5 L2 12 Z" }));
+const Plus = (p) => /* @__PURE__ */ React.createElement(Icon, { ...p }, /* @__PURE__ */ React.createElement("line", { x1: "12", y1: "5", x2: "12", y2: "19" }), /* @__PURE__ */ React.createElement("line", { x1: "5", y1: "12", x2: "19", y2: "12" }));
+const X = (p) => /* @__PURE__ */ React.createElement(Icon, { ...p }, /* @__PURE__ */ React.createElement("line", { x1: "6", y1: "6", x2: "18", y2: "18" }), /* @__PURE__ */ React.createElement("line", { x1: "18", y1: "6", x2: "6", y2: "18" }));
+const Check = (p) => /* @__PURE__ */ React.createElement(Icon, { ...p }, /* @__PURE__ */ React.createElement("path", { d: "M5 13 L10 18 L19 6" }));
+const ChevronLeft = (p) => /* @__PURE__ */ React.createElement(Icon, { ...p }, /* @__PURE__ */ React.createElement("path", { d: "M15 5 L8 12 L15 19" }));
+const ChevronRight = (p) => /* @__PURE__ */ React.createElement(Icon, { ...p }, /* @__PURE__ */ React.createElement("path", { d: "M9 5 L16 12 L9 19" }));
+const RotateCcw = (p) => /* @__PURE__ */ React.createElement(Icon, { ...p }, /* @__PURE__ */ React.createElement("path", { d: "M4 4 V9 H9" }), /* @__PURE__ */ React.createElement("path", { d: "M4.6 15 A8 8 0 1 0 6 6.3" }));
+const Trash2 = (p) => /* @__PURE__ */ React.createElement(Icon, { ...p }, /* @__PURE__ */ React.createElement("path", { d: "M4 7 H20" }), /* @__PURE__ */ React.createElement("path", { d: "M9 7 V4 H15 V7" }), /* @__PURE__ */ React.createElement("path", { d: "M6 7 L7 20 H17 L18 7" }), /* @__PURE__ */ React.createElement("line", { x1: "10", y1: "11", x2: "10", y2: "17" }), /* @__PURE__ */ React.createElement("line", { x1: "14", y1: "11", x2: "14", y2: "17" }));
+const Pencil = (p) => /* @__PURE__ */ React.createElement(Icon, { ...p }, /* @__PURE__ */ React.createElement("path", { d: "M4 20 L4 16 L15 5 L19 9 L8 20 Z" }), /* @__PURE__ */ React.createElement("line", { x1: "14", y1: "6", x2: "18", y2: "10" }));
+const Clock = (p) => /* @__PURE__ */ React.createElement(Icon, { ...p }, /* @__PURE__ */ React.createElement("circle", { cx: "12", cy: "12", r: "9" }), /* @__PURE__ */ React.createElement("line", { x1: "12", y1: "7", x2: "12", y2: "12" }), /* @__PURE__ */ React.createElement("line", { x1: "12", y1: "12", x2: "15", y2: "14" }));
+const Settings = (p) => /* @__PURE__ */ React.createElement(Icon, { ...p }, /* @__PURE__ */ React.createElement("circle", { cx: "12", cy: "12", r: "3" }), /* @__PURE__ */ React.createElement("path", { d: "M19 12 H21 M3 12 H5 M12 3 V5 M12 19 V21 M17.5 6.5 L19 5 M5 19 L6.5 17.5 M17.5 17.5 L19 19 M5 5 L6.5 6.5" }));
+const Download = (p) => /* @__PURE__ */ React.createElement(Icon, { ...p }, /* @__PURE__ */ React.createElement("path", { d: "M12 3 V15" }), /* @__PURE__ */ React.createElement("path", { d: "M7 10 L12 15 L17 10" }), /* @__PURE__ */ React.createElement("path", { d: "M4 19 H20" }));
+const Upload = (p) => /* @__PURE__ */ React.createElement(Icon, { ...p }, /* @__PURE__ */ React.createElement("path", { d: "M12 15 V3" }), /* @__PURE__ */ React.createElement("path", { d: "M7 8 L12 3 L17 8" }), /* @__PURE__ */ React.createElement("path", { d: "M4 19 H20" }));
 const INK = "#232A2E";
 const PAPER = "#F5F2EA";
 const PAPER_DIM = "#EDE9DE";
 const LINE = "#DCD6C6";
-
 const CATS = {
-  pago:       { label: "Pago",        short: "Pagos",       icon: "💳", color: "#B8763B", soft: "#F3E3D2" },
-  cita:       { label: "Cita",        short: "Citas",       icon: "📅", color: "#2E7D75", soft: "#DCEFEC" },
-  documento:  { label: "Documento",   short: "Documentos",  icon: "📄", color: "#6C4E85", soft: "#E7DEEE" },
-  renovacion: { label: "Renovación",  short: "Renovaciones",icon: "🔄", color: "#A8492F", soft: "#F1DCD4" },
-  viaje:      { label: "Viaje",       short: "Viajes",      icon: "✈️", color: "#2F6690", soft: "#DCE8F0" },
-  pendiente:  { label: "Pendiente",   short: "Pendientes",  icon: "✅", color: "#4E7A45", soft: "#E1EBDC" },
+  pago: { label: "Pago", short: "Pagos", icon: "\u{1F4B3}", color: "#B8763B", soft: "#F3E3D2" },
+  cita: { label: "Cita", short: "Citas", icon: "\u{1F4C5}", color: "#2E7D75", soft: "#DCEFEC" },
+  documento: { label: "Documento", short: "Documentos", icon: "\u{1F4C4}", color: "#6C4E85", soft: "#E7DEEE" },
+  renovacion: { label: "Renovaci\xF3n", short: "Renovaciones", icon: "\u{1F504}", color: "#A8492F", soft: "#F1DCD4" },
+  viaje: { label: "Viaje", short: "Viajes", icon: "\u2708\uFE0F", color: "#2F6690", soft: "#DCE8F0" },
+  pendiente: { label: "Pendiente", short: "Pendientes", icon: "\u2705", color: "#4E7A45", soft: "#E1EBDC" }
 };
 const CAT_ORDER = ["pago", "cita", "documento", "renovacion", "viaje", "pendiente"];
-
 const REMINDER_PRESETS = [
   { label: "6 meses antes", days: 182 },
   { label: "3 meses antes", days: 91 },
   { label: "1 mes antes", days: 30 },
   { label: "1 semana antes", days: 7 },
-  { label: "5 días antes", days: 5 },
-  { label: "1 día antes", days: 1 },
+  { label: "5 d\xEDas antes", days: 5 },
+  { label: "1 d\xEDa antes", days: 1 }
 ];
-
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 const todayISO = () => {
-  const d = new Date();
+  const d = /* @__PURE__ */ new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
-const fmtLong = (iso) =>
-  iso ? new Date(iso + "T00:00:00").toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" }) : "";
-const fmtShort = (iso) =>
-  iso ? new Date(iso + "T00:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "short" }) : "";
-const daysBetween = (a, b) => Math.round((new Date(b + "T00:00:00") - new Date(a + "T00:00:00")) / 86400000);
+const fmtLong = (iso) => iso ? (/* @__PURE__ */ new Date(iso + "T00:00:00")).toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" }) : "";
+const fmtShort = (iso) => iso ? (/* @__PURE__ */ new Date(iso + "T00:00:00")).toLocaleDateString("es-MX", { day: "numeric", month: "short" }) : "";
+const daysBetween = (a, b) => Math.round((/* @__PURE__ */ new Date(b + "T00:00:00") - /* @__PURE__ */ new Date(a + "T00:00:00")) / 864e5);
 const addMonths = (iso, n) => {
-  const d = new Date(iso + "T00:00:00");
+  const d = /* @__PURE__ */ new Date(iso + "T00:00:00");
   d.setMonth(d.getMonth() + n);
   return d.toISOString().slice(0, 10);
 };
-const money = (n) => (n === "" || n === undefined || n === null ? "" : Number(n).toLocaleString("es-MX", { style: "currency", currency: "MXN" }));
-
-/* ------------------------------------------------------------------ */
-/* Storage (Firebase, sincroniza entre dispositivos)                   */
-/* ------------------------------------------------------------------ */
+const money = (n) => n === "" || n === void 0 || n === null ? "" : Number(n).toLocaleString("es-MX", { style: "currency", currency: "MXN" });
 function useItems() {
-  const [items, setItems] = useState(null); // null = cargando
+  const [items, setItems] = useState(null);
   const [error, setError] = useState(false);
   const [fb, setFb] = useState(null);
-
   useEffect(() => {
     (async () => {
       try {
@@ -193,11 +178,13 @@ function useItems() {
       }
     })();
   }, []);
-
   const persist = useCallback(async (next) => {
     const prev = items || [];
     setItems(next);
-    if (!fb) { setError(true); return; }
+    if (!fb) {
+      setError(true);
+      return;
+    }
     try {
       const prevIds = new Set(prev.map((i) => i.id));
       const nextIds = new Set(next.map((i) => i.id));
@@ -208,122 +195,76 @@ function useItems() {
       });
       await Promise.all([
         ...toDelete.map((i) => fb.deleteItem(i.id)),
-        ...toSave.map((i) => fb.setItem(i)),
+        ...toSave.map((i) => fb.setItem(i))
       ]);
     } catch {
       setError(true);
     }
   }, [items, fb]);
-
   return { items, persist, error };
 }
-
-/* ------------------------------------------------------------------ */
-/* Small UI atoms                                                      */
-/* ------------------------------------------------------------------ */
 function Pill({ children, color, soft }) {
-  return (
-    <span
-      className="text-[11px] font-medium px-2 py-0.5 rounded-full"
-      style={{ background: soft, color }}
-    >
-      {children}
-    </span>
+  return /* @__PURE__ */ React.createElement(
+    "span",
+    {
+      className: "text-[11px] font-medium px-2 py-0.5 rounded-full",
+      style: { background: soft, color }
+    },
+    children
   );
 }
-
 function IconBtn({ onClick, children, label }) {
-  return (
-    <button
-      onClick={onClick}
-      aria-label={label}
-      className="w-9 h-9 flex items-center justify-center rounded-full active:scale-95 transition"
-      style={{ color: INK }}
-    >
-      {children}
-    </button>
+  return /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick,
+      "aria-label": label,
+      className: "w-9 h-9 flex items-center justify-center rounded-full active:scale-95 transition",
+      style: { color: INK }
+    },
+    children
   );
 }
-
 function EmptyState({ icon, text }) {
-  return (
-    <div className="flex flex-col items-center justify-center text-center py-16 opacity-60">
-      <div className="text-4xl mb-2">{icon}</div>
-      <p className="text-sm" style={{ color: INK }}>{text}</p>
-    </div>
-  );
+  return /* @__PURE__ */ React.createElement("div", { className: "flex flex-col items-center justify-center text-center py-16 opacity-60" }, /* @__PURE__ */ React.createElement("div", { className: "text-4xl mb-2" }, icon), /* @__PURE__ */ React.createElement("p", { className: "text-sm", style: { color: INK } }, text));
 }
-
-/* ------------------------------------------------------------------ */
-/* Item card                                                           */
-/* ------------------------------------------------------------------ */
 function statusLabel(it) {
   if (it.category === "documento" || it.category === "renovacion") return null;
   if (it.status === "completado") return it.category === "pago" ? "Pagado" : it.category === "cita" ? "Realizada" : "Hecho";
   if (it.status === "cancelada") return "Cancelada";
   return null;
 }
-
 function relativeTag(iso) {
   const d = daysBetween(todayISO(), iso);
   if (d < 0) return { text: `Atrasado ${Math.abs(d)}d`, tone: "bad" };
   if (d === 0) return { text: "Hoy", tone: "warn" };
-  if (d === 1) return { text: "Mañana", tone: "warn" };
-  if (d <= 7) return { text: `En ${d} días`, tone: "soon" };
+  if (d === 1) return { text: "Ma\xF1ana", tone: "warn" };
+  if (d <= 7) return { text: `En ${d} d\xEDas`, tone: "soon" };
   return { text: fmtShort(iso), tone: "later" };
 }
-
 function ItemCard({ item, onOpen }) {
   const cat = CATS[item.category];
   const done = item.status === "completado" || item.status === "cancelada";
   const tag = relativeTag(item.date);
   const toneColor = { bad: "#B23A2E", warn: "#B8763B", soon: "#2E7D75", later: "#8A8578" }[tag.tone];
-
-  return (
-    <button
-      onClick={() => onOpen(item)}
-      className="w-full text-left rounded-2xl p-3.5 flex items-start gap-3 active:scale-[0.99] transition"
-      style={{ background: "white", border: `1px solid ${LINE}`, opacity: done ? 0.55 : 1 }}
-    >
-      <div
-        className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
-        style={{ background: cat.soft }}
-      >
-        {cat.icon}
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center justify-between gap-2">
-          <p className="font-semibold text-[15px] truncate" style={{ color: INK, fontFamily: "'Fraunces', serif" }}>
-            {item.title || cat.label}
-          </p>
-          {!done && (
-            <span className="text-[11px] font-semibold shrink-0" style={{ color: toneColor }}>
-              {tag.text}
-            </span>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5 mt-1">
-          {item.endDate && item.endDate !== item.date && (
-            <span className="text-xs" style={{ color: "#8A8578" }}>
-              {fmtShort(item.date)} – {fmtShort(item.endDate)}
-            </span>
-          )}
-          {item.time && <span className="text-xs" style={{ color: "#8A8578" }}>{item.time}</span>}
-          {item.place && <span className="text-xs truncate" style={{ color: "#8A8578" }}>· {item.place}</span>}
-          {item.amount !== "" && item.amount !== undefined && item.category === "pago" && (
-            <span className="text-xs font-medium" style={{ color: cat.color }}>{money(item.amount)}</span>
-          )}
-          {statusLabel(item) && <Pill color={cat.color} soft={cat.soft}>{statusLabel(item)}</Pill>}
-          {item.recurringMonths > 0 && <span className="text-xs" style={{ color: "#8A8578" }}><RotateCcw size={10} className="inline -mt-0.5" /></span>}
-        </div>
-      </div>
-    </button>
+  return /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => onOpen(item),
+      className: "w-full text-left rounded-2xl p-3.5 flex items-start gap-3 active:scale-[0.99] transition",
+      style: { background: "white", border: `1px solid ${LINE}`, opacity: done ? 0.55 : 1 }
+    },
+    /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        className: "w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0",
+        style: { background: cat.soft }
+      },
+      cat.icon
+    ),
+    /* @__PURE__ */ React.createElement("div", { className: "min-w-0 flex-1" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between gap-2" }, /* @__PURE__ */ React.createElement("p", { className: "font-semibold text-[15px] truncate", style: { color: INK, fontFamily: "'Fraunces', serif" } }, item.title || cat.label), !done && /* @__PURE__ */ React.createElement("span", { className: "text-[11px] font-semibold shrink-0", style: { color: toneColor } }, tag.text)), /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap items-center gap-1.5 mt-1" }, item.endDate && item.endDate !== item.date && /* @__PURE__ */ React.createElement("span", { className: "text-xs", style: { color: "#8A8578" } }, fmtShort(item.date), " \u2013 ", fmtShort(item.endDate)), item.time && /* @__PURE__ */ React.createElement("span", { className: "text-xs", style: { color: "#8A8578" } }, item.time), item.place && /* @__PURE__ */ React.createElement("span", { className: "text-xs truncate", style: { color: "#8A8578" } }, "\xB7 ", item.place), item.amount !== "" && item.amount !== void 0 && item.category === "pago" && /* @__PURE__ */ React.createElement("span", { className: "text-xs font-medium", style: { color: cat.color } }, money(item.amount)), statusLabel(item) && /* @__PURE__ */ React.createElement(Pill, { color: cat.color, soft: cat.soft }, statusLabel(item)), item.recurringMonths > 0 && /* @__PURE__ */ React.createElement("span", { className: "text-xs", style: { color: "#8A8578" } }, /* @__PURE__ */ React.createElement(RotateCcw, { size: 10, className: "inline -mt-0.5" }))))
   );
 }
-
-/* ------------------------------------------------------------------ */
-/* Item Form (add/edit)                                                */
-/* ------------------------------------------------------------------ */
 function ItemForm({ initial, defaultCategory, prefillDate, onSave, onDelete, onClose }) {
   const [category, setCategory] = useState(initial?.category || defaultCategory || "pendiente");
   const [title, setTitle] = useState(initial?.title || "");
@@ -338,15 +279,12 @@ function ItemForm({ initial, defaultCategory, prefillDate, onSave, onDelete, onC
   const [recurringMonths, setRecurringMonths] = useState(initial?.recurringMonths || 0);
   const [reminders, setReminders] = useState(initial?.reminders || (category === "documento" || category === "renovacion" ? [30] : []));
   const [status, setStatus] = useState(initial?.status || "pendiente");
-
   const cat = CATS[category];
   const isDateSpan = category === "viaje" || category === "pendiente";
   const isDoc = category === "documento" || category === "renovacion";
-
   const toggleReminder = (d) => {
-    setReminders((r) => (r.includes(d) ? r.filter((x) => x !== d) : [...r, d].sort((a, b) => b - a)));
+    setReminders((r) => r.includes(d) ? r.filter((x) => x !== d) : [...r, d].sort((a, b) => b - a));
   };
-
   const save = () => {
     if (!title.trim() || !date) return;
     const item = {
@@ -364,193 +302,79 @@ function ItemForm({ initial, defaultCategory, prefillDate, onSave, onDelete, onC
       recurringMonths: category === "pago" ? Number(recurringMonths) || 0 : 0,
       reminders,
       status,
-      history: initial?.history || [],
+      history: initial?.history || []
     };
     onSave(item);
   };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" style={{ background: "rgba(35,42,46,0.45)" }} onClick={onClose}>
-      <div
-        className="w-full sm:max-w-md max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl p-5"
-        style={{ background: PAPER }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold" style={{ fontFamily: "'Fraunces', serif", color: INK }}>
-            {initial ? "Editar" : "Nuevo"}
-          </h2>
-          <IconBtn onClick={onClose} label="Cerrar"><X size={20} /></IconBtn>
-        </div>
-
-        {!initial && (
-          <div className="flex flex-wrap gap-2 mb-4">
-            {CAT_ORDER.map((c) => (
-              <button
-                key={c}
-                onClick={() => setCategory(c)}
-                className="px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-1.5 transition"
-                style={{
-                  background: category === c ? CATS[c].color : "white",
-                  color: category === c ? "white" : INK,
-                  border: `1px solid ${category === c ? CATS[c].color : LINE}`,
-                }}
-              >
-                <span>{CATS[c].icon}</span>{CATS[c].label}
-              </button>
-            ))}
-          </div>
-        )}
-
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs font-medium" style={{ color: "#8A8578" }}>Título</label>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={category === "viaje" ? "Ej. Viaje a Oaxaca" : category === "pago" ? "Ej. Tarjeta BBVA" : "Título"}
-              className="w-full mt-1 px-3 py-2.5 rounded-xl text-[15px] outline-none"
-              style={{ background: "white", border: `1px solid ${LINE}`, color: INK }}
-            />
-          </div>
-
-          {category === "viaje" && (
-            <div>
-              <label className="text-xs font-medium" style={{ color: "#8A8578" }}>Destino</label>
-              <input value={destino} onChange={(e) => setDestino(e.target.value)} className="w-full mt-1 px-3 py-2.5 rounded-xl text-[15px] outline-none" style={{ background: "white", border: `1px solid ${LINE}`, color: INK }} />
-            </div>
-          )}
-
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <label className="text-xs font-medium" style={{ color: "#8A8578" }}>
-                {isDoc ? "Fecha de vencimiento" : isDateSpan ? "Fecha inicio" : "Fecha"}
-              </label>
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full mt-1 px-3 py-2.5 rounded-xl text-[15px] outline-none" style={{ background: "white", border: `1px solid ${LINE}`, color: INK }} />
-            </div>
-            {isDateSpan && (
-              <div className="flex-1">
-                <label className="text-xs font-medium" style={{ color: "#8A8578" }}>Fecha fin (opcional)</label>
-                <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full mt-1 px-3 py-2.5 rounded-xl text-[15px] outline-none" style={{ background: "white", border: `1px solid ${LINE}`, color: INK }} />
-              </div>
-            )}
-            {category === "cita" && (
-              <div className="flex-1">
-                <label className="text-xs font-medium" style={{ color: "#8A8578" }}>Hora</label>
-                <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full mt-1 px-3 py-2.5 rounded-xl text-[15px] outline-none" style={{ background: "white", border: `1px solid ${LINE}`, color: INK }} />
-              </div>
-            )}
-          </div>
-
-          {category === "cita" && (
-            <div>
-              <label className="text-xs font-medium" style={{ color: "#8A8578" }}>Lugar</label>
-              <input value={place} onChange={(e) => setPlace(e.target.value)} className="w-full mt-1 px-3 py-2.5 rounded-xl text-[15px] outline-none" style={{ background: "white", border: `1px solid ${LINE}`, color: INK }} />
-            </div>
-          )}
-
-          {category === "pago" && (
-            <>
-              <div className="flex gap-3">
-                <div className="flex-1">
-                  <label className="text-xs font-medium" style={{ color: "#8A8578" }}>Monto</label>
-                  <input type="number" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full mt-1 px-3 py-2.5 rounded-xl text-[15px] outline-none" style={{ background: "white", border: `1px solid ${LINE}`, color: INK }} />
-                </div>
-                <div className="flex-1">
-                  <label className="text-xs font-medium" style={{ color: "#8A8578" }}>Cuenta / tarjeta</label>
-                  <input value={account} onChange={(e) => setAccount(e.target.value)} placeholder="Desde dónde pagas" className="w-full mt-1 px-3 py-2.5 rounded-xl text-[15px] outline-none" style={{ background: "white", border: `1px solid ${LINE}`, color: INK }} />
-                </div>
-              </div>
-              <div>
-                <label className="text-xs font-medium" style={{ color: "#8A8578" }}>Recurrencia</label>
-                <div className="flex gap-2 mt-1">
-                  {[{ v: 0, t: "Único" }, { v: 1, t: "Mensual" }, { v: 3, t: "Trimestral" }, { v: 12, t: "Anual" }].map((o) => (
-                    <button key={o.v} onClick={() => setRecurringMonths(o.v)} className="px-3 py-1.5 rounded-full text-xs font-medium"
-                      style={{ background: recurringMonths === o.v ? INK : "white", color: recurringMonths === o.v ? PAPER : INK, border: `1px solid ${LINE}` }}>
-                      {o.t}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
-
-          {isDoc && (
-            <div>
-              <label className="text-xs font-medium" style={{ color: "#8A8578" }}>Recordatorios</label>
-              <div className="flex flex-wrap gap-2 mt-1">
-                {REMINDER_PRESETS.map((r) => (
-                  <button key={r.days} onClick={() => toggleReminder(r.days)} className="px-2.5 py-1 rounded-full text-xs font-medium"
-                    style={{ background: reminders.includes(r.days) ? cat.color : "white", color: reminders.includes(r.days) ? "white" : INK, border: `1px solid ${LINE}` }}>
-                    {r.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {!isDoc && (
-            <div>
-              <label className="text-xs font-medium" style={{ color: "#8A8578" }}>Estado</label>
-              <div className="flex gap-2 mt-1">
-                {["pendiente", "completado", ...(category === "cita" ? ["cancelada"] : [])].map((s) => (
-                  <button key={s} onClick={() => setStatus(s)} className="px-3 py-1.5 rounded-full text-xs font-medium capitalize"
-                    style={{ background: status === s ? cat.color : "white", color: status === s ? "white" : INK, border: `1px solid ${LINE}` }}>
-                    {s === "completado" ? (category === "pago" ? "Pagado" : category === "cita" ? "Realizada" : "Hecho") : s}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div>
-            <label className="text-xs font-medium" style={{ color: "#8A8578" }}>Notas</label>
-            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="w-full mt-1 px-3 py-2.5 rounded-xl text-[15px] outline-none resize-none" style={{ background: "white", border: `1px solid ${LINE}`, color: INK }} />
-          </div>
-        </div>
-
-        <div className="flex gap-2 mt-5">
-          {initial && (
-            <button onClick={() => onDelete(initial.id)} className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: "white", border: `1px solid ${LINE}`, color: "#B23A2E" }}>
-              <Trash2 size={18} />
-            </button>
-          )}
-          <button onClick={save} disabled={!title.trim() || !date} className="flex-1 py-3 rounded-xl font-semibold text-[15px] disabled:opacity-40" style={{ background: INK, color: PAPER }}>
-            Guardar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+  return /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 z-50 flex items-end sm:items-center justify-center", style: { background: "rgba(35,42,46,0.45)" }, onClick: onClose }, /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      className: "w-full sm:max-w-md max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl p-5",
+      style: { background: PAPER },
+      onClick: (e) => e.stopPropagation()
+    },
+    /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-4" }, /* @__PURE__ */ React.createElement("h2", { className: "text-lg font-semibold", style: { fontFamily: "'Fraunces', serif", color: INK } }, initial ? "Editar" : "Nuevo"), /* @__PURE__ */ React.createElement(IconBtn, { onClick: onClose, label: "Cerrar" }, /* @__PURE__ */ React.createElement(X, { size: 20 }))),
+    !initial && /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-2 mb-4" }, CAT_ORDER.map((c) => /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: c,
+        onClick: () => setCategory(c),
+        className: "px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-1.5 transition",
+        style: {
+          background: category === c ? CATS[c].color : "white",
+          color: category === c ? "white" : INK,
+          border: `1px solid ${category === c ? CATS[c].color : LINE}`
+        }
+      },
+      /* @__PURE__ */ React.createElement("span", null, CATS[c].icon),
+      CATS[c].label
+    ))),
+    /* @__PURE__ */ React.createElement("div", { className: "space-y-3" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { className: "text-xs font-medium", style: { color: "#8A8578" } }, "T\xEDtulo"), /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        value: title,
+        onChange: (e) => setTitle(e.target.value),
+        placeholder: category === "viaje" ? "Ej. Viaje a Oaxaca" : category === "pago" ? "Ej. Tarjeta BBVA" : "T\xEDtulo",
+        className: "w-full mt-1 px-3 py-2.5 rounded-xl text-[15px] outline-none",
+        style: { background: "white", border: `1px solid ${LINE}`, color: INK }
+      }
+    )), category === "viaje" && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { className: "text-xs font-medium", style: { color: "#8A8578" } }, "Destino"), /* @__PURE__ */ React.createElement("input", { value: destino, onChange: (e) => setDestino(e.target.value), className: "w-full mt-1 px-3 py-2.5 rounded-xl text-[15px] outline-none", style: { background: "white", border: `1px solid ${LINE}`, color: INK } })), /* @__PURE__ */ React.createElement("div", { className: "flex gap-3" }, /* @__PURE__ */ React.createElement("div", { className: "flex-1" }, /* @__PURE__ */ React.createElement("label", { className: "text-xs font-medium", style: { color: "#8A8578" } }, isDoc ? "Fecha de vencimiento" : isDateSpan ? "Fecha inicio" : "Fecha"), /* @__PURE__ */ React.createElement("input", { type: "date", value: date, onChange: (e) => setDate(e.target.value), className: "w-full mt-1 px-3 py-2.5 rounded-xl text-[15px] outline-none", style: { background: "white", border: `1px solid ${LINE}`, color: INK } })), isDateSpan && /* @__PURE__ */ React.createElement("div", { className: "flex-1" }, /* @__PURE__ */ React.createElement("label", { className: "text-xs font-medium", style: { color: "#8A8578" } }, "Fecha fin (opcional)"), /* @__PURE__ */ React.createElement("input", { type: "date", value: endDate, onChange: (e) => setEndDate(e.target.value), className: "w-full mt-1 px-3 py-2.5 rounded-xl text-[15px] outline-none", style: { background: "white", border: `1px solid ${LINE}`, color: INK } })), category === "cita" && /* @__PURE__ */ React.createElement("div", { className: "flex-1" }, /* @__PURE__ */ React.createElement("label", { className: "text-xs font-medium", style: { color: "#8A8578" } }, "Hora"), /* @__PURE__ */ React.createElement("input", { type: "time", value: time, onChange: (e) => setTime(e.target.value), className: "w-full mt-1 px-3 py-2.5 rounded-xl text-[15px] outline-none", style: { background: "white", border: `1px solid ${LINE}`, color: INK } }))), category === "cita" && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { className: "text-xs font-medium", style: { color: "#8A8578" } }, "Lugar"), /* @__PURE__ */ React.createElement("input", { value: place, onChange: (e) => setPlace(e.target.value), className: "w-full mt-1 px-3 py-2.5 rounded-xl text-[15px] outline-none", style: { background: "white", border: `1px solid ${LINE}`, color: INK } })), category === "pago" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "flex gap-3" }, /* @__PURE__ */ React.createElement("div", { className: "flex-1" }, /* @__PURE__ */ React.createElement("label", { className: "text-xs font-medium", style: { color: "#8A8578" } }, "Monto"), /* @__PURE__ */ React.createElement("input", { type: "number", inputMode: "decimal", value: amount, onChange: (e) => setAmount(e.target.value), className: "w-full mt-1 px-3 py-2.5 rounded-xl text-[15px] outline-none", style: { background: "white", border: `1px solid ${LINE}`, color: INK } })), /* @__PURE__ */ React.createElement("div", { className: "flex-1" }, /* @__PURE__ */ React.createElement("label", { className: "text-xs font-medium", style: { color: "#8A8578" } }, "Cuenta / tarjeta"), /* @__PURE__ */ React.createElement("input", { value: account, onChange: (e) => setAccount(e.target.value), placeholder: "Desde d\xF3nde pagas", className: "w-full mt-1 px-3 py-2.5 rounded-xl text-[15px] outline-none", style: { background: "white", border: `1px solid ${LINE}`, color: INK } }))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { className: "text-xs font-medium", style: { color: "#8A8578" } }, "Recurrencia"), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mt-1" }, [{ v: 0, t: "\xDAnico" }, { v: 1, t: "Mensual" }, { v: 3, t: "Trimestral" }, { v: 12, t: "Anual" }].map((o) => /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: o.v,
+        onClick: () => setRecurringMonths(o.v),
+        className: "px-3 py-1.5 rounded-full text-xs font-medium",
+        style: { background: recurringMonths === o.v ? INK : "white", color: recurringMonths === o.v ? PAPER : INK, border: `1px solid ${LINE}` }
+      },
+      o.t
+    ))))), isDoc && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { className: "text-xs font-medium", style: { color: "#8A8578" } }, "Recordatorios"), /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-2 mt-1" }, REMINDER_PRESETS.map((r) => /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: r.days,
+        onClick: () => toggleReminder(r.days),
+        className: "px-2.5 py-1 rounded-full text-xs font-medium",
+        style: { background: reminders.includes(r.days) ? cat.color : "white", color: reminders.includes(r.days) ? "white" : INK, border: `1px solid ${LINE}` }
+      },
+      r.label
+    )))), !isDoc && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { className: "text-xs font-medium", style: { color: "#8A8578" } }, "Estado"), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mt-1" }, ["pendiente", "completado", ...category === "cita" ? ["cancelada"] : []].map((s) => /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: s,
+        onClick: () => setStatus(s),
+        className: "px-3 py-1.5 rounded-full text-xs font-medium capitalize",
+        style: { background: status === s ? cat.color : "white", color: status === s ? "white" : INK, border: `1px solid ${LINE}` }
+      },
+      s === "completado" ? category === "pago" ? "Pagado" : category === "cita" ? "Realizada" : "Hecho" : s
+    )))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { className: "text-xs font-medium", style: { color: "#8A8578" } }, "Notas"), /* @__PURE__ */ React.createElement("textarea", { value: notes, onChange: (e) => setNotes(e.target.value), rows: 2, className: "w-full mt-1 px-3 py-2.5 rounded-xl text-[15px] outline-none resize-none", style: { background: "white", border: `1px solid ${LINE}`, color: INK } }))),
+    /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mt-5" }, initial && /* @__PURE__ */ React.createElement("button", { onClick: () => onDelete(initial.id), className: "w-11 h-11 rounded-xl flex items-center justify-center", style: { background: "white", border: `1px solid ${LINE}`, color: "#B23A2E" } }, /* @__PURE__ */ React.createElement(Trash2, { size: 18 })), /* @__PURE__ */ React.createElement("button", { onClick: save, disabled: !title.trim() || !date, className: "flex-1 py-3 rounded-xl font-semibold text-[15px] disabled:opacity-40", style: { background: INK, color: PAPER } }, "Guardar"))
+  ));
 }
-
-/* ------------------------------------------------------------------ */
-/* Renew Document modal                                                */
-/* ------------------------------------------------------------------ */
 function RenewModal({ item, onConfirm, onClose }) {
   const [newDate, setNewDate] = useState(addMonths(item.date, 12));
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-6" style={{ background: "rgba(35,42,46,0.45)" }} onClick={onClose}>
-      <div className="w-full max-w-sm rounded-2xl p-5" style={{ background: PAPER }} onClick={(e) => e.stopPropagation()}>
-        <h3 className="font-semibold text-[16px] mb-1" style={{ fontFamily: "'Fraunces', serif", color: INK }}>Renovar {item.title}</h3>
-        <p className="text-xs mb-3" style={{ color: "#8A8578" }}>El vencimiento anterior ({fmtLong(item.date)}) se guardará en el historial.</p>
-        <label className="text-xs font-medium" style={{ color: "#8A8578" }}>Nueva fecha de vencimiento</label>
-        <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} className="w-full mt-1 px-3 py-2.5 rounded-xl text-[15px] outline-none" style={{ background: "white", border: `1px solid ${LINE}`, color: INK }} />
-        <div className="flex gap-2 mt-4">
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl font-medium text-sm" style={{ border: `1px solid ${LINE}`, color: INK }}>Cancelar</button>
-          <button onClick={() => onConfirm(newDate)} className="flex-1 py-2.5 rounded-xl font-semibold text-sm" style={{ background: INK, color: PAPER }}>Confirmar</button>
-        </div>
-      </div>
-    </div>
-  );
+  return /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 z-50 flex items-center justify-center px-6", style: { background: "rgba(35,42,46,0.45)" }, onClick: onClose }, /* @__PURE__ */ React.createElement("div", { className: "w-full max-w-sm rounded-2xl p-5", style: { background: PAPER }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React.createElement("h3", { className: "font-semibold text-[16px] mb-1", style: { fontFamily: "'Fraunces', serif", color: INK } }, "Renovar ", item.title), /* @__PURE__ */ React.createElement("p", { className: "text-xs mb-3", style: { color: "#8A8578" } }, "El vencimiento anterior (", fmtLong(item.date), ") se guardar\xE1 en el historial."), /* @__PURE__ */ React.createElement("label", { className: "text-xs font-medium", style: { color: "#8A8578" } }, "Nueva fecha de vencimiento"), /* @__PURE__ */ React.createElement("input", { type: "date", value: newDate, onChange: (e) => setNewDate(e.target.value), className: "w-full mt-1 px-3 py-2.5 rounded-xl text-[15px] outline-none", style: { background: "white", border: `1px solid ${LINE}`, color: INK } }), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mt-4" }, /* @__PURE__ */ React.createElement("button", { onClick: onClose, className: "flex-1 py-2.5 rounded-xl font-medium text-sm", style: { border: `1px solid ${LINE}`, color: INK } }, "Cancelar"), /* @__PURE__ */ React.createElement("button", { onClick: () => onConfirm(newDate), className: "flex-1 py-2.5 rounded-xl font-semibold text-sm", style: { background: INK, color: PAPER } }, "Confirmar"))));
 }
-
-/* ------------------------------------------------------------------ */
-/* Settings / Backup                                                   */
-/* ------------------------------------------------------------------ */
 function SettingsModal({ items, onClose, onImport }) {
   const [msg, setMsg] = useState("");
-
   const exportData = () => {
     const blob = new Blob([JSON.stringify(items, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -561,9 +385,8 @@ function SettingsModal({ items, onClose, onImport }) {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-    setMsg("Respaldo descargado ✓");
+    setMsg("Respaldo descargado \u2713");
   };
-
   const importData = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -573,47 +396,15 @@ function SettingsModal({ items, onClose, onImport }) {
         const parsed = JSON.parse(reader.result);
         if (!Array.isArray(parsed)) throw new Error("bad");
         onImport(parsed);
-        setMsg("Datos restaurados ✓");
+        setMsg("Datos restaurados \u2713");
       } catch {
-        setMsg("Ese archivo no se pudo leer. ¿Es un respaldo válido?");
+        setMsg("Ese archivo no se pudo leer. \xBFEs un respaldo v\xE1lido?");
       }
     };
     reader.readAsText(file);
   };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" style={{ background: "rgba(35,42,46,0.45)" }} onClick={onClose}>
-      <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-5" style={{ background: PAPER }} onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-1">
-          <h2 className="text-lg font-semibold" style={{ fontFamily: "'Fraunces', serif", color: INK }}>Respaldo de datos</h2>
-          <IconBtn onClick={onClose} label="Cerrar"><X size={20} /></IconBtn>
-        </div>
-        <p className="text-sm mb-4" style={{ color: "#8A8578" }}>
-          Tus {items.length} elementos se guardan en la nube y se sincronizan automáticamente entre tu laptop y tu celular. Descarga un respaldo de vez en cuando por si acaso.
-        </p>
-
-        <button onClick={exportData} className="w-full py-3 rounded-xl font-semibold text-[15px] flex items-center justify-center gap-2 mb-3" style={{ background: INK, color: PAPER }}>
-          <Download size={17} /> Descargar respaldo (.json)
-        </button>
-
-        <label className="w-full py-3 rounded-xl font-medium text-[15px] flex items-center justify-center gap-2 cursor-pointer" style={{ background: "white", border: `1px solid ${LINE}`, color: INK }}>
-          <Upload size={17} /> Restaurar desde un archivo
-          <input type="file" accept="application/json" onChange={importData} className="hidden" />
-        </label>
-
-        {msg && <p className="text-xs text-center mt-3" style={{ color: msg.includes("✓") ? "#4E7A45" : "#B23A2E" }}>{msg}</p>}
-
-        <p className="text-xs mt-5 opacity-60" style={{ color: INK }}>
-          Restaurar reemplaza todo lo que tienes ahora por lo que traiga el archivo. Úsalo solo si perdiste información.
-        </p>
-      </div>
-    </div>
-  );
+  return /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 z-50 flex items-end sm:items-center justify-center", style: { background: "rgba(35,42,46,0.45)" }, onClick: onClose }, /* @__PURE__ */ React.createElement("div", { className: "w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-5", style: { background: PAPER }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-1" }, /* @__PURE__ */ React.createElement("h2", { className: "text-lg font-semibold", style: { fontFamily: "'Fraunces', serif", color: INK } }, "Respaldo de datos"), /* @__PURE__ */ React.createElement(IconBtn, { onClick: onClose, label: "Cerrar" }, /* @__PURE__ */ React.createElement(X, { size: 20 }))), /* @__PURE__ */ React.createElement("p", { className: "text-sm mb-4", style: { color: "#8A8578" } }, "Tus ", items.length, " elementos se guardan en la nube y se sincronizan autom\xE1ticamente entre tu laptop y tu celular. Descarga un respaldo de vez en cuando por si acaso."), /* @__PURE__ */ React.createElement("button", { onClick: exportData, className: "w-full py-3 rounded-xl font-semibold text-[15px] flex items-center justify-center gap-2 mb-3", style: { background: INK, color: PAPER } }, /* @__PURE__ */ React.createElement(Download, { size: 17 }), " Descargar respaldo (.json)"), /* @__PURE__ */ React.createElement("label", { className: "w-full py-3 rounded-xl font-medium text-[15px] flex items-center justify-center gap-2 cursor-pointer", style: { background: "white", border: `1px solid ${LINE}`, color: INK } }, /* @__PURE__ */ React.createElement(Upload, { size: 17 }), " Restaurar desde un archivo", /* @__PURE__ */ React.createElement("input", { type: "file", accept: "application/json", onChange: importData, className: "hidden" })), msg && /* @__PURE__ */ React.createElement("p", { className: "text-xs text-center mt-3", style: { color: msg.includes("\u2713") ? "#4E7A45" : "#B23A2E" } }, msg), /* @__PURE__ */ React.createElement("p", { className: "text-xs mt-5 opacity-60", style: { color: INK } }, "Restaurar reemplaza todo lo que tienes ahora por lo que traiga el archivo. \xDAsalo solo si perdiste informaci\xF3n.")));
 }
-
-/* ------------------------------------------------------------------ */
-/* Home / Hoy                                                          */
-/* ------------------------------------------------------------------ */
 function HomeView({ items, onOpen, onSettings }) {
   const today = todayISO();
   const groups = useMemo(() => {
@@ -628,88 +419,30 @@ function HomeView({ items, onOpen, onSettings }) {
     const byDate = (a, b) => a.date.localeCompare(b.date);
     return { hoy: hoy.sort(byDate), semana: semana.sort(byDate), pronto: pronto.sort(byDate) };
   }, [items, today]);
-
-  const Section = ({ title, list }) =>
-    list.length > 0 && (
-      <div className="mb-6">
-        <h3 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#8A8578" }}>{title}</h3>
-        <div className="space-y-2">
-          {list.map((it) => <ItemCard key={it.id} item={it} onOpen={onOpen} />)}
-        </div>
-      </div>
-    );
-
+  const Section = ({ title, list }) => list.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "mb-6" }, /* @__PURE__ */ React.createElement("h3", { className: "text-xs font-semibold uppercase tracking-wide mb-2", style: { color: "#8A8578" } }, title), /* @__PURE__ */ React.createElement("div", { className: "space-y-2" }, list.map((it) => /* @__PURE__ */ React.createElement(ItemCard, { key: it.id, item: it, onOpen }))));
   const nothing = groups.hoy.length + groups.semana.length + groups.pronto.length === 0;
-
-  return (
-    <div className="px-4 pt-2 pb-24">
-      <div className="mb-5 pt-2 flex items-start justify-between">
-        <div>
-          <p className="text-xs" style={{ color: "#8A8578" }}>{new Date().toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" })}</p>
-          <h1 className="text-2xl font-semibold" style={{ fontFamily: "'Fraunces', serif", color: INK }}>Hoy</h1>
-        </div>
-        <IconBtn onClick={onSettings} label="Respaldo de datos"><Settings size={20} /></IconBtn>
-      </div>
-      {nothing ? (
-        <EmptyState icon="🌤️" text="Nada urgente por ahora. Todo bajo control." />
-      ) : (
-        <>
-          <Section title="Hoy y atrasado" list={groups.hoy} />
-          <Section title="Próximos 7 días" list={groups.semana} />
-          <Section title="Próximamente" list={groups.pronto} />
-        </>
-      )}
-    </div>
-  );
+  return /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-2 pb-24" }, /* @__PURE__ */ React.createElement("div", { className: "mb-5 pt-2 flex items-start justify-between" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("p", { className: "text-xs", style: { color: "#8A8578" } }, (/* @__PURE__ */ new Date()).toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" })), /* @__PURE__ */ React.createElement("h1", { className: "text-2xl font-semibold", style: { fontFamily: "'Fraunces', serif", color: INK } }, "Hoy")), /* @__PURE__ */ React.createElement(IconBtn, { onClick: onSettings, label: "Respaldo de datos" }, /* @__PURE__ */ React.createElement(Settings, { size: 20 }))), nothing ? /* @__PURE__ */ React.createElement(EmptyState, { icon: "\u{1F324}\uFE0F", text: "Nada urgente por ahora. Todo bajo control." }) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Section, { title: "Hoy y atrasado", list: groups.hoy }), /* @__PURE__ */ React.createElement(Section, { title: "Pr\xF3ximos 7 d\xEDas", list: groups.semana }), /* @__PURE__ */ React.createElement(Section, { title: "Pr\xF3ximamente", list: groups.pronto })));
 }
-
-/* ------------------------------------------------------------------ */
-/* Category List View                                                  */
-/* ------------------------------------------------------------------ */
 function ListView({ category, items, onOpen }) {
   const cat = CATS[category];
   const list = useMemo(() => {
     const filtered = items.filter((i) => i.category === category);
     return filtered.sort((a, b) => a.date.localeCompare(b.date));
   }, [items, category]);
-
   const pending = list.filter((i) => i.status !== "completado" && i.status !== "cancelada");
   const done = list.filter((i) => i.status === "completado" || i.status === "cancelada");
-
-  return (
-    <div className="px-4 pt-2 pb-24">
-      <div className="mb-5 pt-2 flex items-center gap-2">
-        <span className="text-2xl">{cat.icon}</span>
-        <h1 className="text-2xl font-semibold" style={{ fontFamily: "'Fraunces', serif", color: INK }}>{cat.short}</h1>
-      </div>
-      {list.length === 0 ? (
-        <EmptyState icon={cat.icon} text={`Aún no tienes ${cat.short.toLowerCase()}.`} />
-      ) : (
-        <div className="space-y-2">
-          {pending.map((it) => <ItemCard key={it.id} item={it} onOpen={onOpen} />)}
-          {done.length > 0 && (
-            <>
-              <h3 className="text-xs font-semibold uppercase tracking-wide mt-5 mb-2" style={{ color: "#8A8578" }}>Historial</h3>
-              {done.map((it) => <ItemCard key={it.id} item={it} onOpen={onOpen} />)}
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  );
+  return /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-2 pb-24" }, /* @__PURE__ */ React.createElement("div", { className: "mb-5 pt-2 flex items-center gap-2" }, /* @__PURE__ */ React.createElement("span", { className: "text-2xl" }, cat.icon), /* @__PURE__ */ React.createElement("h1", { className: "text-2xl font-semibold", style: { fontFamily: "'Fraunces', serif", color: INK } }, cat.short)), list.length === 0 ? /* @__PURE__ */ React.createElement(EmptyState, { icon: cat.icon, text: `A\xFAn no tienes ${cat.short.toLowerCase()}.` }) : /* @__PURE__ */ React.createElement("div", { className: "space-y-2" }, pending.map((it) => /* @__PURE__ */ React.createElement(ItemCard, { key: it.id, item: it, onOpen })), done.length > 0 && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("h3", { className: "text-xs font-semibold uppercase tracking-wide mt-5 mb-2", style: { color: "#8A8578" } }, "Historial"), done.map((it) => /* @__PURE__ */ React.createElement(ItemCard, { key: it.id, item: it, onOpen })))));
 }
-
-/* ------------------------------------------------------------------ */
-/* Calendar View                                                       */
-/* ------------------------------------------------------------------ */
 function CalendarView({ items, onOpen, onAddOnDay }) {
-  const [cursor, setCursor] = useState(() => { const d = new Date(); d.setDate(1); return d; });
+  const [cursor, setCursor] = useState(() => {
+    const d = /* @__PURE__ */ new Date();
+    d.setDate(1);
+    return d;
+  });
   const [selected, setSelected] = useState(todayISO());
-
   const year = cursor.getFullYear(), month = cursor.getMonth();
   const firstDow = (new Date(year, month, 1).getDay() + 6) % 7;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-
   const dayMap = useMemo(() => {
     const m = {};
     for (const it of items) {
@@ -719,94 +452,55 @@ function CalendarView({ items, onOpen, onAddOnDay }) {
         let cur = start;
         let guard = 0;
         while (cur <= end && guard < 60) {
-          (m[cur] ||= []).push(it);
-          cur = new Date(new Date(cur + "T00:00:00").getTime() + 86400000).toISOString().slice(0, 10);
+          (m[cur] || (m[cur] = [])).push(it);
+          cur = new Date((/* @__PURE__ */ new Date(cur + "T00:00:00")).getTime() + 864e5).toISOString().slice(0, 10);
           guard++;
         }
       }
     }
     return m;
   }, [items]);
-
   const cells = [];
   for (let i = 0; i < firstDow; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-
   const iso = (d) => `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
   const monthLabel = cursor.toLocaleDateString("es-MX", { month: "long", year: "numeric" });
   const dayItems = (dayMap[selected] || []).sort((a, b) => (a.time || "").localeCompare(b.time || ""));
-
-  return (
-    <div className="px-4 pt-2 pb-24">
-      <div className="flex items-center justify-between pt-2 mb-4">
-        <h1 className="text-2xl font-semibold capitalize" style={{ fontFamily: "'Fraunces', serif", color: INK }}>{monthLabel}</h1>
-        <div className="flex gap-1">
-          <IconBtn label="Mes anterior" onClick={() => setCursor(new Date(year, month - 1, 1))}><ChevronLeft size={18} /></IconBtn>
-          <IconBtn label="Mes siguiente" onClick={() => setCursor(new Date(year, month + 1, 1))}><ChevronRight size={18} /></IconBtn>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-7 text-center mb-1">
-        {["L", "M", "X", "J", "V", "S", "D"].map((d) => (
-          <div key={d} className="text-[11px] font-medium py-1" style={{ color: "#8A8578" }}>{d}</div>
-        ))}
-      </div>
-      <div className="grid grid-cols-7 gap-y-1">
-        {cells.map((d, idx) => {
-          if (d === null) return <div key={idx} />;
-          const dISO = iso(d);
-          const dayList = dayMap[dISO] || [];
-          const isToday = dISO === todayISO();
-          const isSelected = dISO === selected;
-          const cats = [...new Set(dayList.map((i) => i.category))].slice(0, 4);
-          return (
-            <button key={idx} onClick={() => setSelected(dISO)} className="flex flex-col items-center py-1.5 gap-1 rounded-xl"
-              style={{ background: isSelected ? INK : "transparent" }}>
-              <span className="text-[13px] font-medium w-6 h-6 flex items-center justify-center rounded-full"
-                style={{ color: isSelected ? PAPER : isToday ? CATS.cita.color : INK, border: isToday && !isSelected ? `1px solid ${CATS.cita.color}` : "none" }}>
-                {d}
-              </span>
-              <div className="flex gap-0.5 h-1.5">
-                {cats.map((c) => (
-                  <span key={c} className="w-1 h-1 rounded-full" style={{ background: isSelected ? PAPER : CATS[c].color }} />
-                ))}
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="mt-6">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold" style={{ color: INK }}>{fmtLong(selected)}</h3>
-          <button onClick={() => onAddOnDay(selected)} className="text-xs font-medium flex items-center gap-1" style={{ color: CATS.cita.color }}>
-            <Plus size={14} /> Agregar
-          </button>
-        </div>
-        {dayItems.length === 0 ? (
-          <p className="text-sm py-6 text-center opacity-50" style={{ color: INK }}>Sin nada este día.</p>
-        ) : (
-          <div className="space-y-2">
-            {dayItems.map((it) => <ItemCard key={it.id + selected} item={it} onOpen={onOpen} />)}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  return /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-2 pb-24" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between pt-2 mb-4" }, /* @__PURE__ */ React.createElement("h1", { className: "text-2xl font-semibold capitalize", style: { fontFamily: "'Fraunces', serif", color: INK } }, monthLabel), /* @__PURE__ */ React.createElement("div", { className: "flex gap-1" }, /* @__PURE__ */ React.createElement(IconBtn, { label: "Mes anterior", onClick: () => setCursor(new Date(year, month - 1, 1)) }, /* @__PURE__ */ React.createElement(ChevronLeft, { size: 18 })), /* @__PURE__ */ React.createElement(IconBtn, { label: "Mes siguiente", onClick: () => setCursor(new Date(year, month + 1, 1)) }, /* @__PURE__ */ React.createElement(ChevronRight, { size: 18 })))), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-7 text-center mb-1" }, ["L", "M", "X", "J", "V", "S", "D"].map((d) => /* @__PURE__ */ React.createElement("div", { key: d, className: "text-[11px] font-medium py-1", style: { color: "#8A8578" } }, d))), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-7 gap-y-1" }, cells.map((d, idx) => {
+    if (d === null) return /* @__PURE__ */ React.createElement("div", { key: idx });
+    const dISO = iso(d);
+    const dayList = dayMap[dISO] || [];
+    const isToday = dISO === todayISO();
+    const isSelected = dISO === selected;
+    const cats = [...new Set(dayList.map((i) => i.category))].slice(0, 4);
+    return /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: idx,
+        onClick: () => setSelected(dISO),
+        className: "flex flex-col items-center py-1.5 gap-1 rounded-xl",
+        style: { background: isSelected ? INK : "transparent" }
+      },
+      /* @__PURE__ */ React.createElement(
+        "span",
+        {
+          className: "text-[13px] font-medium w-6 h-6 flex items-center justify-center rounded-full",
+          style: { color: isSelected ? PAPER : isToday ? CATS.cita.color : INK, border: isToday && !isSelected ? `1px solid ${CATS.cita.color}` : "none" }
+        },
+        d
+      ),
+      /* @__PURE__ */ React.createElement("div", { className: "flex gap-0.5 h-1.5" }, cats.map((c) => /* @__PURE__ */ React.createElement("span", { key: c, className: "w-1 h-1 rounded-full", style: { background: isSelected ? PAPER : CATS[c].color } })))
+    );
+  })), /* @__PURE__ */ React.createElement("div", { className: "mt-6" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-2" }, /* @__PURE__ */ React.createElement("h3", { className: "text-sm font-semibold", style: { color: INK } }, fmtLong(selected)), /* @__PURE__ */ React.createElement("button", { onClick: () => onAddOnDay(selected), className: "text-xs font-medium flex items-center gap-1", style: { color: CATS.cita.color } }, /* @__PURE__ */ React.createElement(Plus, { size: 14 }), " Agregar")), dayItems.length === 0 ? /* @__PURE__ */ React.createElement("p", { className: "text-sm py-6 text-center opacity-50", style: { color: INK } }, "Sin nada este d\xEDa.") : /* @__PURE__ */ React.createElement("div", { className: "space-y-2" }, dayItems.map((it) => /* @__PURE__ */ React.createElement(ItemCard, { key: it.id + selected, item: it, onOpen })))));
 }
-
-/* ------------------------------------------------------------------ */
-/* App                                                                  */
-/* ------------------------------------------------------------------ */
 const TABS = [
   { key: "hoy", label: "Hoy", icon: Home },
   { key: "calendario", label: "Calendario", icon: CalendarIconEl },
   { key: "pago", label: "Pagos", icon: CreditCard },
   { key: "cita", label: "Citas", icon: Stethoscope },
   { key: "documento", label: "Docs", icon: FileText },
-  { key: "viaje", label: "Viajes", icon: Plane },
+  { key: "viaje", label: "Viajes", icon: Plane }
 ];
-
 function App() {
   const { items, persist, error } = useItems();
   const [tab, setTab] = useState("hoy");
@@ -814,167 +508,100 @@ function App() {
   const [renewing, setRenewing] = useState(null);
   const [detail, setDetail] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
-
   const openDetail = (item) => setDetail(item);
   const openNew = (defaultCategory, date) => setFormState({ initial: date ? { date } : null, defaultCategory });
-
   const saveItem = async (item) => {
     if (!items) return;
     const exists = items.some((i) => i.id === item.id);
-    const next = exists ? items.map((i) => (i.id === item.id ? item : i)) : [...items, item];
+    const next = exists ? items.map((i) => i.id === item.id ? item : i) : [...items, item];
     await persist(next);
     setFormState(null);
     setDetail(null);
   };
-
   const deleteItem = async (id) => {
     await persist(items.filter((i) => i.id !== id));
     setFormState(null);
     setDetail(null);
   };
-
   const toggleStatus = async (item) => {
     const isDone = item.status === "completado";
-    let next = items.map((i) => (i.id === item.id ? { ...i, status: isDone ? "pendiente" : "completado" } : i));
+    let next = items.map((i) => i.id === item.id ? { ...i, status: isDone ? "pendiente" : "completado" } : i);
     if (!isDone && item.category === "pago" && item.recurringMonths > 0) {
       next = [...next, { ...item, id: uid(), status: "pendiente", date: addMonths(item.date, item.recurringMonths) }];
     }
     await persist(next);
-    setDetail((d) => (d ? { ...d, status: isDone ? "pendiente" : "completado" } : d));
+    setDetail((d) => d ? { ...d, status: isDone ? "pendiente" : "completado" } : d);
   };
-
   const renewDoc = async (item, newDate) => {
-    const history = [...(item.history || []), { date: item.date, renewedOn: todayISO() }];
-    const next = items.map((i) => (i.id === item.id ? { ...i, date: newDate, history } : i));
+    const history = [...item.history || [], { date: item.date, renewedOn: todayISO() }];
+    const next = items.map((i) => i.id === item.id ? { ...i, date: newDate, history } : i);
     await persist(next);
     setRenewing(null);
     setDetail(null);
   };
-
   if (items === null) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: PAPER }}>
-        <p className="text-sm" style={{ color: "#8A8578" }}>Cargando…</p>
-      </div>
-    );
+    return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen flex items-center justify-center", style: { background: PAPER } }, /* @__PURE__ */ React.createElement("p", { className: "text-sm", style: { color: "#8A8578" } }, "Cargando\u2026"));
   }
-
-  return (
-    <div className="min-h-screen w-full flex justify-center" style={{ background: PAPER_DIM, fontFamily: "'Inter', sans-serif" }}>
-      <div className="w-full max-w-md min-h-screen relative" style={{ background: PAPER }}>
-        {error && (
-          <div className="text-[11px] text-center py-1" style={{ background: "#F1DCD4", color: "#A8492F" }}>
-            No se pudo guardar. Revisa tu conexión.
-          </div>
-        )}
-
-        {tab === "hoy" && <HomeView items={items} onOpen={openDetail} onSettings={() => setShowSettings(true)} />}
-        {tab === "calendario" && <CalendarView items={items} onOpen={openDetail} onAddOnDay={(date) => openNew("pendiente", date)} />}
-        {["pago", "cita", "documento", "viaje"].includes(tab) && (
-          <ListView category={tab} items={items} onOpen={openDetail} />
-        )}
-
-        <button
-          onClick={() => openNew(tab === "hoy" || tab === "calendario" ? "pendiente" : tab)}
-          style={{
-            position: "fixed",
-            bottom: "5.5rem",
-            right: "max(1.25rem, calc(50vw - 14rem))",
-            background: INK, color: PAPER,
-            width: 52, height: 52, borderRadius: 26,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 6px 16px rgba(35,42,46,0.25)",
-            zIndex: 30,
-          }}
-          aria-label="Agregar"
-        >
-          <Plus size={24} />
-        </button>
-
-        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md flex border-t" style={{ background: PAPER, borderColor: LINE }}>
-          {TABS.map((t) => {
-            const IconComp = t.icon;
-            const activeCat = CATS[t.key];
-            const active = tab === t.key;
-            return (
-              <button key={t.key} onClick={() => setTab(t.key)} className="flex-1 flex flex-col items-center gap-0.5 py-2.5">
-                <IconComp size={20} color={active ? (activeCat ? activeCat.color : INK) : "#B8B2A0"} strokeWidth={active ? 2.4 : 2} />
-                <span className="text-[10px] font-medium" style={{ color: active ? INK : "#B8B2A0" }}>{t.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {detail && (
-          <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center" style={{ background: "rgba(35,42,46,0.45)" }} onClick={() => setDetail(null)}>
-            <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-5" style={{ background: PAPER }} onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">{CATS[detail.category].icon}</span>
-                  <h2 className="text-lg font-semibold" style={{ fontFamily: "'Fraunces', serif", color: INK }}>{detail.title}</h2>
-                </div>
-                <IconBtn onClick={() => setDetail(null)} label="Cerrar"><X size={20} /></IconBtn>
-              </div>
-              <div className="space-y-1.5 text-sm mb-4" style={{ color: INK }}>
-                <p><Clock size={13} className="inline mr-1.5 -mt-0.5" />{fmtLong(detail.date)}{detail.time ? ` · ${detail.time}` : ""}</p>
-                {detail.endDate && detail.endDate !== detail.date && <p>Hasta {fmtLong(detail.endDate)}</p>}
-                {detail.place && <p>📍 {detail.place}</p>}
-                {detail.destino && <p>Destino: {detail.destino}</p>}
-                {detail.amount !== "" && detail.category === "pago" && <p>Monto: {money(detail.amount)}</p>}
-                {detail.account && <p>Cuenta: {detail.account}</p>}
-                {detail.notes && <p className="opacity-70">{detail.notes}</p>}
-                {detail.history && detail.history.length > 0 && (
-                  <p className="text-xs opacity-60">Historial: {detail.history.map((h) => fmtShort(h.date)).join(", ")}</p>
-                )}
-              </div>
-              <div className="flex gap-2">
-                {(detail.category === "documento" || detail.category === "renovacion") ? (
-                  <button onClick={() => setRenewing(detail)} className="flex-1 py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-1.5" style={{ background: CATS[detail.category].color, color: "white" }}>
-                    <RotateCcw size={15} /> Renovar
-                  </button>
-                ) : (
-                  <button onClick={() => toggleStatus(detail)} className="flex-1 py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-1.5"
-                    style={{ background: detail.status === "completado" ? "white" : CATS[detail.category].color, color: detail.status === "completado" ? INK : "white", border: detail.status === "completado" ? `1px solid ${LINE}` : "none" }}>
-                    <Check size={15} /> {detail.status === "completado" ? "Marcar pendiente" : "Marcar hecho"}
-                  </button>
-                )}
-                <button onClick={() => setFormState({ initial: detail })} className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: "white", border: `1px solid ${LINE}`, color: INK }}>
-                  <Pencil size={16} />
-                </button>
-                <button onClick={() => deleteItem(detail.id)} className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: "white", border: `1px solid ${LINE}`, color: "#B23A2E" }}>
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {formState && (
-          <ItemForm
-            initial={formState.initial && formState.initial.id ? formState.initial : null}
-            defaultCategory={formState.defaultCategory || (formState.initial && formState.initial.date ? undefined : "pendiente")}
-            prefillDate={formState.initial && !formState.initial.id ? formState.initial.date : undefined}
-            onSave={saveItem}
-            onDelete={deleteItem}
-            onClose={() => setFormState(null)}
-          />
-        )}
-
-        {renewing && <RenewModal item={renewing} onConfirm={(d) => renewDoc(renewing, d)} onClose={() => setRenewing(null)} />}
-
-        {showSettings && (
-          <SettingsModal
-            items={items}
-            onClose={() => setShowSettings(false)}
-            onImport={async (data) => { await persist(data); }}
-          />
-        )}
-      </div>
-    </div>
-  );
+  return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen w-full flex justify-center", style: { background: PAPER_DIM, fontFamily: "'Inter', sans-serif" } }, /* @__PURE__ */ React.createElement("div", { className: "w-full max-w-md min-h-screen relative", style: { background: PAPER } }, error && /* @__PURE__ */ React.createElement("div", { className: "text-[11px] text-center py-1", style: { background: "#F1DCD4", color: "#A8492F" } }, "No se pudo guardar. Revisa tu conexi\xF3n."), tab === "hoy" && /* @__PURE__ */ React.createElement(HomeView, { items, onOpen: openDetail, onSettings: () => setShowSettings(true) }), tab === "calendario" && /* @__PURE__ */ React.createElement(CalendarView, { items, onOpen: openDetail, onAddOnDay: (date) => openNew("pendiente", date) }), ["pago", "cita", "documento", "viaje"].includes(tab) && /* @__PURE__ */ React.createElement(ListView, { category: tab, items, onOpen: openDetail }), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => openNew(tab === "hoy" || tab === "calendario" ? "pendiente" : tab),
+      style: {
+        position: "fixed",
+        bottom: "5.5rem",
+        right: "max(1.25rem, calc(50vw - 14rem))",
+        background: INK,
+        color: PAPER,
+        width: 52,
+        height: 52,
+        borderRadius: 26,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        boxShadow: "0 6px 16px rgba(35,42,46,0.25)",
+        zIndex: 30
+      },
+      "aria-label": "Agregar"
+    },
+    /* @__PURE__ */ React.createElement(Plus, { size: 24 })
+  ), /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md flex border-t", style: { background: PAPER, borderColor: LINE } }, TABS.map((t) => {
+    const IconComp = t.icon;
+    const activeCat = CATS[t.key];
+    const active = tab === t.key;
+    return /* @__PURE__ */ React.createElement("button", { key: t.key, onClick: () => setTab(t.key), className: "flex-1 flex flex-col items-center gap-0.5 py-2.5" }, /* @__PURE__ */ React.createElement(IconComp, { size: 20, color: active ? activeCat ? activeCat.color : INK : "#B8B2A0", strokeWidth: active ? 2.4 : 2 }), /* @__PURE__ */ React.createElement("span", { className: "text-[10px] font-medium", style: { color: active ? INK : "#B8B2A0" } }, t.label));
+  })), detail && /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 z-40 flex items-end sm:items-center justify-center", style: { background: "rgba(35,42,46,0.45)" }, onClick: () => setDetail(null) }, /* @__PURE__ */ React.createElement("div", { className: "w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-5", style: { background: PAPER }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React.createElement("div", { className: "flex items-start justify-between mb-3" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("span", { className: "text-xl" }, CATS[detail.category].icon), /* @__PURE__ */ React.createElement("h2", { className: "text-lg font-semibold", style: { fontFamily: "'Fraunces', serif", color: INK } }, detail.title)), /* @__PURE__ */ React.createElement(IconBtn, { onClick: () => setDetail(null), label: "Cerrar" }, /* @__PURE__ */ React.createElement(X, { size: 20 }))), /* @__PURE__ */ React.createElement("div", { className: "space-y-1.5 text-sm mb-4", style: { color: INK } }, /* @__PURE__ */ React.createElement("p", null, /* @__PURE__ */ React.createElement(Clock, { size: 13, className: "inline mr-1.5 -mt-0.5" }), fmtLong(detail.date), detail.time ? ` \xB7 ${detail.time}` : ""), detail.endDate && detail.endDate !== detail.date && /* @__PURE__ */ React.createElement("p", null, "Hasta ", fmtLong(detail.endDate)), detail.place && /* @__PURE__ */ React.createElement("p", null, "\u{1F4CD} ", detail.place), detail.destino && /* @__PURE__ */ React.createElement("p", null, "Destino: ", detail.destino), detail.amount !== "" && detail.category === "pago" && /* @__PURE__ */ React.createElement("p", null, "Monto: ", money(detail.amount)), detail.account && /* @__PURE__ */ React.createElement("p", null, "Cuenta: ", detail.account), detail.notes && /* @__PURE__ */ React.createElement("p", { className: "opacity-70" }, detail.notes), detail.history && detail.history.length > 0 && /* @__PURE__ */ React.createElement("p", { className: "text-xs opacity-60" }, "Historial: ", detail.history.map((h) => fmtShort(h.date)).join(", "))), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, detail.category === "documento" || detail.category === "renovacion" ? /* @__PURE__ */ React.createElement("button", { onClick: () => setRenewing(detail), className: "flex-1 py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-1.5", style: { background: CATS[detail.category].color, color: "white" } }, /* @__PURE__ */ React.createElement(RotateCcw, { size: 15 }), " Renovar") : /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => toggleStatus(detail),
+      className: "flex-1 py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-1.5",
+      style: { background: detail.status === "completado" ? "white" : CATS[detail.category].color, color: detail.status === "completado" ? INK : "white", border: detail.status === "completado" ? `1px solid ${LINE}` : "none" }
+    },
+    /* @__PURE__ */ React.createElement(Check, { size: 15 }),
+    " ",
+    detail.status === "completado" ? "Marcar pendiente" : "Marcar hecho"
+  ), /* @__PURE__ */ React.createElement("button", { onClick: () => setFormState({ initial: detail }), className: "w-11 h-11 rounded-xl flex items-center justify-center", style: { background: "white", border: `1px solid ${LINE}`, color: INK } }, /* @__PURE__ */ React.createElement(Pencil, { size: 16 })), /* @__PURE__ */ React.createElement("button", { onClick: () => deleteItem(detail.id), className: "w-11 h-11 rounded-xl flex items-center justify-center", style: { background: "white", border: `1px solid ${LINE}`, color: "#B23A2E" } }, /* @__PURE__ */ React.createElement(Trash2, { size: 16 }))))), formState && /* @__PURE__ */ React.createElement(
+    ItemForm,
+    {
+      initial: formState.initial && formState.initial.id ? formState.initial : null,
+      defaultCategory: formState.defaultCategory || (formState.initial && formState.initial.date ? void 0 : "pendiente"),
+      prefillDate: formState.initial && !formState.initial.id ? formState.initial.date : void 0,
+      onSave: saveItem,
+      onDelete: deleteItem,
+      onClose: () => setFormState(null)
+    }
+  ), renewing && /* @__PURE__ */ React.createElement(RenewModal, { item: renewing, onConfirm: (d) => renewDoc(renewing, d), onClose: () => setRenewing(null) }), showSettings && /* @__PURE__ */ React.createElement(
+    SettingsModal,
+    {
+      items,
+      onClose: () => setShowSettings(false),
+      onImport: async (data) => {
+        await persist(data);
+      }
+    }
+  )));
 }
+ReactDOM.createRoot(document.getElementById("root")).render(/* @__PURE__ */ React.createElement(App, null));
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 </script>
 </body>
 </html>
