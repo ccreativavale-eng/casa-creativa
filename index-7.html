@@ -304,6 +304,25 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
         <option value="mixto">🔀 Mixto</option>
       </select>
     </div>
+    <div id="edit-pkg-segundo-pago-section" style="border-top:1px solid var(--hueso2);margin-top:6px;padding-top:12px">
+      <div style="font-weight:700;font-size:13px;color:var(--grafito);margin-bottom:10px">💰 Segundo pago (si aplica)</div>
+      <div class="field"><label>¿Tiene segundo pago pendiente?</label>
+        <select id="edit-pkg-tiene-segundo" onchange="toggleEditSegundoPago()">
+          <option value="no">No</option>
+          <option value="si">Sí</option>
+        </select>
+      </div>
+      <div id="edit-pkg-segundo-campos" style="display:none">
+        <div class="field"><label>Monto pendiente ($)</label><input type="number" id="edit-pkg-monto2" placeholder="Ej. 1632"></div>
+        <div class="field"><label>Fecha límite</label><input type="date" id="edit-pkg-fecha2"></div>
+        <div class="field"><label>Estado</label>
+          <select id="edit-pkg-pagado2">
+            <option value="no">⏳ Aún no se ha pagado</option>
+            <option value="si">✅ Ya se pagó</option>
+          </select>
+        </div>
+      </div>
+    </div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="btn btn-ghost btn-small" onclick="closeModal('modal-editar-paquete')">Cancelar</button>
       <button class="btn btn-primary btn-small" id="btn-guardar-edicion-paquete">Guardar cambios</button>
@@ -1681,6 +1700,19 @@ window.verAlumna=async id=>{
       document.getElementById("edit-pkg-clases").value=p.clasesRestantes;
       document.getElementById("edit-pkg-monto").value=p.monto||0;
       document.getElementById("edit-pkg-expira").value=p.expira;
+      if(p.segundoPago){
+        document.getElementById("edit-pkg-tiene-segundo").value="si";
+        document.getElementById("edit-pkg-monto2").value=p.segundoPago.monto||0;
+        document.getElementById("edit-pkg-fecha2").value=p.segundoPago.fechaLimite||"";
+        document.getElementById("edit-pkg-pagado2").value=p.segundoPago.pagado?"si":"no";
+        document.getElementById("edit-pkg-segundo-campos").style.display="block";
+      } else {
+        document.getElementById("edit-pkg-tiene-segundo").value="no";
+        document.getElementById("edit-pkg-monto2").value="";
+        document.getElementById("edit-pkg-fecha2").value="";
+        document.getElementById("edit-pkg-pagado2").value="no";
+        document.getElementById("edit-pkg-segundo-campos").style.display="none";
+      }
       window._editPkgId=pkgId;
       window._editAlumnaId=alumnaId;
       openModal("modal-editar-paquete");
@@ -1732,12 +1764,26 @@ window.guardarEdicionPaquete=async()=>{
   const clases=parseInt(document.getElementById("edit-pkg-clases").value)||0;
   const monto=parseFloat(document.getElementById("edit-pkg-monto").value)||0;
   const expira=document.getElementById("edit-pkg-expira").value;
-  a.paquetes=a.paquetes.map(p=>p.id===pkgId?{...p,paqueteDefId:defId,nombre:def?.nombre||p.nombre,emoji:def?.emoji||p.emoji,clasesRestantes:clases,clasesTotal:Math.max(clases,p.clasesTotal),monto,montoTotal:monto,expira}:p);
+  const tieneSegundo=document.getElementById("edit-pkg-tiene-segundo").value==="si";
+  let segundoPago=null;
+  if(tieneSegundo){
+    const monto2=parseFloat(document.getElementById("edit-pkg-monto2").value)||0;
+    const fecha2=document.getElementById("edit-pkg-fecha2").value;
+    const pagado2=document.getElementById("edit-pkg-pagado2").value==="si";
+    segundoPago={monto:monto2,fechaLimite:fecha2,metodo:"efectivo",pagado:pagado2};
+  }
+  const montoTotal=monto+(segundoPago&&!segundoPago.pagado?segundoPago.monto:0);
+  a.paquetes=a.paquetes.map(p=>p.id===pkgId?{...p,paqueteDefId:defId,nombre:def?.nombre||p.nombre,emoji:def?.emoji||p.emoji,clasesRestantes:clases,clasesTotal:Math.max(clases,p.clasesTotal),monto,montoTotal,expira,segundoPago}:p);
   await fbUpdate("alumnas",alumnaId,{paquetes:a.paquetes});
   closeModal("modal-editar-paquete");
   closeModal("modal-ver-alumna");
   renderAlumnas();
   showToast("✓ Paquete actualizado");
+};
+
+window.toggleEditSegundoPago=()=>{
+  const tiene=document.getElementById("edit-pkg-tiene-segundo").value==="si";
+  document.getElementById("edit-pkg-segundo-campos").style.display=tiene?"block":"none";
 };
 
 window.marcarSegundoPago=async(alumnaId,pkgId)=>{
