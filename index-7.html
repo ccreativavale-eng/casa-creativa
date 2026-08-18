@@ -949,7 +949,7 @@ window.renderServicios = () => {
           <div>
             <div style="font-weight:700">${s.nombre}</div>
             <div style="font-size:12px;color:var(--gris)">${tipoLabel} · ${s.gramos?s.gramos+"g · ":""}${fmtFecha(s.fecha)}</div>
-            <div style="font-size:11px;font-weight:700;color:${s.pagado?"var(--verde)":"var(--oro)"}">${s.pagado?"✅ Pagado":"⏳ Pendiente"}</div>
+            <div style="font-size:11px;font-weight:700;color:${s.pagado?"var(--verde)":"var(--oro)"}">${s.pagado?"✅ Pagado"+(s.fechaPago?" el "+fmtFecha(s.fechaPago):""):"⏳ Pendiente"}</div>
           </div>
           <div style="text-align:right;display:flex;flex-direction:column;gap:4px;align-items:flex-end">
             <div style="font-weight:800;font-size:16px;color:var(--principal)">$${s.precio}</div>
@@ -973,7 +973,7 @@ window.renderServicios = () => {
   document.getElementById("btn-migrar-servicios")?.addEventListener("click", async()=>{
     if(!confirm("¿Marcar TODOS los servicios como pagados?")) return;
     const servicios = JSON.parse(localStorage.getItem("cc_servicios")||"[]");
-    const updated = servicios.map(s=>({...s, pagado:true, fechaISO:s.fechaISO||s.creadoEn?.slice(0,10)||hoy()}));
+    const updated = servicios.map(s=>({...s, pagado:true, fechaPago:s.fechaPago||hoy(), fechaISO:s.fechaISO||s.creadoEn?.slice(0,10)||hoy()}));
     localStorage.setItem("cc_servicios", JSON.stringify(updated));
     // Update Firebase
     for(const s of updated){
@@ -1010,10 +1010,12 @@ window.renderServicios = () => {
       const id = btn.getAttribute("data-srv-id");
       const servicios = JSON.parse(localStorage.getItem("cc_servicios")||"[]");
       const srvToUpdate = servicios.find(s=>s.id===id);
-      const updated = servicios.map(s => s.id === id ? {...s, pagado: true} : s);
+      const fechaPagoHoy = hoy();
+      const updated = servicios.map(s => s.id === id ? {...s, pagado: true, fechaPago: fechaPagoHoy} : s);
       localStorage.setItem("cc_servicios", JSON.stringify(updated));
-      if(srvToUpdate) await fbSet("servicios", id, {...srvToUpdate, pagado: true});
-      showToast("✅ Servicio marcado como pagado");
+      if(srvToUpdate) await fbSet("servicios", id, {...srvToUpdate, pagado: true, fechaPago: fechaPagoHoy});
+      if(window._serviciosFirebase) window._serviciosFirebase = window._serviciosFirebase.map(s => s.id === id ? {...s, pagado:true, fechaPago:fechaPagoHoy} : s);
+      showToast("✅ Servicio marcado como pagado hoy");
       renderServicios();
       if(document.getElementById("tab-ingresos").style.display!=="none") renderIngresos();
     });
@@ -1123,10 +1125,12 @@ window.guardarServicio = async() => {
   else { const t=tipo==="sancocho"?TARIFAS_SANCOCHO:TARIFAS_ESMALTADO; precio=calcPrecio(val,t); }
   const servicios = JSON.parse(localStorage.getItem("cc_servicios")||"[]");
   const pagado = document.getElementById("srv-pagado")?.value === "si";
-  const nuevoSrv = {id:uid(),nombre,tipo,gramos,precio,fecha,pagado:!!pagado,creadoEn:new Date().toISOString()};
+  const nuevoSrv = {id:uid(),nombre,tipo,gramos,precio,fecha,pagado:!!pagado,fechaPago: pagado ? fecha : null, creadoEn:new Date().toISOString()};
   servicios.push(nuevoSrv);
   localStorage.setItem("cc_servicios", JSON.stringify(servicios));
   await fbSet("servicios", nuevoSrv.id, nuevoSrv);
+  if(!window._serviciosFirebase) window._serviciosFirebase=[];
+  window._serviciosFirebase.push(nuevoSrv);
   showToast(`✓ Servicio registrado · $${precio}`);
   renderServicios();
   if(document.getElementById("tab-ingresos").style.display!=="none") renderIngresos();
@@ -1333,7 +1337,10 @@ window.renderIngresosInterno=()=>{
   const porMes={};
   todos.forEach(p=>{const m=p.compradoEn.slice(0,7);if(!porMes[m])porMes[m]={total:0,paquetes:[],servicios:[]};porMes[m].total+=p.montoTotal||p.monto||0;porMes[m].paquetes.push(p);});
   serviciosGuardados.forEach(s=>{
-    const m=normalizarMes(s.fecha,s.creadoEn,s.fechaISO);
+    // Usar la fecha en que se PAGÓ (fechaPago) en vez de la fecha en que se registró el servicio.
+    // Para ingresos libres, fechaISO ya guarda la fecha correcta (funciona igual que fechaPago).
+    const fechaParaIngreso = s.fechaPago || s.fechaISO || s.fecha;
+    const m=normalizarMes(fechaParaIngreso, s.creadoEn, fechaParaIngreso);
     if(!porMes[m])porMes[m]={total:0,paquetes:[],servicios:[]};
     porMes[m].total+=(s.precio||s.monto||0);
     if(!porMes[m].servicios)porMes[m].servicios=[];
