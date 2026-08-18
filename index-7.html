@@ -953,7 +953,7 @@ window.renderServicios = () => {
           </div>
           <div style="text-align:right;display:flex;flex-direction:column;gap:4px;align-items:flex-end">
             <div style="font-weight:800;font-size:16px;color:var(--principal)">$${s.precio}</div>
-            ${!s.pagado?`<button data-srv-id="${s.id}" style="font-size:11px;background:var(--verde);color:white;border:none;border-radius:6px;padding:2px 8px;cursor:pointer;font-family:inherit">✓ Pagado</button>`:""}
+            ${!s.pagado?`<button data-srv-id="${s.id}" style="font-size:11px;background:var(--verde);color:white;border:none;border-radius:6px;padding:2px 8px;cursor:pointer;font-family:inherit">✓ Pagado</button>`:`<button data-srv-fix-fecha="${s.id}" style="font-size:10px;background:var(--gris);color:white;border:none;border-radius:6px;padding:2px 6px;cursor:pointer;font-family:inherit">🔄 Corregir fecha a hoy</button>`}
             <button data-srv-del="${s.id}" style="font-size:13px;background:none;color:var(--acento2);border:none;cursor:pointer;font-family:inherit;padding:2px 4px">✕</button>
           </div>
         </div>
@@ -1016,6 +1016,22 @@ window.renderServicios = () => {
       if(srvToUpdate) await fbSet("servicios", id, {...srvToUpdate, pagado: true, fechaPago: fechaPagoHoy});
       if(window._serviciosFirebase) window._serviciosFirebase = window._serviciosFirebase.map(s => s.id === id ? {...s, pagado:true, fechaPago:fechaPagoHoy} : s);
       showToast("✅ Servicio marcado como pagado hoy");
+      renderServicios();
+      if(document.getElementById("tab-ingresos").style.display!=="none") renderIngresos();
+    });
+  });
+  document.querySelectorAll("[data-srv-fix-fecha]").forEach(btn => {
+    btn.addEventListener("click", async() => {
+      const id = btn.getAttribute("data-srv-fix-fecha");
+      if(!confirm("¿Mover este ingreso al mes de HOY? Úsalo si ya estaba marcado como pagado antes de la actualización y sigue apareciendo en el mes viejo.")) return;
+      const servicios = JSON.parse(localStorage.getItem("cc_servicios")||"[]");
+      const srvToUpdate = servicios.find(s=>s.id===id);
+      const fechaPagoHoy = hoy();
+      const updated = servicios.map(s => s.id === id ? {...s, fechaPago: fechaPagoHoy} : s);
+      localStorage.setItem("cc_servicios", JSON.stringify(updated));
+      if(srvToUpdate) await fbSet("servicios", id, {...srvToUpdate, fechaPago: fechaPagoHoy});
+      if(window._serviciosFirebase) window._serviciosFirebase = window._serviciosFirebase.map(s => s.id === id ? {...s, fechaPago:fechaPagoHoy} : s);
+      showToast("✓ Fecha de pago corregida a hoy");
       renderServicios();
       if(document.getElementById("tab-ingresos").style.display!=="none") renderIngresos();
     });
