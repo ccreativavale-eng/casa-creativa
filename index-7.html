@@ -243,6 +243,12 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
         <option value="dos_pagos">📅 En dos pagos</option>
       </select>
     </div>
+    <div class="field" id="pkg-metodo1-field" style="display:none"><label>Método primer pago</label>
+      <select id="pkg-metodo1">
+        <option value="efectivo">💵 Efectivo</option>
+        <option value="transferencia">🏦 Transferencia</option>
+      </select>
+    </div>
     <div class="field"><label>Monto primer pago ($) *</label><input type="number" id="pkg-monto1" placeholder="Ej. 4500"></div>
     <div class="field"><label>Fecha primer pago</label><input type="date" id="pkg-fecha1"></div>
     
@@ -315,6 +321,12 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
       <div id="edit-pkg-segundo-campos" style="display:none">
         <div class="field"><label>Monto pendiente ($)</label><input type="number" id="edit-pkg-monto2" placeholder="Ej. 1632"></div>
         <div class="field"><label>Fecha límite</label><input type="date" id="edit-pkg-fecha2"></div>
+        <div class="field"><label>Método segundo pago</label>
+          <select id="edit-pkg-metodo2">
+            <option value="efectivo">💵 Efectivo</option>
+            <option value="transferencia">🏦 Transferencia</option>
+          </select>
+        </div>
         <div class="field"><label>Estado</label>
           <select id="edit-pkg-pagado2">
             <option value="no">⏳ Aún no se ha pagado</option>
@@ -948,6 +960,13 @@ window.renderServicios = () => {
     <div class="field" id="srv-input-peso"><label id="srv-input-label">Peso de la pieza (gramos)</label><input type="number" id="srv-gramos" placeholder="Ej. 350"></div>
     <div id="srv-precio-preview" style="display:none" class="aviso aviso-rosa" style="font-size:14px;font-weight:700;margin-bottom:14px"></div>
     <div class="field"><label>Fecha</label><input type="date" id="srv-fecha"></div>
+    <div class="field"><label>Método de pago</label>
+      <select id="srv-metodo">
+        <option value="efectivo">💵 Efectivo</option>
+        <option value="transferencia">🏦 Transferencia</option>
+        <option value="mixto">🔀 Mixto</option>
+      </select>
+    </div>
     <div class="field"><label>Estado del pago</label>
       <select id="srv-pagado">
         <option value="si">✅ Ya pagó</option>
@@ -968,7 +987,7 @@ window.renderServicios = () => {
           <div>
             <div style="font-weight:700">${s.nombre}</div>
             <div style="font-size:12px;color:var(--gris)">${tipoLabel} · ${s.gramos?s.gramos+"g · ":""}${fmtFecha(s.fecha)}</div>
-            <div style="font-size:11px;font-weight:700;color:${s.pagado?"var(--verde)":"var(--oro)"}">${s.pagado?"✅ Pagado"+(s.fechaPago?" el "+fmtFecha(s.fechaPago):""):"⏳ Pendiente"}</div>
+            <div style="font-size:11px;font-weight:700;color:${s.pagado?"var(--verde)":"var(--oro)"}">${s.pagado?"✅ Pagado"+(s.fechaPago?" el "+fmtFecha(s.fechaPago):""):"⏳ Pendiente"} ${s.metodo?"· "+metodoLabel(s.metodo):""}</div>
           </div>
           <div style="text-align:right;display:flex;flex-direction:column;gap:4px;align-items:flex-end">
             <div style="font-weight:800;font-size:16px;color:var(--principal)">$${s.precio}</div>
@@ -1129,6 +1148,7 @@ window.guardarServicio = async() => {
   const tipo = document.getElementById("srv-tipo")?.value;
   const gramos = parseInt(document.getElementById("srv-gramos")?.value||0);
   const fecha = document.getElementById("srv-fecha")?.value;
+  const metodo = document.getElementById("srv-metodo")?.value||"efectivo";
   if(!nombre||!gramos) { showToast("Completa todos los campos"); return; }
   const val = gramos;
   let precio;
@@ -1144,7 +1164,7 @@ window.guardarServicio = async() => {
   else { const t=tipo==="sancocho"?TARIFAS_SANCOCHO:TARIFAS_ESMALTADO; precio=calcPrecio(val,t); }
   const servicios = JSON.parse(localStorage.getItem("cc_servicios")||"[]");
   const pagado = document.getElementById("srv-pagado")?.value === "si";
-  const nuevoSrv = {id:uid(),nombre,tipo,gramos,precio,fecha,pagado:!!pagado,fechaPago: pagado ? fecha : null, creadoEn:new Date().toISOString()};
+  const nuevoSrv = {id:uid(),nombre,tipo,gramos,precio,fecha,metodo,pagado:!!pagado,fechaPago: pagado ? fecha : null, creadoEn:new Date().toISOString()};
   servicios.push(nuevoSrv);
   localStorage.setItem("cc_servicios", JSON.stringify(servicios));
   await fbSet("servicios", nuevoSrv.id, nuevoSrv);
@@ -1354,16 +1374,41 @@ window.renderIngresosInterno=()=>{
   const esPagado2=s=>s.pagado&&s.pagado!==false&&s.pagado!=="no"&&s.pagado!=="pendiente"&&s.pagado!=="Pendiente";
   const serviciosGuardados=todosServicios.filter(s=>esPagado2(s));
   const porMes={};
-  todos.forEach(p=>{const m=p.compradoEn.slice(0,7);if(!porMes[m])porMes[m]={total:0,paquetes:[],servicios:[]};porMes[m].total+=p.montoTotal||p.monto||0;porMes[m].paquetes.push(p);});
+  const getMesData=(m)=>{if(!porMes[m])porMes[m]={total:0,efectivo:0,transferencia:0,mixto:0,paquetes:[],servicios:[]};return porMes[m];};
+  todos.forEach(p=>{
+    const m=p.compradoEn.slice(0,7);
+    const md=getMesData(m);
+    md.total+=p.montoTotal||p.monto||0;
+    md.paquetes.push(p);
+    // Primer pago (o pago completo si no es dos_pagos)
+    const metodo1=p.metodoPago||"efectivo";
+    if(metodo1==="efectivo")md.efectivo+=p.monto||0;
+    else if(metodo1==="transferencia")md.transferencia+=p.monto||0;
+    else md.mixto+=p.monto||0;
+    // Segundo pago, si ya se pagó — se suma al mes en que realmente se pagó
+    if(p.segundoPago&&p.segundoPago.pagado){
+      const m2=(p.segundoPago.fechaPago||p.segundoPago.fechaLimite||p.compradoEn).slice(0,7);
+      const md2=getMesData(m2);
+      const metodo2=p.segundoPago.metodo||"efectivo";
+      if(metodo2==="efectivo")md2.efectivo+=p.segundoPago.monto||0;
+      else if(metodo2==="transferencia")md2.transferencia+=p.segundoPago.monto||0;
+      else md2.mixto+=p.segundoPago.monto||0;
+      // Si el segundo pago cae en un mes distinto al primero, sumar también su monto al total de ESE mes
+      if(m2!==m){md2.total+=p.segundoPago.monto||0;}
+    }
+  });
   serviciosGuardados.forEach(s=>{
     // Usar la fecha en que se PAGÓ (fechaPago) en vez de la fecha en que se registró el servicio.
     // Para ingresos libres, fechaISO ya guarda la fecha correcta (funciona igual que fechaPago).
     const fechaParaIngreso = s.fechaPago || s.fechaISO || s.fecha;
     const m=normalizarMes(fechaParaIngreso, s.creadoEn, fechaParaIngreso);
-    if(!porMes[m])porMes[m]={total:0,paquetes:[],servicios:[]};
-    porMes[m].total+=(s.precio||s.monto||0);
-    if(!porMes[m].servicios)porMes[m].servicios=[];
-    porMes[m].servicios.push(s);
+    const md=getMesData(m);
+    md.total+=(s.precio||s.monto||0);
+    md.servicios.push(s);
+    const metodo=s.metodo||"efectivo";
+    if(metodo==="efectivo")md.efectivo+=(s.precio||s.monto||0);
+    else if(metodo==="transferencia")md.transferencia+=(s.precio||s.monto||0);
+    else md.mixto+=(s.precio||s.monto||0);
   });
   const meses=Object.keys(porMes).sort().reverse(),total=todos.reduce((s,p)=>s+(p.montoTotal||p.monto||0),0)+serviciosGuardados.filter(s=>s.pagado).reduce((s,x)=>s+(x.precio||x.monto||0),0);
 
@@ -1374,7 +1419,20 @@ window.renderIngresosInterno=()=>{
   const todasDeudas=[...deudasPaquetes,...deudasServicios];
   const totalDeudas=todasDeudas.reduce((s,d)=>s+d.monto,0);
 
+  // Resumen del mes actual: efectivo vs transferencia
+  const mesActualKey=hoy().slice(0,7);
+  const mesActualData=porMes[mesActualKey]||{efectivo:0,transferencia:0,mixto:0};
+
   let html=`<div class="row-space" style="margin-bottom:16px"><span style="font-weight:800;font-size:16px;font-family:'DM Serif Display',serif">Ingresos</span><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px"><button id="btn-abrir-ingreso-libre" class="btn btn-primary btn-small">+ Ingreso libre</button><div style="text-align:right"><div style="font-size:11px;color:var(--gris)">Total cobrado</div><div class="display" style="font-weight:800;font-size:24px;color:var(--principal)">$${total.toLocaleString("es-MX")}</div></div></div></div>`;
+
+  // Resumen efectivo vs transferencia — mes actual
+  html+=`<div class="card" style="margin-bottom:16px;border:2px solid var(--principal)"><div style="font-weight:800;font-family:'DM Serif Display',serif;margin-bottom:10px;text-transform:capitalize">💵🏦 ${mesAnio(mesActualKey)}</div>
+    <div style="display:flex;gap:8px">
+      <div style="flex:1;background:var(--fondo);border-radius:10px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:800;color:var(--verde)">$${(mesActualData.efectivo||0).toLocaleString("es-MX")}</div><div style="font-size:11px;color:var(--gris)">💵 Efectivo</div></div>
+      <div style="flex:1;background:var(--fondo);border-radius:10px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:800;color:var(--principal)">$${(mesActualData.transferencia||0).toLocaleString("es-MX")}</div><div style="font-size:11px;color:var(--gris)">🏦 Transferencia</div></div>
+      ${mesActualData.mixto>0?`<div style="flex:1;background:var(--fondo);border-radius:10px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:800;color:var(--oro)">$${(mesActualData.mixto||0).toLocaleString("es-MX")}</div><div style="font-size:11px;color:var(--gris)">🔀 Mixto</div></div>`:""}
+    </div>
+  </div>`;
 
   // Sección deudas
   if(todasDeudas.length){
@@ -1386,12 +1444,14 @@ window.renderIngresosInterno=()=>{
   const tipoLabelSimple2=(t)=>({sancocho:"Sancocho",esmaltado:"Esmaltado",ambos:"Sancocho+Esmaltado",sancocho_grande:"Sancocho grande",esmaltado_grande:"Esmaltado grande",ambos_grande:"Ambos grande",sancocho_lote:"Sancocho lote",esmaltado_lote:"Esmaltado lote",ambos_lote:"Ambos lote",clase_esmalte:"Clase esmalte",pulido_esmaltado:"Pulido+esmaltado"}[t]||t);
   if(!meses.length)html+=`<div class="card empty-state"><div style="font-size:36px;margin-bottom:8px">💰</div><div>Sin ingresos registrados aún.</div></div>`;
   meses.forEach(mes=>{
-    const{total:t,paquetes:ps}=porMes[mes];
+    const{total:t,paquetes:ps,efectivo:mEfectivo,transferencia:mTransferencia,mixto:mMixto}=porMes[mes];
     const srvMes=(porMes[mes].servicios||[]);
-    html+=`<div class="card" style="margin-bottom:14px"><div class="row-space" style="margin-bottom:10px"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif;text-transform:capitalize">${mesAnio(mes)}</div><div class="display" style="font-weight:800;font-size:18px;color:var(--principal)">$${t.toLocaleString("es-MX")}</div></div>${ps.map((p,i)=>{
+    html+=`<div class="card" style="margin-bottom:14px"><div class="row-space" style="margin-bottom:6px"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif;text-transform:capitalize">${mesAnio(mes)}</div><div class="display" style="font-weight:800;font-size:18px;color:var(--principal)">$${t.toLocaleString("es-MX")}</div></div>
+    <div style="font-size:11px;color:var(--gris);margin-bottom:10px;padding-bottom:8px;border-bottom:1px dashed var(--hueso2)">💵 $${(mEfectivo||0).toLocaleString("es-MX")} efectivo &nbsp;·&nbsp; 🏦 $${(mTransferencia||0).toLocaleString("es-MX")} transferencia${mMixto>0?` &nbsp;·&nbsp; 🔀 $${mMixto.toLocaleString("es-MX")} mixto`:""}</div>
+    ${ps.map((p,i)=>{
       const pendiente=p.segundoPago&&!p.segundoPago.pagado;
       return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;${i<ps.length-1?"border-bottom:1px solid var(--hueso2)":""};font-size:13px"><div><span style="font-weight:600">${p.alumna}</span><span style="color:var(--gris)"> · ${p.emoji} ${p.nombre}</span><br><span style="font-size:11px;color:var(--gris)">${metodoLabel(p.metodoPago||"efectivo")}</span>${pendiente?`<span style="font-size:11px;color:var(--oro);font-weight:700"> · ⏳ Falta $${(p.segundoPago.monto||0).toLocaleString("es-MX")}</span>`:""}</div><span style="font-weight:700">$${(p.montoTotal||p.monto||0).toLocaleString("es-MX")}</span></div>`;
-    }).join("")}${srvMes.map(s=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--hueso2);font-size:13px"><div><span style="font-weight:600">${s.nombre}</span><br><span style="color:var(--gris)">${s.tipo==="libre"?`💰 ${s.concepto} · ${s.metodo==="efectivo"?"💵":s.metodo==="transferencia"?"🏦":"🔀"}`:`🔥 ${tipoLabelSimple2(s.tipo)}`}</span></div><span style="font-weight:700">$${(s.precio||s.monto||0).toLocaleString("es-MX")}</span></div>`).join("")}</div>`;
+    }).join("")}${srvMes.map(s=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--hueso2);font-size:13px"><div><span style="font-weight:600">${s.nombre}</span><br><span style="color:var(--gris)">${s.tipo==="libre"?`💰 ${s.concepto} · ${s.metodo==="efectivo"?"💵":s.metodo==="transferencia"?"🏦":"🔀"}`:`🔥 ${tipoLabelSimple2(s.tipo)} · ${s.metodo==="efectivo"?"💵":s.metodo==="transferencia"?"🏦":"🔀"}`}</span></div><span style="font-weight:700">$${(s.precio||s.monto||0).toLocaleString("es-MX")}</span></div>`).join("")}</div>`;
   });
   document.getElementById("tab-ingresos").innerHTML=html;
   
@@ -1484,8 +1544,8 @@ window.guardarAlumna=async()=>{
   renderAlumnas();showToast("✓ "+nombre+" agregada");
 };
 
-window.openPaquete=id=>{pkgAlumnaId=id;const a=alumnas.find(x=>x.id===id);document.getElementById("modal-paquete-title").textContent="Nuevo paquete — "+a.nombre;document.getElementById("pkg-fecha1").value=hoy();document.getElementById("pkg-monto1").value="";document.getElementById("pkg-monto2").value="";document.getElementById("pkg-fecha2").value=addDias(hoy(),15);document.getElementById("pkg-metodo").value="efectivo";document.getElementById("segundo-pago-section").style.display="none";const pkt=document.getElementById("pkg-def").value;const isPrevio=pkt.startsWith("previo");document.getElementById("pkg-clases-field").style.display=isPrevio?"none":"block";document.getElementById("pkg-clases-restantes").value="";updatePkgInfo();openModal("modal-paquete");};
-window.toggleSegundoPago=()=>{const m=document.getElementById("pkg-metodo").value;document.getElementById("segundo-pago-section").style.display=m==="dos_pagos"?"block":"none";};
+window.openPaquete=id=>{pkgAlumnaId=id;const a=alumnas.find(x=>x.id===id);document.getElementById("modal-paquete-title").textContent="Nuevo paquete — "+a.nombre;document.getElementById("pkg-fecha1").value=hoy();document.getElementById("pkg-monto1").value="";document.getElementById("pkg-monto2").value="";document.getElementById("pkg-fecha2").value=addDias(hoy(),15);document.getElementById("pkg-metodo").value="efectivo";document.getElementById("segundo-pago-section").style.display="none";document.getElementById("pkg-metodo1-field").style.display="none";const pkt=document.getElementById("pkg-def").value;const isPrevio=pkt.startsWith("previo");document.getElementById("pkg-clases-field").style.display=isPrevio?"none":"block";document.getElementById("pkg-clases-restantes").value="";updatePkgInfo();openModal("modal-paquete");};
+window.toggleSegundoPago=()=>{const m=document.getElementById("pkg-metodo").value;const esDosPagos=m==="dos_pagos";document.getElementById("segundo-pago-section").style.display=esDosPagos?"block":"none";document.getElementById("pkg-metodo1-field").style.display=esDosPagos?"block":"none";};
 const DIAS_PREVIO = (clases) => {
   if(clases <= 1) return 15;
   if(clases <= 4) return 60;
@@ -1505,9 +1565,12 @@ window.updatePkgInfo=()=>{
 
 window.guardarPaquete=async()=>{
   const monto1=parseFloat(document.getElementById("pkg-monto1").value)||0;
-  const defId=document.getElementById("pkg-def").value,def=PAQUETES_DEF[defId],fc=document.getElementById("pkg-fecha1").value,metodo=document.getElementById("pkg-metodo").value;
+  const defId=document.getElementById("pkg-def").value,def=PAQUETES_DEF[defId],fc=document.getElementById("pkg-fecha1").value,metodoSel=document.getElementById("pkg-metodo").value;
   let segundoPago=null,montoTotal=monto1;
-  if(metodo==="dos_pagos"){
+  // Si es "dos_pagos", el método real del primer pago viene de pkg-metodo1 (efectivo/transferencia).
+  // Si no, el método elegido (efectivo/transferencia/mixto) es directamente el método del pago.
+  const metodo = metodoSel==="dos_pagos" ? (document.getElementById("pkg-metodo1")?.value||"efectivo") : metodoSel;
+  if(metodoSel==="dos_pagos"){
     const monto2=parseFloat(document.getElementById("pkg-monto2").value)||0;
     montoTotal=monto1+monto2;
     segundoPago={monto:monto2,fechaLimite:document.getElementById("pkg-fecha2").value,metodo:document.getElementById("pkg-metodo2").value,pagado:false};
@@ -1701,16 +1764,19 @@ window.verAlumna=async id=>{
       document.getElementById("edit-pkg-clases").value=p.clasesRestantes;
       document.getElementById("edit-pkg-monto").value=p.monto||0;
       document.getElementById("edit-pkg-expira").value=p.expira;
+      document.getElementById("edit-pkg-metodo").value=p.metodoPago==="dos_pagos"?"efectivo":(p.metodoPago||"efectivo");
       if(p.segundoPago){
         document.getElementById("edit-pkg-tiene-segundo").value="si";
         document.getElementById("edit-pkg-monto2").value=p.segundoPago.monto||0;
         document.getElementById("edit-pkg-fecha2").value=p.segundoPago.fechaLimite||"";
+        document.getElementById("edit-pkg-metodo2").value=p.segundoPago.metodo||"efectivo";
         document.getElementById("edit-pkg-pagado2").value=p.segundoPago.pagado?"si":"no";
         document.getElementById("edit-pkg-segundo-campos").style.display="block";
       } else {
         document.getElementById("edit-pkg-tiene-segundo").value="no";
         document.getElementById("edit-pkg-monto2").value="";
         document.getElementById("edit-pkg-fecha2").value="";
+        document.getElementById("edit-pkg-metodo2").value="efectivo";
         document.getElementById("edit-pkg-pagado2").value="no";
         document.getElementById("edit-pkg-segundo-campos").style.display="none";
       }
@@ -1781,16 +1847,22 @@ window.guardarEdicionPaquete=async()=>{
   const clases=parseInt(document.getElementById("edit-pkg-clases").value)||0;
   const monto=parseFloat(document.getElementById("edit-pkg-monto").value)||0;
   const expira=document.getElementById("edit-pkg-expira").value;
+  const metodo=document.getElementById("edit-pkg-metodo").value;
   const tieneSegundo=document.getElementById("edit-pkg-tiene-segundo").value==="si";
+  const pAnterior=a.paquetes.find(p=>p.id===pkgId);
   let segundoPago=null;
   if(tieneSegundo){
     const monto2=parseFloat(document.getElementById("edit-pkg-monto2").value)||0;
     const fecha2=document.getElementById("edit-pkg-fecha2").value;
+    const metodo2=document.getElementById("edit-pkg-metodo2").value;
     const pagado2=document.getElementById("edit-pkg-pagado2").value==="si";
-    segundoPago={monto:monto2,fechaLimite:fecha2,metodo:"efectivo",pagado:pagado2};
+    // Si se marca como pagado y no tenía ya una fecha de pago registrada, usar hoy
+    const fechaPagoPrevia=pAnterior?.segundoPago?.fechaPago;
+    const fechaPago = pagado2 ? (fechaPagoPrevia || hoy()) : null;
+    segundoPago={monto:monto2,fechaLimite:fecha2,metodo:metodo2,pagado:pagado2,fechaPago};
   }
   const montoTotal=monto+(segundoPago&&!segundoPago.pagado?segundoPago.monto:0);
-  a.paquetes=a.paquetes.map(p=>p.id===pkgId?{...p,paqueteDefId:defId,nombre:def?.nombre||p.nombre,emoji:def?.emoji||p.emoji,clasesRestantes:clases,clasesTotal:Math.max(clases,p.clasesTotal),monto,montoTotal,expira,segundoPago}:p);
+  a.paquetes=a.paquetes.map(p=>p.id===pkgId?{...p,paqueteDefId:defId,nombre:def?.nombre||p.nombre,emoji:def?.emoji||p.emoji,clasesRestantes:clases,clasesTotal:Math.max(clases,p.clasesTotal),monto,montoTotal,metodoPago:metodo,expira,segundoPago}:p);
   await fbUpdate("alumnas",alumnaId,{paquetes:a.paquetes});
   closeModal("modal-editar-paquete");
   closeModal("modal-ver-alumna");
