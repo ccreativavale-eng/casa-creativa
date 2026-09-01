@@ -1453,7 +1453,8 @@ window.renderIngresosInterno=()=>{
   if(!meses.length)html+=`<div class="card empty-state"><div style="font-size:36px;margin-bottom:8px">💰</div><div>Sin ingresos registrados aún.</div></div>`;
   meses.forEach(mes=>{
     const{total:t,paquetes:ps,efectivo:mEfectivo,transferencia:mTransferencia,mixto:mMixto}=porMes[mes];
-    const srvMes=(porMes[mes].servicios||[]);
+    const srvMes=(porMes[mes].servicios||[]).slice().sort((a,b)=>(b.fechaPago||b.fecha||"").localeCompare(a.fechaPago||a.fecha||""));
+    ps.sort((a,b)=>(b.compradoEn||"").localeCompare(a.compradoEn||""));
     html+=`<div class="card" style="margin-bottom:14px"><div class="row-space" style="margin-bottom:6px"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif;text-transform:capitalize">${mesAnio(mes)}</div><div class="display" style="font-weight:800;font-size:18px;color:var(--principal)">$${t.toLocaleString("es-MX")}</div></div>
     <div style="font-size:11px;color:var(--gris);margin-bottom:10px;padding-bottom:8px;border-bottom:1px dashed var(--hueso2)">💵 $${(mEfectivo||0).toLocaleString("es-MX")} efectivo &nbsp;·&nbsp; 🏦 $${(mTransferencia||0).toLocaleString("es-MX")} transferencia${mMixto>0?` &nbsp;·&nbsp; 🔀 $${mMixto.toLocaleString("es-MX")} mixto`:""}</div>
     ${ps.map((p,i)=>{
