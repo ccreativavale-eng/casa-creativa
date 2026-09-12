@@ -133,6 +133,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
       <button class="tab" onclick="setTab('alumnas')">👩‍🎨 Alumnas</button>
       <button class="tab" onclick="setTab('ingresos')">💰 Ingresos</button>
       <button class="tab" onclick="setTab('servicios')">🔥 Servicios</button>
+      <button class="tab" onclick="setTab('eventos')">🎉 Eventos</button>
       <button class="tab" onclick="setTab('gastos')">📊 Gastos</button>
       <button class="tab" onclick="setTab('estadisticas')">📈 Stats</button>
     </div>
@@ -142,6 +143,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
     <div id="tab-alumnas" style="display:none"></div>
     <div id="tab-ingresos" style="display:none"></div>
     <div id="tab-servicios" style="display:none"></div>
+    <div id="tab-eventos" style="display:none"></div>
     <div id="tab-gastos" style="display:none"></div>
     <div id="tab-estadisticas" style="display:none"></div>
   </div>
@@ -402,6 +404,65 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-nuevo-evento">
+  <div class="modal">
+    <div class="modal-header"><span class="serif" id="modal-evento-title" style="font-weight:800;font-size:17px">🎉 Nuevo evento</span><button class="modal-close" onclick="closeModal('modal-nuevo-evento')">×</button></div>
+    <div class="field"><label>Nombre del evento *</label><input type="text" id="ev-nombre" placeholder="Ej. Taller navideño"></div>
+    <div class="field"><label>Fecha del evento</label><input type="date" id="ev-fecha"></div>
+    <div class="field"><label>Costo sugerido por persona ($)</label><input type="text" inputmode="decimal" id="ev-costo" placeholder="Ej. 500"></div>
+    <div class="field"><label>Notas (opcional)</label><input type="text" id="ev-notas" placeholder="Ej. Cupo máximo, detalles…"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost btn-small" onclick="closeModal('modal-nuevo-evento')">Cancelar</button>
+      <button class="btn btn-primary btn-small" id="btn-guardar-evento">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-participante-evento">
+  <div class="modal">
+    <div class="modal-header"><span class="serif" style="font-weight:800;font-size:17px">+ Participante</span><button class="modal-close" onclick="closeModal('modal-participante-evento')">×</button></div>
+    <div class="field">
+      <label>Nombre</label>
+      <input type="text" id="pev-nombre" placeholder="Ej. María García" autocomplete="off">
+      <div id="pev-sugerencias" style="background:var(--blanco);border:1.5px solid var(--hueso2);border-radius:9px;margin-top:2px;display:none;max-height:120px;overflow-y:auto;"></div>
+    </div>
+    <div class="field"><label>¿Cuántos pagos?</label>
+      <select id="pev-tipo-pago" onchange="toggleSegundoPagoEvento()">
+        <option value="unico">💰 Un solo pago</option>
+        <option value="dos_pagos">📅 En dos pagos</option>
+      </select>
+    </div>
+    <div class="field"><label id="pev-monto1-label">Monto ($) *</label><input type="text" inputmode="decimal" id="pev-monto1" placeholder="Ej. 500"></div>
+    <div class="field"><label id="pev-metodo1-label">Método de pago</label>
+      <select id="pev-metodo1">
+        <option value="efectivo">💵 Efectivo</option>
+        <option value="transferencia">🏦 Transferencia</option>
+      </select>
+    </div>
+    <div id="pev-segundo-pago-section" style="display:none">
+      <div style="font-weight:700;font-size:13px;color:var(--grafito);margin:12px 0 10px">2° Pago</div>
+      <div class="field"><label>Monto segundo pago ($)</label><input type="text" inputmode="decimal" id="pev-monto2" placeholder="Ej. 250"></div>
+      <div class="field"><label>Fecha límite segundo pago</label><input type="date" id="pev-fecha2"></div>
+      <div class="field"><label>Método segundo pago</label>
+        <select id="pev-metodo2">
+          <option value="efectivo">💵 Efectivo</option>
+          <option value="transferencia">🏦 Transferencia</option>
+        </select>
+      </div>
+      <div class="field"><label>Estado del segundo pago</label>
+        <select id="pev-pagado2">
+          <option value="no">⏳ Aún no se ha pagado</option>
+          <option value="si">✅ Ya se pagó</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost btn-small" onclick="closeModal('modal-participante-evento')">Cancelar</button>
+      <button class="btn btn-primary btn-small" id="btn-guardar-participante-evento">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
 import { getFirestore, collection, doc, getDocs, setDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
@@ -446,7 +507,7 @@ const HORARIOS = [
   {id:"sab_m",label:"Sábado 16:00–19:00",  dia:"Sábado", hora:"16:00–19:00", diaN:6, tipo:"membresia"},
 ];
 
-let alumnas=[],reservas=[],asistencias=[];
+let alumnas=[],reservas=[],asistencias=[],eventos=[];
 let alumnaActiva=null,semanaOffset=0,pkgAlumnaId=null,vistaAgenda="mes",mesOffset=0;
 let bloqueos=[];
 let clasesCerradas=[];
@@ -569,7 +630,7 @@ window.renderGastos = () => {
   document.getElementById("btn-guardar-gasto").addEventListener("click", () => {
     const desc = document.getElementById("gasto-desc")?.value?.trim();
     const cat = document.getElementById("gasto-cat")?.value;
-    const monto = parseFloat(document.getElementById("gasto-monto")?.value||0);
+    const monto = parseFloat((document.getElementById("gasto-monto")?.value||"0").replace(/,/g,""));
     const fecha = document.getElementById("gasto-fecha")?.value;
     if(!desc||!monto) { showToast("Completa todos los campos"); return; }
     const gastos = JSON.parse(localStorage.getItem("cc_gastos")||"[]");
@@ -612,7 +673,7 @@ const db = getFirestore(app);
 window.guardarIngresoLibre = async() => {
   const nombre = document.getElementById("il-nombre")?.value?.trim();
   const concepto = document.getElementById("il-concepto")?.value?.trim();
-  const monto = parseFloat(document.getElementById("il-monto")?.value||0);
+  const monto = parseFloat((document.getElementById("il-monto")?.value||"0").replace(/,/g,""));
   const fecha = document.getElementById("il-fecha")?.value;
   if(!nombre||!concepto||!monto) { showToast("Completa todos los campos"); return; }
   const metodo = document.getElementById("il-metodo")?.value||"efectivo";
@@ -721,6 +782,10 @@ async function cargarDatos(){
     const ccSnap = await getDocs(collection(db,"clases_cerradas"));
     clasesCerradas = ccSnap.docs.map(d=>({id:d.id,...d.data()}));
   } catch(e) { clasesCerradas=[]; }
+  try {
+    const evSnap = await getDocs(collection(db,"eventos"));
+    eventos = evSnap.docs.map(d=>({id:d.id,...d.data()}));
+  } catch(e) { eventos=[]; }
   reservas=rSnap.docs.map(d=>({id:d.id,...d.data()}));
   asistencias=asSnap.docs.map(d=>({id:d.id,...d.data()}));
   // Merge Firebase services with localStorage
@@ -761,9 +826,9 @@ window.entrarAlumna=()=>{if(!alumnaLoginSel)return;alumnaActiva=alumnas.find(x=>
 window.entrarMaestra=()=>{if(document.getElementById("input-clave").value===CLAVE){renderMaestra();showScreen("maestra");}else{document.getElementById("error-clave").style.display="block";setTimeout(()=>document.getElementById("error-clave").style.display="none",2000);}};
 
 window.setTab=name=>{
-  ["agenda","alumnas","ingresos","servicios","gastos","estadisticas"].forEach(t=>{document.getElementById("tab-"+t).style.display=t===name?"block":"none";});
-  document.querySelectorAll(".tab").forEach((b,i)=>b.classList.toggle("active",["agenda","alumnas","ingresos","servicios","gastos","estadisticas"][i]===name));
-  if(name==="agenda")renderAgenda();if(name==="alumnas")renderAlumnas();if(name==="ingresos")renderIngresos();if(name==="servicios")renderServicios();if(name==="gastos")renderGastos();if(name==="estadisticas")renderEstadisticas();
+  ["agenda","alumnas","ingresos","servicios","eventos","gastos","estadisticas"].forEach(t=>{document.getElementById("tab-"+t).style.display=t===name?"block":"none";});
+  document.querySelectorAll(".tab").forEach((b,i)=>b.classList.toggle("active",["agenda","alumnas","ingresos","servicios","eventos","gastos","estadisticas"][i]===name));
+  if(name==="agenda")renderAgenda();if(name==="alumnas")renderAlumnas();if(name==="ingresos")renderIngresos();if(name==="servicios")renderServicios();if(name==="eventos")renderEventos();if(name==="gastos")renderGastos();if(name==="estadisticas")renderEstadisticas();
 };
 const renderMaestra=()=>renderAgenda();
 
@@ -1183,6 +1248,192 @@ window.guardarServicio = async() => {
   if(document.getElementById("tab-ingresos").style.display!=="none") renderIngresos();
 };
 
+// ── EVENTOS ─────────────────────────────────────────────
+const _numLimpio=(v)=>parseFloat((v||"0").toString().replace(/,/g,""))||0;
+
+window.renderEventos = () => {
+  let html = `<div class="row-space" style="margin-bottom:16px">
+    <span style="font-weight:800;font-size:16px;font-family:'DM Serif Display',serif">🎉 Eventos</span>
+    <button class="btn btn-primary btn-small" id="btn-nuevo-evento">+ Nuevo evento</button>
+  </div>`;
+
+  if(!eventos.length){
+    html += `<div class="card empty-state"><div style="font-size:36px;margin-bottom:8px">🎉</div><div>Aún no hay eventos registrados.</div></div>`;
+  } else {
+    [...eventos].sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||"")).forEach(ev=>{
+      const participantes = ev.participantes||[];
+      const totalCobrado = participantes.reduce((s,p)=>s+(p.monto||0)+((p.segundoPago&&p.segundoPago.pagado)?(p.segundoPago.monto||0):0),0);
+      const totalPorCobrar = participantes.reduce((s,p)=>s+((p.segundoPago&&!p.segundoPago.pagado)?(p.segundoPago.monto||0):0),0);
+      html += `<div class="card" style="margin-bottom:16px;border:2px solid var(--secundario)">
+        <div class="row-space" style="margin-bottom:4px">
+          <div style="font-weight:800;font-size:16px;font-family:'DM Serif Display',serif">${ev.nombre}</div>
+          <button data-del-evento="${ev.id}" style="font-size:13px;background:none;color:var(--acento2);border:none;cursor:pointer;font-family:inherit;padding:2px 4px">✕</button>
+        </div>
+        <div style="font-size:12px;color:var(--gris);margin-bottom:10px">${ev.fecha?fmtFecha(ev.fecha)+" · ":""}${ev.costo?"Costo sugerido: $"+Number(ev.costo).toLocaleString("es-MX"):""}${ev.notas?" · "+ev.notas:""}</div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <div style="flex:1;background:var(--fondo);border-radius:10px;padding:8px;text-align:center"><div style="font-size:16px;font-weight:800;color:var(--verde)">$${totalCobrado.toLocaleString("es-MX")}</div><div style="font-size:10px;color:var(--gris)">Cobrado</div></div>
+          <div style="flex:1;background:var(--fondo);border-radius:10px;padding:8px;text-align:center"><div style="font-size:16px;font-weight:800;color:var(--oro)">$${totalPorCobrar.toLocaleString("es-MX")}</div><div style="font-size:10px;color:var(--gris)">Por cobrar</div></div>
+          <div style="flex:1;background:var(--fondo);border-radius:10px;padding:8px;text-align:center"><div style="font-size:16px;font-weight:800;color:var(--principal)">${participantes.length}</div><div style="font-size:10px;color:var(--gris)">Participantes</div></div>
+        </div>
+        <button data-add-participante="${ev.id}" class="btn btn-ghost btn-small btn-full" style="margin-bottom:10px">+ Agregar participante</button>`;
+      if(!participantes.length){
+        html += `<div style="font-size:13px;color:var(--gris);text-align:center;padding:8px 0">Sin participantes todavía.</div>`;
+      } else {
+        [...participantes].reverse().forEach(p=>{
+          const pendiente = p.segundoPago && !p.segundoPago.pagado;
+          html += `<div style="background:var(--fondo);border-radius:10px;padding:8px 12px;margin-bottom:6px">
+            <div class="row-space">
+              <div>
+                <div style="font-weight:700;font-size:13px">${p.nombre}</div>
+                <div style="font-size:11px;color:var(--gris)">${metodoLabel(p.metodoPago||"efectivo")}${p.segundoPago?" · Dos pagos":""}</div>
+              </div>
+              <div style="text-align:right;display:flex;align-items:center;gap:6px">
+                <div>
+                  <div style="font-weight:700;font-size:13px">$${((p.monto||0)+((p.segundoPago&&p.segundoPago.pagado)?(p.segundoPago.monto||0):0)).toLocaleString("es-MX")}</div>
+                  ${pendiente?`<div style="font-size:10px;color:var(--oro);font-weight:700">⏳ Falta $${(p.segundoPago.monto||0).toLocaleString("es-MX")}</div>`:""}
+                </div>
+                <button data-del-participante="${p.id}" data-del-participante-evento="${ev.id}" style="font-size:11px;background:var(--acento2);color:white;border:none;border-radius:6px;padding:2px 6px;cursor:pointer;font-family:inherit">✕</button>
+              </div>
+            </div>
+            ${pendiente?`<button data-pagar-participante="${p.id}" data-pagar-participante-evento="${ev.id}" style="margin-top:6px;font-size:11px;background:var(--verde);color:white;border:none;border-radius:6px;padding:3px 8px;cursor:pointer;font-family:inherit">✓ Marcar segundo pago como pagado</button>`:""}
+          </div>`;
+        });
+      }
+      html += `</div>`;
+    });
+  }
+
+  document.getElementById("tab-eventos").innerHTML = html;
+
+  document.getElementById("btn-nuevo-evento")?.addEventListener("click",()=>{
+    document.getElementById("ev-nombre").value="";
+    document.getElementById("ev-fecha").value=hoy();
+    document.getElementById("ev-costo").value="";
+    document.getElementById("ev-notas").value="";
+    window._editEventoId=null;
+    document.getElementById("modal-evento-title").textContent="🎉 Nuevo evento";
+    openModal("modal-nuevo-evento");
+  });
+
+  document.getElementById("btn-guardar-evento").onclick = async()=>{
+    const nombre=document.getElementById("ev-nombre")?.value?.trim();
+    const fecha=document.getElementById("ev-fecha")?.value||hoy();
+    const costo=_numLimpio(document.getElementById("ev-costo")?.value);
+    const notas=document.getElementById("ev-notas")?.value?.trim()||"";
+    if(!nombre){ showToast("Ponle un nombre al evento"); return; }
+    const nuevo={id:uid(),nombre,fecha,costo,notas,participantes:[],creadoEn:new Date().toISOString()};
+    eventos.push(nuevo);
+    await fbSet("eventos",nuevo.id,nuevo);
+    closeModal("modal-nuevo-evento");
+    renderEventos();
+    showToast("✓ Evento \""+nombre+"\" creado");
+  };
+
+  document.querySelectorAll("[data-del-evento]").forEach(btn=>{
+    btn.addEventListener("click",async()=>{
+      const evId=btn.getAttribute("data-del-evento");
+      const ev=eventos.find(e=>e.id===evId);
+      if(!confirm("¿Eliminar el evento \""+(ev?.nombre||"")+"\" y todos sus participantes? Esta acción no se puede deshacer."))return;
+      await fbDelete("eventos",evId);
+      eventos=eventos.filter(e=>e.id!==evId);
+      renderEventos();
+      showToast("Evento eliminado");
+    });
+  });
+
+  document.querySelectorAll("[data-add-participante]").forEach(btn=>{
+    btn.addEventListener("click",()=>abrirParticipanteEvento(btn.getAttribute("data-add-participante")));
+  });
+
+  document.querySelectorAll("[data-pagar-participante]").forEach(btn=>{
+    btn.addEventListener("click",async()=>{
+      const pId=btn.getAttribute("data-pagar-participante");
+      const evId=btn.getAttribute("data-pagar-participante-evento");
+      const ev=eventos.find(e=>e.id===evId);
+      if(!ev)return;
+      ev.participantes=(ev.participantes||[]).map(p=>p.id===pId?{...p,segundoPago:{...p.segundoPago,pagado:true,fechaPago:hoy()}}:p);
+      await fbUpdate("eventos",evId,{participantes:ev.participantes});
+      renderEventos();
+      showToast("✓ Segundo pago registrado");
+    });
+  });
+
+  document.querySelectorAll("[data-del-participante]").forEach(btn=>{
+    btn.addEventListener("click",async()=>{
+      const pId=btn.getAttribute("data-del-participante");
+      const evId=btn.getAttribute("data-del-participante-evento");
+      const ev=eventos.find(e=>e.id===evId);
+      if(!ev)return;
+      if(!confirm("¿Quitar este participante del evento?"))return;
+      ev.participantes=(ev.participantes||[]).filter(p=>p.id!==pId);
+      await fbUpdate("eventos",evId,{participantes:ev.participantes});
+      renderEventos();
+      showToast("Participante eliminado");
+    });
+  });
+};
+
+window.toggleSegundoPagoEvento = () => {
+  const dosPag = document.getElementById("pev-tipo-pago").value==="dos_pagos";
+  document.getElementById("pev-segundo-pago-section").style.display = dosPag?"block":"none";
+  document.getElementById("pev-monto1-label").textContent = dosPag?"Monto primer pago ($) *":"Monto ($) *";
+  document.getElementById("pev-metodo1-label").textContent = dosPag?"Método primer pago":"Método de pago";
+};
+
+window.abrirParticipanteEvento = (eventoId) => {
+  window._eventoActualId = eventoId;
+  document.getElementById("pev-nombre").value="";
+  document.getElementById("pev-tipo-pago").value="unico";
+  document.getElementById("pev-monto1").value="";
+  document.getElementById("pev-metodo1").value="efectivo";
+  document.getElementById("pev-monto2").value="";
+  document.getElementById("pev-fecha2").value=addDias(hoy(),15);
+  document.getElementById("pev-metodo2").value="efectivo";
+  document.getElementById("pev-pagado2").value="no";
+  toggleSegundoPagoEvento();
+  openModal("modal-participante-evento");
+
+  const input = document.getElementById("pev-nombre");
+  const sugs = document.getElementById("pev-sugerencias");
+  input.oninput = () => {
+    const q = input.value.toLowerCase();
+    if(q.length<1){ sugs.style.display="none"; return; }
+    const matches = alumnas.filter(a=>a.nombre.toLowerCase().includes(q)).slice(0,5);
+    if(!matches.length){ sugs.style.display="none"; return; }
+    sugs.style.display="block";
+    sugs.innerHTML = matches.map(a=>`<div data-pev-nombre="${a.nombre}" style="padding:8px 13px;cursor:pointer;font-size:14px;border-bottom:1px solid var(--hueso2)">${a.nombre}</div>`).join("");
+    sugs.querySelectorAll("[data-pev-nombre]").forEach(d=>{
+      d.addEventListener("click",()=>{ input.value=d.getAttribute("data-pev-nombre"); sugs.style.display="none"; });
+    });
+  };
+};
+
+document.getElementById("btn-guardar-participante-evento").onclick = async()=>{
+  const evId = window._eventoActualId;
+  const ev = eventos.find(e=>e.id===evId);
+  if(!ev)return;
+  const nombre = document.getElementById("pev-nombre")?.value?.trim();
+  const tipoPago = document.getElementById("pev-tipo-pago")?.value;
+  const monto1 = _numLimpio(document.getElementById("pev-monto1")?.value);
+  const metodo1 = document.getElementById("pev-metodo1")?.value||"efectivo";
+  if(!nombre){ showToast("Ponle un nombre al participante"); return; }
+  if(!monto1){ showToast("Ingresa el monto"); return; }
+  let segundoPago = null;
+  if(tipoPago==="dos_pagos"){
+    const monto2 = _numLimpio(document.getElementById("pev-monto2")?.value);
+    const fecha2 = document.getElementById("pev-fecha2")?.value;
+    const metodo2 = document.getElementById("pev-metodo2")?.value||"efectivo";
+    const pagado2 = document.getElementById("pev-pagado2")?.value==="si";
+    segundoPago = {monto:monto2,fechaLimite:fecha2,metodo:metodo2,pagado:pagado2,fechaPago:pagado2?hoy():null};
+  }
+  const nuevoParticipante = {id:uid(),nombre,monto:monto1,metodoPago:metodo1,fechaPago:hoy(),segundoPago};
+  ev.participantes = [...(ev.participantes||[]),nuevoParticipante];
+  await fbUpdate("eventos",evId,{participantes:ev.participantes});
+  closeModal("modal-participante-evento");
+  renderEventos();
+  showToast("✓ "+nombre+" agregado al evento");
+};
+
 window.verDiaDetalle = (fecha) => {
   const resDelDia = reservas.filter(r=>r.fecha===fecha&&r.estado!=="cancelada");
   const fechaFmt = new Date(fecha+"T12:00:00").toLocaleDateString("es-MX",{weekday:"long",day:"numeric",month:"long"});
@@ -1418,13 +1669,36 @@ window.renderIngresosInterno=()=>{
     else if(metodo==="transferencia")md.transferencia+=(s.precio||s.monto||0);
     else md.mixto+=(s.precio||s.monto||0);
   });
-  const meses=Object.keys(porMes).sort().reverse(),total=todos.reduce((s,p)=>s+(p.montoTotal||p.monto||0),0)+serviciosGuardados.filter(s=>s.pagado).reduce((s,x)=>s+(x.precio||x.monto||0),0);
+  // Eventos: cada participante cuenta como un ingreso más
+  const todosParticipantesEventos=eventos.flatMap(ev=>(ev.participantes||[]).map(p=>({...p,evento:ev.nombre,eventoId:ev.id})));
+  todosParticipantesEventos.forEach(p=>{
+    const m=(p.fechaPago||hoy()).slice(0,7);
+    const md=getMesData(m);
+    md.total+=p.monto||0;
+    if(!md.eventos)md.eventos=[];
+    md.eventos.push(p);
+    const metodo1=p.metodoPago||"efectivo";
+    if(metodo1==="efectivo")md.efectivo+=p.monto||0;
+    else if(metodo1==="transferencia")md.transferencia+=p.monto||0;
+    else md.mixto+=p.monto||0;
+    if(p.segundoPago&&p.segundoPago.pagado){
+      const m2=(p.segundoPago.fechaPago||p.segundoPago.fechaLimite||m+"-01").slice(0,7);
+      const md2=getMesData(m2);
+      const metodo2=p.segundoPago.metodo||"efectivo";
+      if(metodo2==="efectivo")md2.efectivo+=p.segundoPago.monto||0;
+      else if(metodo2==="transferencia")md2.transferencia+=p.segundoPago.monto||0;
+      else md2.mixto+=p.segundoPago.monto||0;
+      if(m2!==m){md2.total+=p.segundoPago.monto||0;}
+    }
+  });
+  const meses=Object.keys(porMes).sort().reverse(),total=todos.reduce((s,p)=>s+(p.montoTotal||p.monto||0),0)+serviciosGuardados.filter(s=>s.pagado).reduce((s,x)=>s+(x.precio||x.monto||0),0)+todosParticipantesEventos.reduce((s,p)=>s+(p.monto||0)+((p.segundoPago&&p.segundoPago.pagado)?(p.segundoPago.monto||0):0),0);
 
   // Deudas
   const deudasPaquetes=alumnas.flatMap(a=>(a.paquetes||[]).filter(p=>p.segundoPago&&!p.segundoPago.pagado).map(p=>({alumna:a.nombre,monto:p.segundoPago.monto,tipo:"paquete",detalle:p.nombre,fecha:p.segundoPago.fechaLimite})));
   const esPagado=s=>s.pagado&&s.pagado!==false&&s.pagado!=="no"&&s.pagado!=="pendiente"&&s.pagado!=="Pendiente";
   const deudasServicios=todosServicios.filter(s=>!esPagado(s)).map(s=>({alumna:s.nombre,monto:s.precio,tipo:"servicio",detalle:tipoLabelSimple(s.tipo),fecha:s.fecha}));
-  const todasDeudas=[...deudasPaquetes,...deudasServicios];
+  const deudasEventos=todosParticipantesEventos.filter(p=>p.segundoPago&&!p.segundoPago.pagado).map(p=>({alumna:p.nombre,monto:p.segundoPago.monto,tipo:"evento",detalle:"🎉 "+p.evento,fecha:p.segundoPago.fechaLimite}));
+  const todasDeudas=[...deudasPaquetes,...deudasServicios,...deudasEventos];
   const totalDeudas=todasDeudas.reduce((s,d)=>s+d.monto,0);
 
   // Resumen del mes actual: efectivo vs transferencia
@@ -1454,10 +1728,12 @@ window.renderIngresosInterno=()=>{
   meses.forEach(mes=>{
     const{total:t,paquetes:ps,efectivo:mEfectivo,transferencia:mTransferencia,mixto:mMixto}=porMes[mes];
     const srvMes=(porMes[mes].servicios||[]);
-    // Combinar paquetes y servicios en una sola lista, cada uno con su fecha real, y ordenar de más reciente a más antiguo
+    const evMes=(porMes[mes].eventos||[]);
+    // Combinar paquetes, servicios y eventos en una sola lista, cada uno con su fecha real, y ordenar de más reciente a más antiguo
     const itemsCombinados=[
       ...ps.map(p=>({fechaOrden:p.compradoEn||"",tipo:"paquete",data:p})),
       ...srvMes.map(s=>({fechaOrden:s.fechaPago||s.fecha||"",tipo:"servicio",data:s})),
+      ...evMes.map(p=>({fechaOrden:p.fechaPago||"",tipo:"evento",data:p})),
     ].sort((a,b)=>b.fechaOrden.localeCompare(a.fechaOrden));
     html+=`<div class="card" style="margin-bottom:14px"><div class="row-space" style="margin-bottom:6px"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif;text-transform:capitalize">${mesAnio(mes)}</div><div class="display" style="font-weight:800;font-size:18px;color:var(--principal)">$${t.toLocaleString("es-MX")}</div></div>
     <div style="font-size:11px;color:var(--gris);margin-bottom:10px;padding-bottom:8px;border-bottom:1px dashed var(--hueso2)">💵 $${(mEfectivo||0).toLocaleString("es-MX")} efectivo &nbsp;·&nbsp; 🏦 $${(mTransferencia||0).toLocaleString("es-MX")} transferencia${mMixto>0?` &nbsp;·&nbsp; 🔀 $${mMixto.toLocaleString("es-MX")} mixto`:""}</div>
@@ -1466,6 +1742,10 @@ window.renderIngresosInterno=()=>{
         const p=item.data;
         const pendiente=p.segundoPago&&!p.segundoPago.pagado;
         return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;${i<itemsCombinados.length-1?"border-bottom:1px solid var(--hueso2)":""};font-size:13px"><div><span style="font-weight:600">${p.alumna}</span><span style="color:var(--gris)"> · ${p.emoji} ${p.nombre}</span><br><span style="font-size:11px;color:var(--gris)">${fmtFecha(p.compradoEn)} · ${metodoLabel(p.metodoPago||"efectivo")}</span>${pendiente?`<span style="font-size:11px;color:var(--oro);font-weight:700"> · ⏳ Falta $${(p.segundoPago.monto||0).toLocaleString("es-MX")}</span>`:""}</div><span style="font-weight:700">$${(p.montoTotal||p.monto||0).toLocaleString("es-MX")}</span></div>`;
+      } else if(item.tipo==="evento"){
+        const p=item.data;
+        const pendiente=p.segundoPago&&!p.segundoPago.pagado;
+        return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;${i<itemsCombinados.length-1?"border-bottom:1px solid var(--hueso2)":""};font-size:13px"><div><span style="font-weight:600">${p.nombre}</span><span style="color:var(--gris)"> · 🎉 ${p.evento}</span><br><span style="font-size:11px;color:var(--gris)">${fmtFecha(p.fechaPago)} · ${metodoLabel(p.metodoPago||"efectivo")}</span>${pendiente?`<span style="font-size:11px;color:var(--oro);font-weight:700"> · ⏳ Falta $${(p.segundoPago.monto||0).toLocaleString("es-MX")}</span>`:""}</div><span style="font-weight:700">$${(p.monto||0).toLocaleString("es-MX")}</span></div>`;
       } else {
         const s=item.data;
         return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;${i<itemsCombinados.length-1?"border-bottom:1px solid var(--hueso2)":""};font-size:13px"><div><span style="font-weight:600">${s.nombre}</span><br><span style="color:var(--gris)">${fmtFecha(s.fecha)} · ${s.tipo==="libre"?`💰 ${s.concepto} · ${s.metodo==="efectivo"?"💵":s.metodo==="transferencia"?"🏦":"🔀"}`:`🔥 ${tipoLabelSimple2(s.tipo)} · ${s.metodo==="efectivo"?"💵":s.metodo==="transferencia"?"🏦":"🔀"}`}</span></div><span style="font-weight:700">$${(s.precio||s.monto||0).toLocaleString("es-MX")}</span></div>`;
@@ -1583,14 +1863,14 @@ window.updatePkgInfo=()=>{
 };
 
 window.guardarPaquete=async()=>{
-  const monto1=parseFloat(document.getElementById("pkg-monto1").value)||0;
+  const monto1=parseFloat((document.getElementById("pkg-monto1").value||"0").replace(/,/g,""))||0;
   const defId=document.getElementById("pkg-def").value,def=PAQUETES_DEF[defId],fc=document.getElementById("pkg-fecha1").value,metodoSel=document.getElementById("pkg-metodo").value;
   let segundoPago=null,montoTotal=monto1;
   // Si es "dos_pagos", el método real del primer pago viene de pkg-metodo1 (efectivo/transferencia).
   // Si no, el método elegido (efectivo/transferencia/mixto) es directamente el método del pago.
   const metodo = metodoSel==="dos_pagos" ? (document.getElementById("pkg-metodo1")?.value||"efectivo") : metodoSel;
   if(metodoSel==="dos_pagos"){
-    const monto2=parseFloat(document.getElementById("pkg-monto2").value)||0;
+    const monto2=parseFloat((document.getElementById("pkg-monto2").value||"0").replace(/,/g,""))||0;
     montoTotal=monto1+monto2;
     segundoPago={monto:monto2,fechaLimite:document.getElementById("pkg-fecha2").value,metodo:document.getElementById("pkg-metodo2").value,pagado:false};
   }
@@ -1864,14 +2144,14 @@ window.guardarEdicionPaquete=async()=>{
   const defId=document.getElementById("edit-pkg-def").value;
   const def=PAQUETES_DEF[defId];
   const clases=parseInt(document.getElementById("edit-pkg-clases").value)||0;
-  const monto=parseFloat(document.getElementById("edit-pkg-monto").value)||0;
+  const monto=parseFloat((document.getElementById("edit-pkg-monto").value||"0").replace(/,/g,""))||0;
   const expira=document.getElementById("edit-pkg-expira").value;
   const metodo=document.getElementById("edit-pkg-metodo").value;
   const tieneSegundo=document.getElementById("edit-pkg-tiene-segundo").value==="si";
   const pAnterior=a.paquetes.find(p=>p.id===pkgId);
   let segundoPago=null;
   if(tieneSegundo){
-    const monto2=parseFloat(document.getElementById("edit-pkg-monto2").value)||0;
+    const monto2=parseFloat((document.getElementById("edit-pkg-monto2").value||"0").replace(/,/g,""))||0;
     const fecha2=document.getElementById("edit-pkg-fecha2").value;
     const metodo2=document.getElementById("edit-pkg-metodo2").value;
     const pagado2=document.getElementById("edit-pkg-pagado2").value==="si";
