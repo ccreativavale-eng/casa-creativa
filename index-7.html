@@ -1292,6 +1292,7 @@ window.renderEventos = () => {
                   <div style="font-weight:700;font-size:13px">$${((p.monto||0)+((p.segundoPago&&p.segundoPago.pagado)?(p.segundoPago.monto||0):0)).toLocaleString("es-MX")}</div>
                   ${pendiente?`<div style="font-size:10px;color:var(--oro);font-weight:700">⏳ Falta $${(p.segundoPago.monto||0).toLocaleString("es-MX")}</div>`:""}
                 </div>
+                <button data-edit-participante="${p.id}" data-edit-participante-evento="${ev.id}" style="font-size:11px;background:var(--principal);color:white;border:none;border-radius:6px;padding:2px 6px;cursor:pointer;font-family:inherit">✏️</button>
                 <button data-del-participante="${p.id}" data-del-participante-evento="${ev.id}" style="font-size:11px;background:var(--acento2);color:white;border:none;border-radius:6px;padding:2px 6px;cursor:pointer;font-family:inherit">✕</button>
               </div>
             </div>
@@ -1371,6 +1372,14 @@ window.renderEventos = () => {
       showToast("Participante eliminado");
     });
   });
+
+  document.querySelectorAll("[data-edit-participante]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const pId=btn.getAttribute("data-edit-participante");
+      const evId=btn.getAttribute("data-edit-participante-evento");
+      abrirEditarParticipanteEvento(evId,pId);
+    });
+  });
 };
 
 window.toggleSegundoPagoEvento = () => {
@@ -1382,6 +1391,8 @@ window.toggleSegundoPagoEvento = () => {
 
 window.abrirParticipanteEvento = (eventoId) => {
   window._eventoActualId = eventoId;
+  window._editingParticipanteId = null;
+  document.getElementById("modal-participante-evento").querySelector(".modal-header span").textContent = "+ Participante";
   document.getElementById("pev-nombre").value="";
   document.getElementById("pev-tipo-pago").value="unico";
   document.getElementById("pev-monto1").value="";
@@ -1408,6 +1419,34 @@ window.abrirParticipanteEvento = (eventoId) => {
   };
 };
 
+window.abrirEditarParticipanteEvento = (eventoId, participanteId) => {
+  const ev = eventos.find(e=>e.id===eventoId);
+  const p = ev?.participantes?.find(x=>x.id===participanteId);
+  if(!p)return;
+  window._eventoActualId = eventoId;
+  window._editingParticipanteId = participanteId;
+  document.getElementById("modal-participante-evento").querySelector(".modal-header span").textContent = "✏️ Editar participante";
+  document.getElementById("pev-nombre").value = p.nombre||"";
+  document.getElementById("pev-tipo-pago").value = p.segundoPago ? "dos_pagos" : "unico";
+  document.getElementById("pev-monto1").value = p.monto||"";
+  document.getElementById("pev-metodo1").value = p.metodoPago||"efectivo";
+  if(p.segundoPago){
+    document.getElementById("pev-monto2").value = p.segundoPago.monto||"";
+    document.getElementById("pev-fecha2").value = p.segundoPago.fechaLimite||addDias(hoy(),15);
+    document.getElementById("pev-metodo2").value = p.segundoPago.metodo||"efectivo";
+    document.getElementById("pev-pagado2").value = p.segundoPago.pagado?"si":"no";
+  } else {
+    document.getElementById("pev-monto2").value="";
+    document.getElementById("pev-fecha2").value=addDias(hoy(),15);
+    document.getElementById("pev-metodo2").value="efectivo";
+    document.getElementById("pev-pagado2").value="no";
+  }
+  toggleSegundoPagoEvento();
+  document.getElementById("pev-sugerencias").style.display="none";
+  document.getElementById("pev-nombre").oninput = null;
+  openModal("modal-participante-evento");
+};
+
 document.getElementById("btn-guardar-participante-evento").onclick = async()=>{
   const evId = window._eventoActualId;
   const ev = eventos.find(e=>e.id===evId);
@@ -1424,7 +1463,19 @@ document.getElementById("btn-guardar-participante-evento").onclick = async()=>{
     const fecha2 = document.getElementById("pev-fecha2")?.value;
     const metodo2 = document.getElementById("pev-metodo2")?.value||"efectivo";
     const pagado2 = document.getElementById("pev-pagado2")?.value==="si";
-    segundoPago = {monto:monto2,fechaLimite:fecha2,metodo:metodo2,pagado:pagado2,fechaPago:pagado2?hoy():null};
+    const editId = window._editingParticipanteId;
+    const pAnterior = editId ? ev.participantes.find(x=>x.id===editId) : null;
+    const fechaPagoPrevia = pAnterior?.segundoPago?.fechaPago;
+    segundoPago = {monto:monto2,fechaLimite:fecha2,metodo:metodo2,pagado:pagado2,fechaPago:pagado2?(fechaPagoPrevia||hoy()):null};
+  }
+  if(window._editingParticipanteId){
+    const pId = window._editingParticipanteId;
+    ev.participantes = ev.participantes.map(p=>p.id===pId?{...p,nombre,monto:monto1,metodoPago:metodo1,segundoPago}:p);
+    await fbUpdate("eventos",evId,{participantes:ev.participantes});
+    closeModal("modal-participante-evento");
+    renderEventos();
+    showToast("✓ Participante actualizado");
+    return;
   }
   const nuevoParticipante = {id:uid(),nombre,monto:monto1,metodoPago:metodo1,fechaPago:hoy(),segundoPago};
   ev.participantes = [...(ev.participantes||[]),nuevoParticipante];
