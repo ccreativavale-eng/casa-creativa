@@ -1752,7 +1752,7 @@ window.renderIngresosInterno=()=>{
       if(metodo2==="efectivo")md2.efectivo+=p.segundoPago.monto||0;
       else if(metodo2==="transferencia")md2.transferencia+=p.segundoPago.monto||0;
       else md2.mixto+=p.segundoPago.monto||0;
-      if(m2!==m){md2.total+=p.segundoPago.monto||0;}
+      md2.total+=p.segundoPago.monto||0;
     }
   });
   const meses=Object.keys(porMes).sort().reverse(),total=todos.reduce((s,p)=>s+(p.montoTotal||p.monto||0),0)+serviciosGuardados.filter(s=>s.pagado).reduce((s,x)=>s+(x.precio||x.monto||0),0)+todosParticipantesEventos.reduce((s,p)=>s+(p.monto||0)+((p.segundoPago&&p.segundoPago.pagado)?(p.segundoPago.monto||0):0),0);
@@ -1809,7 +1809,8 @@ window.renderIngresosInterno=()=>{
       } else if(item.tipo==="evento"){
         const p=item.data;
         const pendiente=p.segundoPago&&!p.segundoPago.pagado;
-        return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;${i<itemsCombinados.length-1?"border-bottom:1px solid var(--hueso2)":""};font-size:13px"><div><span style="font-weight:600">${p.nombre}</span><span style="color:var(--gris)"> · 🎉 ${p.evento}</span><br><span style="font-size:11px;color:var(--gris)">${fmtFecha(p.fechaPago)} · ${metodoLabel(p.metodoPago||"efectivo")}</span>${pendiente?`<span style="font-size:11px;color:var(--oro);font-weight:700"> · ⏳ Falta $${(p.segundoPago.monto||0).toLocaleString("es-MX")}</span>`:""}</div><span style="font-weight:700">$${(p.monto||0).toLocaleString("es-MX")}</span></div>`;
+        const totalPagadoEvento=(p.monto||0)+((p.segundoPago&&p.segundoPago.pagado)?(p.segundoPago.monto||0):0);
+        return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;${i<itemsCombinados.length-1?"border-bottom:1px solid var(--hueso2)":""};font-size:13px"><div><span style="font-weight:600">${p.nombre}</span><span style="color:var(--gris)"> · 🎉 ${p.evento}</span><br><span style="font-size:11px;color:var(--gris)">${fmtFecha(p.fechaPago)} · ${metodoLabel(p.metodoPago||"efectivo")}${p.segundoPago?p.segundoPago.pagado?" + 2° pago "+fmtFecha(p.segundoPago.fechaPago):"":""}</span>${pendiente?`<span style="font-size:11px;color:var(--oro);font-weight:700"> · ⏳ Falta $${(p.segundoPago.monto||0).toLocaleString("es-MX")}</span>`:""}</div><span style="font-weight:700">$${totalPagadoEvento.toLocaleString("es-MX")}</span></div>`;
       } else {
         const s=item.data;
         return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;${i<itemsCombinados.length-1?"border-bottom:1px solid var(--hueso2)":""};font-size:13px"><div><span style="font-weight:600">${s.nombre}</span><br><span style="color:var(--gris)">${fmtFecha(s.fecha)} · ${s.tipo==="libre"?`💰 ${s.concepto} · ${s.metodo==="efectivo"?"💵":s.metodo==="transferencia"?"🏦":"🔀"}`:`🔥 ${tipoLabelSimple2(s.tipo)} · ${s.metodo==="efectivo"?"💵":s.metodo==="transferencia"?"🏦":"🔀"}`}</span></div><span style="font-weight:700">$${(s.precio||s.monto||0).toLocaleString("es-MX")}</span></div>`;
