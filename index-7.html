@@ -83,7 +83,13 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
 </style>
 </head>
 <body>
-<div id="loading"><div style="font-size:40px">🏺</div><div style="color:var(--gris)">Cargando…</div></div>
+<div id="loading"><div style="font-size:40px">🏺</div><div style="color:var(--gris)">Cargando…</div>
+  <div id="error-carga" style="display:none;text-align:center;max-width:320px;padding:0 16px">
+    <div style="color:var(--acento2);font-weight:700;margin-bottom:6px">No se pudieron cargar los datos</div>
+    <div style="font-size:12px;color:var(--gris);margin-bottom:12px">Revisa tu conexión a internet. Detalle: <span id="error-carga-msg"></span></div>
+    <button class="btn btn-primary" onclick="reintentarCarga()">Reintentar</button>
+  </div>
+</div>
 <div id="toast"></div>
 
 <!-- LOGIN -->
@@ -107,10 +113,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
     </div>
     <div id="login-maestra-panel" style="display:none">
       <div class="serif" style="font-size:18px;font-weight:800;margin-bottom:6px">Acceso maestra</div>
-      <div style="font-size:14px;color:var(--gris);margin-bottom:20px">Ingresa tu contraseña.</div>
-      <div class="field"><input type="password" id="input-clave" placeholder="Contraseña" onkeydown="if(event.key==='Enter')entrarMaestra()"></div>
+      <div style="font-size:14px;color:var(--gris);margin-bottom:20px">Ingresa tu correo y contraseña.</div>
+      <div class="field"><input type="email" id="input-correo" placeholder="Correo" autocomplete="username"></div>
+      <div class="field"><input type="password" id="input-clave" placeholder="Contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter')entrarMaestra()"></div>
       <div id="error-clave" style="display:none" class="aviso aviso-rojo"><span style="color:var(--acento2)">Contraseña incorrecta.</span></div>
-      <button class="btn btn-primary btn-full" onclick="entrarMaestra()">Entrar</button>
+      <button class="btn btn-primary btn-full" id="btn-entrar-maestra" onclick="entrarMaestra()">Entrar</button>
       <div style="text-align:center;margin-top:16px">
         <button onclick="showAlumnaLogin()" style="background:none;border:none;color:var(--gris);font-size:12px;cursor:pointer;text-decoration:underline;font-family:inherit">← Volver</button>
       </div>
@@ -127,6 +134,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
         <div class="display" style="font-size:20px;font-weight:700;color:white;letter-spacing:1px">Casa Creativa</div>
         <div style="font-size:12px;color:#ffffffaa">Vista maestra</div>
       </div>
+      <button onclick="goLogin()" style="margin-left:auto;background:none;border:1.5px solid #ffffff66;border-radius:8px;padding:6px 12px;color:white;font-size:12px;cursor:pointer;font-family:inherit">Cerrar sesión</button>
     </div>
     <div class="tabs">
       <button class="tab active" onclick="setTab('agenda')">📅 Agenda</button>
@@ -330,11 +338,12 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
           </select>
         </div>
         <div class="field"><label>Estado</label>
-          <select id="edit-pkg-pagado2">
+          <select id="edit-pkg-pagado2" onchange="document.getElementById('edit-pkg-fechapago2-campo').style.display=this.value==='si'?'block':'none'">
             <option value="no">⏳ Aún no se ha pagado</option>
             <option value="si">✅ Ya se pagó</option>
           </select>
         </div>
+        <div class="field" id="edit-pkg-fechapago2-campo" style="display:none"><label>Fecha en que te pagaron</label><input type="date" id="edit-pkg-fechapago2"></div>
       </div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
@@ -450,11 +459,12 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
         </select>
       </div>
       <div class="field"><label>Estado del segundo pago</label>
-        <select id="pev-pagado2">
+        <select id="pev-pagado2" onchange="document.getElementById('pev-fechapago2-campo').style.display=this.value==='si'?'block':'none'">
           <option value="no">⏳ Aún no se ha pagado</option>
           <option value="si">✅ Ya se pagó</option>
         </select>
       </div>
+      <div class="field" id="pev-fechapago2-campo" style="display:none"><label>Fecha en que te pagaron</label><input type="date" id="pev-fechapago2"></div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="btn btn-ghost btn-small" onclick="closeModal('modal-participante-evento')">Cancelar</button>
@@ -463,9 +473,27 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-fecha-pago">
+  <div class="modal">
+    <div class="modal-header"><span class="serif" style="font-weight:800;font-size:17px">💰 Registrar pago</span><button class="modal-close" onclick="closeModal('modal-fecha-pago')">×</button></div>
+    <div id="fp-detalle" style="font-size:14px;color:var(--gris);margin-bottom:14px"></div>
+    <div class="field"><label>Fecha en que te pagaron</label><input type="date" id="fp-fecha"></div>
+    <div class="field"><label>Método de pago</label>
+      <select id="fp-metodo">
+        <option value="efectivo">💵 Efectivo</option>
+        <option value="transferencia">🏦 Transferencia</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost btn-small" onclick="closeModal('modal-fecha-pago')">Cancelar</button>
+      <button class="btn btn-primary btn-small" id="fp-confirmar">Registrar pago</button>
+    </div>
+  </div>
+</div>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
 import { getFirestore, collection, doc, getDocs, setDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+import { getAuth, signInAnonymously, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAY-ZGwYfqWbTRI7BL6xGp87SxiGt15OU8",
@@ -478,7 +506,6 @@ const firebaseConfig = {
 
 // Firebase initialized in cargarDatos
 
-const CLAVE = "1512";
 const CUPO_MAX = 6;
 const PAQUETES_DEF = {
   previo1:     {nombre:"Paquete previo · 1 clase",   clases:1,  dias:15,  precio:320,  emoji:"📦", tipo:"paquete"},
@@ -669,6 +696,7 @@ window.renderGastos = () => {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
 
 window.guardarIngresoLibre = async() => {
   const nombre = document.getElementById("il-nombre")?.value?.trim();
@@ -770,45 +798,59 @@ window.renderEstadisticas=()=>{
   document.getElementById("tab-estadisticas").innerHTML=html;
 };
 
+async function sesionAnonima(){
+  await auth.authStateReady();
+  if(auth.currentUser && !auth.currentUser.isAnonymous){ await signOut(auth); }
+  if(!auth.currentUser){ await signInAnonymously(auth); }
+}
 async function cargarDatos(){
-  const[aSnap,rSnap,asSnap,srvSnap,gastosSnap]=await Promise.all([getDocs(collection(db,"alumnas")),getDocs(collection(db,"reservas")),getDocs(collection(db,"asistencias")),getDocs(collection(db,"servicios")),getDocs(collection(db,"gastos"))]);
-  alumnas=aSnap.docs.map(d=>({id:d.id,...d.data()}));
-  // Load bloqueos
-  try {
-    const bSnap = await getDocs(collection(db,"bloqueos"));
-    bloqueos = bSnap.docs.map(d=>({id:d.id,...d.data()}));
-  } catch(e) { bloqueos=[]; }
-  try {
-    const ccSnap = await getDocs(collection(db,"clases_cerradas"));
-    clasesCerradas = ccSnap.docs.map(d=>({id:d.id,...d.data()}));
-  } catch(e) { clasesCerradas=[]; }
-  try {
-    const evSnap = await getDocs(collection(db,"eventos"));
-    eventos = evSnap.docs.map(d=>({id:d.id,...d.data()}));
-  } catch(e) { eventos=[]; }
-  reservas=rSnap.docs.map(d=>({id:d.id,...d.data()}));
-  asistencias=asSnap.docs.map(d=>({id:d.id,...d.data()}));
-  // Merge Firebase services with localStorage
+  const errBox=document.getElementById("error-carga");
+  if(errBox) errBox.style.display="none";
+  try{
+    await sesionAnonima();
+    const[aSnap,rSnap,asSnap]=await Promise.all([getDocs(collection(db,"alumnas")),getDocs(collection(db,"reservas")),getDocs(collection(db,"asistencias"))]);
+    alumnas=aSnap.docs.map(d=>({id:d.id,...d.data()}));
+    reservas=rSnap.docs.map(d=>({id:d.id,...d.data()}));
+    asistencias=asSnap.docs.map(d=>({id:d.id,...d.data()}));
+    try { const bSnap = await getDocs(collection(db,"bloqueos")); bloqueos = bSnap.docs.map(d=>({id:d.id,...d.data()})); } catch(e) { bloqueos=[]; }
+    try { const ccSnap = await getDocs(collection(db,"clases_cerradas")); clasesCerradas = ccSnap.docs.map(d=>({id:d.id,...d.data()})); } catch(e) { clasesCerradas=[]; }
+    try { const evSnap = await getDocs(collection(db,"eventos")); eventos = evSnap.docs.map(d=>({id:d.id,...d.data()})); } catch(e) { eventos=[]; }
+    document.getElementById("loading").style.display="none";
+    showScreen("login");
+  }catch(e){
+    console.error(e);
+    if(errBox){
+      document.getElementById("error-carga-msg").textContent=(e&&(e.code||e.message))||"Error desconocido";
+      errBox.style.display="block";
+    }
+  }
+}
+// Datos solo para la maestra (ingresos y gastos)
+async function cargarDatosMaestra(){
+  const[srvSnap,gastosSnap]=await Promise.all([getDocs(collection(db,"servicios")),getDocs(collection(db,"gastos"))]);
   const srvFirebase=srvSnap.docs.map(d=>({id:d.id,...d.data()}));
   const srvLocal=JSON.parse(localStorage.getItem("cc_servicios")||"[]");
   const srvMerged=[...srvFirebase];
   srvLocal.forEach(s=>{ if(!srvMerged.find(x=>x.id===s.id)) srvMerged.push(s); });
   localStorage.setItem("cc_servicios", JSON.stringify(srvMerged));
-  // Merge Firebase gastos with localStorage
   const gastosFirebase=gastosSnap.docs.map(d=>({id:d.id,...d.data()}));
   const gastosLocal=JSON.parse(localStorage.getItem("cc_gastos")||"[]");
   const gastosMerged=[...gastosFirebase];
   gastosLocal.forEach(g=>{ if(!gastosMerged.find(x=>x.id===g.id)) gastosMerged.push(g); });
   localStorage.setItem("cc_gastos", JSON.stringify(gastosMerged));
-  document.getElementById("loading").style.display="none";
-  showScreen("login");
 }
+window.reintentarCarga=()=>cargarDatos();
 async function fbSet(col,id,data){await setDoc(doc(db,col,id),data);}
 async function fbUpdate(col,id,data){await updateDoc(doc(db,col,id),data);}
 async function fbDelete(col,id){await deleteDoc(doc(db,col,id));}
 window.showScreen=id=>{document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));document.getElementById("screen-"+id).classList.add("active");};
-window.goLogin=()=>{showScreen("login");showAlumnaLogin();};
-window.showMaestra=()=>{document.getElementById("login-alumna-panel").style.display="none";document.getElementById("login-maestra-panel").style.display="block";document.getElementById("input-clave").value="";document.getElementById("error-clave").style.display="none";};
+window.goLogin=async()=>{
+  if(auth.currentUser && !auth.currentUser.isAnonymous){
+    try{ await signOut(auth); await signInAnonymously(auth); }catch(e){ console.error(e); }
+  }
+  showScreen("login");showAlumnaLogin();
+};
+window.showMaestra=()=>{document.getElementById("login-alumna-panel").style.display="none";document.getElementById("login-maestra-panel").style.display="block";document.getElementById("input-clave").value="";document.getElementById("error-clave").style.display="none";try{document.getElementById("input-correo").value=localStorage.getItem("cc_correo_maestra")||"";}catch(e){}};
 window.showAlumnaLogin=()=>{document.getElementById("login-alumna-panel").style.display="block";document.getElementById("login-maestra-panel").style.display="none";document.getElementById("input-nombre-login").value="";document.getElementById("resultados-login").innerHTML="";document.getElementById("error-login").style.display="none";document.getElementById("btn-entrar").disabled=true;alumnaLoginSel=null;};
 
 let alumnaLoginSel=null;
@@ -823,7 +865,32 @@ window.buscarAlumna=()=>{
 };
 window.selAlumna=id=>{alumnaLoginSel=id;document.getElementById("btn-entrar").disabled=false;};
 window.entrarAlumna=()=>{if(!alumnaLoginSel)return;alumnaActiva=alumnas.find(x=>x.id===alumnaLoginSel);if(!alumnaActiva)return;renderVistaAlumna();showScreen("alumna");};
-window.entrarMaestra=()=>{if(document.getElementById("input-clave").value===CLAVE){renderMaestra();showScreen("maestra");}else{document.getElementById("error-clave").style.display="block";setTimeout(()=>document.getElementById("error-clave").style.display="none",2000);}};
+window.entrarMaestra=async()=>{
+  const correo=document.getElementById("input-correo").value.trim();
+  const clave=document.getElementById("input-clave").value;
+  const err=document.getElementById("error-clave"),btn=document.getElementById("btn-entrar-maestra");
+  const mostrarError=msg=>{err.querySelector("span").textContent=msg;err.style.display="block";};
+  err.style.display="none";
+  if(!correo||!clave){mostrarError("Escribe tu correo y tu contraseña.");return;}
+  btn.disabled=true;btn.textContent="Entrando…";
+  try{
+    await signInWithEmailAndPassword(auth,correo,clave);
+    try{localStorage.setItem("cc_correo_maestra",correo);}catch(e){}
+    await cargarDatosMaestra();
+    document.getElementById("input-clave").value="";
+    renderMaestra();showScreen("maestra");
+  }catch(e){
+    console.error(e);
+    const c=e&&e.code||"";
+    if(c.includes("invalid-credential")||c.includes("wrong-password")||c.includes("user-not-found")||c.includes("invalid-email")) mostrarError("Correo o contraseña incorrectos.");
+    else if(c.includes("too-many-requests")) mostrarError("Demasiados intentos. Espera unos minutos.");
+    else if(c.includes("network")) mostrarError("Sin conexión. Revisa tu internet.");
+    else mostrarError("No se pudo entrar ("+(c||"error")+").");
+    if(auth.currentUser && !auth.currentUser.isAnonymous){ try{await signOut(auth);await signInAnonymously(auth);}catch(x){} }
+  }finally{
+    btn.disabled=false;btn.textContent="Entrar";
+  }
+};
 
 window.setTab=name=>{
   ["agenda","alumnas","ingresos","servicios","eventos","gastos","estadisticas"].forEach(t=>{document.getElementById("tab-"+t).style.display=t===name?"block":"none";});
@@ -1365,10 +1432,15 @@ window.renderEventos = () => {
       const evId=btn.getAttribute("data-pagar-participante-evento");
       const ev=eventos.find(e=>e.id===evId);
       if(!ev)return;
-      ev.participantes=(ev.participantes||[]).map(p=>p.id===pId?{...p,segundoPago:{...p.segundoPago,pagado:true,fechaPago:hoy()}}:p);
-      await fbUpdate("eventos",evId,{participantes:ev.participantes});
-      renderEventos();
-      showToast("✓ Segundo pago registrado");
+      const part=(ev.participantes||[]).find(p=>p.id===pId);
+      if(!part||!part.segundoPago)return;
+      pedirFechaPago({detalle:part.nombre+" · 2° pago de "+ev.nombre,monto:part.segundoPago.monto,metodo:part.segundoPago.metodo},async(fecha,metodo)=>{
+        const nuevos=(ev.participantes||[]).map(p=>p.id===pId?{...p,segundoPago:{...p.segundoPago,pagado:true,fechaPago:fecha,metodo}}:p);
+        await fbUpdate("eventos",evId,{participantes:nuevos});
+        ev.participantes=nuevos;
+        renderEventos();
+        showToast("✓ Segundo pago registrado");
+      });
     });
   });
 
@@ -1413,7 +1485,7 @@ window.abrirParticipanteEvento = (eventoId) => {
   document.getElementById("pev-monto2").value="";
   document.getElementById("pev-fecha2").value=addDias(hoy(),15);
   document.getElementById("pev-metodo2").value="efectivo";
-  document.getElementById("pev-pagado2").value="no";
+  document.getElementById("pev-pagado2").value="no";document.getElementById("pev-fechapago2").value=hoy();document.getElementById("pev-fechapago2-campo").style.display="none";
   toggleSegundoPagoEvento();
   openModal("modal-participante-evento");
 
@@ -1448,11 +1520,13 @@ window.abrirEditarParticipanteEvento = (eventoId, participanteId) => {
     document.getElementById("pev-fecha2").value = p.segundoPago.fechaLimite||addDias(hoy(),15);
     document.getElementById("pev-metodo2").value = p.segundoPago.metodo||"efectivo";
     document.getElementById("pev-pagado2").value = p.segundoPago.pagado?"si":"no";
+    document.getElementById("pev-fechapago2").value = p.segundoPago.fechaPago||hoy();
+    document.getElementById("pev-fechapago2-campo").style.display = p.segundoPago.pagado?"block":"none";
   } else {
     document.getElementById("pev-monto2").value="";
     document.getElementById("pev-fecha2").value=addDias(hoy(),15);
     document.getElementById("pev-metodo2").value="efectivo";
-    document.getElementById("pev-pagado2").value="no";
+    document.getElementById("pev-pagado2").value="no";document.getElementById("pev-fechapago2").value=hoy();document.getElementById("pev-fechapago2-campo").style.display="none";
   }
   toggleSegundoPagoEvento();
   document.getElementById("pev-sugerencias").style.display="none";
@@ -1479,7 +1553,7 @@ document.getElementById("btn-guardar-participante-evento").onclick = async()=>{
     const editId = window._editingParticipanteId;
     const pAnterior = editId ? ev.participantes.find(x=>x.id===editId) : null;
     const fechaPagoPrevia = pAnterior?.segundoPago?.fechaPago;
-    segundoPago = {monto:monto2,fechaLimite:fecha2,metodo:metodo2,pagado:pagado2,fechaPago:pagado2?(fechaPagoPrevia||hoy()):null};
+    segundoPago = {monto:monto2,fechaLimite:fecha2,metodo:metodo2,pagado:pagado2,fechaPago:pagado2?(document.getElementById("pev-fechapago2")?.value||fechaPagoPrevia||hoy()):null};
   }
   if(window._editingParticipanteId){
     const pId = window._editingParticipanteId;
@@ -1698,26 +1772,24 @@ window.renderIngresosInterno=()=>{
   const serviciosGuardados=todosServicios.filter(s=>esPagado2(s));
   const porMes={};
   const getMesData=(m)=>{if(!porMes[m])porMes[m]={total:0,efectivo:0,transferencia:0,mixto:0,paquetes:[],servicios:[]};return porMes[m];};
+  const sumarMetodo=(md,metodo,monto)=>{if(metodo==="efectivo")md.efectivo+=monto;else if(metodo==="transferencia")md.transferencia+=monto;else md.mixto+=monto;};
   todos.forEach(p=>{
-    const m=p.compradoEn.slice(0,7);
+    const m=(p.compradoEn||hoy()).slice(0,7);
     const md=getMesData(m);
-    md.total+=p.montoTotal||p.monto||0;
-    md.paquetes.push(p);
-    // Primer pago (o pago completo si no es dos_pagos)
-    const metodo1=p.metodoPago||"efectivo";
-    if(metodo1==="efectivo")md.efectivo+=p.monto||0;
-    else if(metodo1==="transferencia")md.transferencia+=p.monto||0;
-    else md.mixto+=p.monto||0;
-    // Segundo pago, si ya se pagó — se suma al mes en que realmente se pagó
+    // Primer pago (o pago completo si no hay segundo pago): solo lo que realmente se cobró
+    const monto1=p.segundoPago?(p.monto||0):(p.montoTotal||p.monto||0);
+    md.total+=monto1;
+    md.paquetes.push({...p,_monto1:monto1});
+    sumarMetodo(md,p.metodoPago||"efectivo",monto1);
+    // Segundo pago: se registra como ingreso propio en el mes en que se pagó
     if(p.segundoPago&&p.segundoPago.pagado){
-      const m2=(p.segundoPago.fechaPago||p.segundoPago.fechaLimite||p.compradoEn).slice(0,7);
-      const md2=getMesData(m2);
-      const metodo2=p.segundoPago.metodo||"efectivo";
-      if(metodo2==="efectivo")md2.efectivo+=p.segundoPago.monto||0;
-      else if(metodo2==="transferencia")md2.transferencia+=p.segundoPago.monto||0;
-      else md2.mixto+=p.segundoPago.monto||0;
-      // Si el segundo pago cae en un mes distinto al primero, sumar también su monto al total de ESE mes
-      if(m2!==m){md2.total+=p.segundoPago.monto||0;}
+      const f2=(p.segundoPago.fechaPago||p.segundoPago.fechaLimite||p.compradoEn||hoy());
+      const md2=getMesData(f2.slice(0,7));
+      const monto2=p.segundoPago.monto||0;
+      md2.total+=monto2;
+      sumarMetodo(md2,p.segundoPago.metodo||"efectivo",monto2);
+      if(!md2.segundos)md2.segundos=[];
+      md2.segundos.push({alumna:p.alumna,detalle:`${p.emoji||"📦"} ${p.nombre}`,monto:monto2,fecha:f2,metodo:p.segundoPago.metodo||"efectivo"});
     }
   });
   serviciosGuardados.forEach(s=>{
@@ -1753,9 +1825,11 @@ window.renderIngresosInterno=()=>{
       else if(metodo2==="transferencia")md2.transferencia+=p.segundoPago.monto||0;
       else md2.mixto+=p.segundoPago.monto||0;
       md2.total+=p.segundoPago.monto||0;
+      if(!md2.segundos)md2.segundos=[];
+      md2.segundos.push({alumna:p.nombre,detalle:"🎉 "+p.evento,monto:p.segundoPago.monto||0,fecha:p.segundoPago.fechaPago||p.segundoPago.fechaLimite||m+"-01",metodo:metodo2});
     }
   });
-  const meses=Object.keys(porMes).sort().reverse(),total=todos.reduce((s,p)=>s+(p.montoTotal||p.monto||0),0)+serviciosGuardados.filter(s=>s.pagado).reduce((s,x)=>s+(x.precio||x.monto||0),0)+todosParticipantesEventos.reduce((s,p)=>s+(p.monto||0)+((p.segundoPago&&p.segundoPago.pagado)?(p.segundoPago.monto||0):0),0);
+  const meses=Object.keys(porMes).sort().reverse(),total=Object.values(porMes).reduce((t,md)=>t+(md.total||0),0);
 
   // Deudas
   const deudasPaquetes=alumnas.flatMap(a=>(a.paquetes||[]).filter(p=>p.segundoPago&&!p.segundoPago.pagado).map(p=>({alumna:a.nombre,monto:p.segundoPago.monto,tipo:"paquete",detalle:p.nombre,fecha:p.segundoPago.fechaLimite})));
@@ -1798,6 +1872,7 @@ window.renderIngresosInterno=()=>{
       ...ps.map(p=>({fechaOrden:p.compradoEn||"",tipo:"paquete",data:p})),
       ...srvMes.map(s=>({fechaOrden:s.fechaPago||s.fecha||"",tipo:"servicio",data:s})),
       ...evMes.map(p=>({fechaOrden:p.fechaPago||"",tipo:"evento",data:p})),
+      ...(porMes[mes].segundos||[]).map(x=>({fechaOrden:x.fecha||"",tipo:"segundo",data:x})),
     ].sort((a,b)=>b.fechaOrden.localeCompare(a.fechaOrden));
     html+=`<div class="card" style="margin-bottom:14px"><div class="row-space" style="margin-bottom:6px"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif;text-transform:capitalize">${mesAnio(mes)}</div><div class="display" style="font-weight:800;font-size:18px;color:var(--principal)">$${t.toLocaleString("es-MX")}</div></div>
     <div style="font-size:11px;color:var(--gris);margin-bottom:10px;padding-bottom:8px;border-bottom:1px dashed var(--hueso2)">💵 $${(mEfectivo||0).toLocaleString("es-MX")} efectivo &nbsp;·&nbsp; 🏦 $${(mTransferencia||0).toLocaleString("es-MX")} transferencia${mMixto>0?` &nbsp;·&nbsp; 🔀 $${mMixto.toLocaleString("es-MX")} mixto`:""}</div>
@@ -1805,7 +1880,10 @@ window.renderIngresosInterno=()=>{
       if(item.tipo==="paquete"){
         const p=item.data;
         const pendiente=p.segundoPago&&!p.segundoPago.pagado;
-        return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;${i<itemsCombinados.length-1?"border-bottom:1px solid var(--hueso2)":""};font-size:13px"><div><span style="font-weight:600">${p.alumna}</span><span style="color:var(--gris)"> · ${p.emoji} ${p.nombre}</span><br><span style="font-size:11px;color:var(--gris)">${fmtFecha(p.compradoEn)} · ${metodoLabel(p.metodoPago||"efectivo")}</span>${pendiente?`<span style="font-size:11px;color:var(--oro);font-weight:700"> · ⏳ Falta $${(p.segundoPago.monto||0).toLocaleString("es-MX")}</span>`:""}</div><span style="font-weight:700">$${(p.montoTotal||p.monto||0).toLocaleString("es-MX")}</span></div>`;
+        return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;${i<itemsCombinados.length-1?"border-bottom:1px solid var(--hueso2)":""};font-size:13px"><div><span style="font-weight:600">${p.alumna}</span><span style="color:var(--gris)"> · ${p.emoji} ${p.nombre}</span><br><span style="font-size:11px;color:var(--gris)">${fmtFecha(p.compradoEn)} · ${metodoLabel(p.metodoPago||"efectivo")}</span>${pendiente?`<span style="font-size:11px;color:var(--oro);font-weight:700"> · ⏳ Falta $${(p.segundoPago.monto||0).toLocaleString("es-MX")}</span>`:""}</div><span style="font-weight:700">$${(p._monto1||0).toLocaleString("es-MX")}</span></div>`;
+      } else if(item.tipo==="segundo"){
+        const x=item.data;
+        return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;${i<itemsCombinados.length-1?"border-bottom:1px solid var(--hueso2)":""};font-size:13px"><div><span style="font-weight:600">${x.alumna}</span><span style="color:var(--gris)"> · ${x.detalle}</span><br><span style="font-size:11px;color:var(--verde);font-weight:700">✓ 2° pago</span><span style="font-size:11px;color:var(--gris)"> · ${fmtFecha(x.fecha)} · ${metodoLabel(x.metodo)}</span></div><span style="font-weight:700">$${(x.monto||0).toLocaleString("es-MX")}</span></div>`;
       } else if(item.tipo==="evento"){
         const p=item.data;
         const pendiente=p.segundoPago&&!p.segundoPago.pagado;
@@ -2135,6 +2213,8 @@ window.verAlumna=async id=>{
         document.getElementById("edit-pkg-fecha2").value=p.segundoPago.fechaLimite||"";
         document.getElementById("edit-pkg-metodo2").value=p.segundoPago.metodo||"efectivo";
         document.getElementById("edit-pkg-pagado2").value=p.segundoPago.pagado?"si":"no";
+        document.getElementById("edit-pkg-fechapago2").value=p.segundoPago.fechaPago||hoy();
+        document.getElementById("edit-pkg-fechapago2-campo").style.display=p.segundoPago.pagado?"block":"none";
         document.getElementById("edit-pkg-segundo-campos").style.display="block";
       } else {
         document.getElementById("edit-pkg-tiene-segundo").value="no";
@@ -2142,6 +2222,8 @@ window.verAlumna=async id=>{
         document.getElementById("edit-pkg-fecha2").value="";
         document.getElementById("edit-pkg-metodo2").value="efectivo";
         document.getElementById("edit-pkg-pagado2").value="no";
+        document.getElementById("edit-pkg-fechapago2").value=hoy();
+        document.getElementById("edit-pkg-fechapago2-campo").style.display="none";
         document.getElementById("edit-pkg-segundo-campos").style.display="none";
       }
       window._editPkgId=pkgId;
@@ -2222,10 +2304,11 @@ window.guardarEdicionPaquete=async()=>{
     const pagado2=document.getElementById("edit-pkg-pagado2").value==="si";
     // Si se marca como pagado y no tenía ya una fecha de pago registrada, usar hoy
     const fechaPagoPrevia=pAnterior?.segundoPago?.fechaPago;
-    const fechaPago = pagado2 ? (fechaPagoPrevia || hoy()) : null;
+    const fechaElegida=document.getElementById("edit-pkg-fechapago2").value;
+    const fechaPago = pagado2 ? (fechaElegida || fechaPagoPrevia || hoy()) : null;
     segundoPago={monto:monto2,fechaLimite:fecha2,metodo:metodo2,pagado:pagado2,fechaPago};
   }
-  const montoTotal=monto+(segundoPago&&!segundoPago.pagado?segundoPago.monto:0);
+  const montoTotal=monto+(segundoPago?(segundoPago.monto||0):0);
   a.paquetes=a.paquetes.map(p=>p.id===pkgId?{...p,paqueteDefId:defId,nombre:def?.nombre||p.nombre,emoji:def?.emoji||p.emoji,clasesRestantes:clases,clasesTotal:Math.max(clases,p.clasesTotal),monto,montoTotal,metodoPago:metodo,expira,segundoPago}:p);
   await fbUpdate("alumnas",alumnaId,{paquetes:a.paquetes});
   closeModal("modal-editar-paquete");
@@ -2239,11 +2322,30 @@ window.toggleEditSegundoPago=()=>{
   document.getElementById("edit-pkg-segundo-campos").style.display=tiene?"block":"none";
 };
 
-window.marcarSegundoPago=async(alumnaId,pkgId)=>{
-  const a=alumnas.find(x=>x.id===alumnaId);
-  a.paquetes=a.paquetes.map(p=>p.id===pkgId?{...p,segundoPago:{...p.segundoPago,pagado:true,fechaPago:hoy()}}:p);
-  await fbUpdate("alumnas",alumnaId,{paquetes:a.paquetes});
-  closeModal("modal-ver-alumna");renderAlumnas();showToast("✓ Segundo pago registrado");
+window.pedirFechaPago=({detalle,monto,metodo},alConfirmar)=>{
+  document.getElementById("fp-detalle").textContent=detalle+" · $"+(monto||0).toLocaleString("es-MX");
+  document.getElementById("fp-fecha").value=hoy();
+  document.getElementById("fp-metodo").value=(metodo==="transferencia")?"transferencia":"efectivo";
+  const btn=document.getElementById("fp-confirmar");
+  btn.onclick=async()=>{
+    const fecha=document.getElementById("fp-fecha").value;
+    if(!fecha){showToast("Elige la fecha del pago");return;}
+    btn.disabled=true;
+    try{ await alConfirmar(fecha,document.getElementById("fp-metodo").value); closeModal("modal-fecha-pago"); }
+    catch(e){ console.error(e); showToast("No se pudo guardar, intenta de nuevo"); }
+    finally{ btn.disabled=false; }
+  };
+  openModal("modal-fecha-pago");
+};
+window.marcarSegundoPago=(alumnaId,pkgId)=>{
+  const a=alumnas.find(x=>x.id===alumnaId);if(!a)return;
+  const pk=(a.paquetes||[]).find(p=>p.id===pkgId);if(!pk||!pk.segundoPago)return;
+  pedirFechaPago({detalle:a.nombre+" · 2° pago de "+pk.nombre,monto:pk.segundoPago.monto,metodo:pk.segundoPago.metodo},async(fecha,metodo)=>{
+    const nuevos=a.paquetes.map(p=>p.id===pkgId?{...p,segundoPago:{...p.segundoPago,pagado:true,fechaPago:fecha,metodo}}:p);
+    await fbUpdate("alumnas",alumnaId,{paquetes:nuevos});
+    a.paquetes=nuevos;
+    closeModal("modal-ver-alumna");renderAlumnas();showToast("✓ Segundo pago registrado");
+  });
 };
 
 window.eliminarAlumna=async id=>{
