@@ -1764,6 +1764,29 @@ const normalizarMes=(fecha,creadoEn,fechaISO)=>{
   return hoy().slice(0,7);
 };
 
+window.descargarMovimientos=(mes)=>{
+  const md=(window._porMesIngresos||{})[mes]||{};
+  const met=m=>m==="efectivo"?"Efectivo":m==="transferencia"?"Transferencia":m==="mixto"?"Mixto":(m||"Efectivo");
+  const filas=[];
+  (md.paquetes||[]).forEach(p=>filas.push([p.compradoEn,"Ingreso","Paquete: "+p.nombre+(p.segundoPago?" (1er pago)":""),p.alumna,met(p.metodoPago),p._monto1||0,"Cobrado"]));
+  (md.segundos||[]).forEach(x=>filas.push([x.fecha,"Ingreso","2° pago: "+x.detalle.replace(/^\S+\s/,""),x.alumna,met(x.metodo),x.monto||0,"Cobrado"]));
+  (md.servicios||[]).forEach(sv=>filas.push([sv.fechaPago||sv.fechaISO||sv.fecha,"Ingreso",sv.tipo==="libre"?(sv.concepto||"Ingreso libre"):"Servicio: "+sv.tipo,sv.nombre||"",met(sv.metodo),sv.precio||sv.monto||0,"Cobrado"]));
+  (md.eventos||[]).forEach(e=>filas.push([e.fechaPago,"Ingreso","Evento: "+e.evento+(e.segundoPago?" (1er pago)":""),e.nombre,met(e.metodoPago),e.monto||0,"Cobrado"]));
+  (window._gastosAll||[]).filter(g=>(g.fecha||"").slice(0,7)===mes).forEach(g=>{
+    const cat=CATEGORIAS_GASTOS.find(c=>c.id===g.categoria);
+    const pag=g.pagado===true||g.pagado==="pagado";
+    filas.push([g.fecha,"Gasto",(cat?cat.label+": ":"")+(g.desc||""),"","",-(Number(g.monto)||0),pag?"Pagado":"Pendiente"]);
+  });
+  filas.sort((a,b)=>String(a[0]||"").localeCompare(String(b[0]||"")));
+  const esc=v=>{const t=String(v??"");return /[",\n;]/.test(t)?'"'+t.replace(/"/g,'""')+'"':t;};
+  const csv="\uFEFF"+[["Fecha","Tipo","Concepto","Alumna/Persona","Método","Monto","Estado"],...filas].map(f=>f.map(esc).join(",")).join("\r\n");
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");a.href=url;a.download="CasaCreativa_movimientos_"+mes+".csv";
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+  showToast("📥 Descargando movimientos de "+mesAnio(mes));
+};
 window.renderIngresosInterno=()=>{
   const todos=alumnas.flatMap(a=>(a.paquetes||[]).map(p=>({...p,alumna:a.nombre})));
   // Read directly from Firebase (set by renderIngresos)
@@ -1829,6 +1852,28 @@ window.renderIngresosInterno=()=>{
       md2.segundos.push({alumna:p.nombre,detalle:"🎉 "+p.evento,monto:p.segundoPago.monto||0,fecha:p.segundoPago.fechaPago||p.segundoPago.fechaLimite||m+"-01",metodo:metodo2});
     }
   });
+  // Gastos por mes, para el balance (pagados cuentan; pendientes se muestran aparte)
+  const gastosAll=JSON.parse(localStorage.getItem("cc_gastos")||"[]");
+  const esGastoPagado=g=>g.pagado===true||g.pagado==="pagado";
+  const gastosMes={},gastosPendMes={};
+  gastosAll.forEach(g=>{
+    const m=(g.fecha||"").slice(0,7);if(!m)return;
+    const v=Number(g.monto)||0;
+    if(esGastoPagado(g))gastosMes[m]=(gastosMes[m]||0)+v;else gastosPendMes[m]=(gastosPendMes[m]||0)+v;
+    getMesData(m);
+  });
+  const fmt$=n=>"$"+Math.abs(Math.round(n)).toLocaleString("es-MX");
+  const balanceHTML=(mes,grande)=>{
+    const ing=(porMes[mes]&&porMes[mes].total)||0,gas=gastosMes[mes]||0,pend=gastosPendMes[mes]||0,bal=ing-gas;
+    const color=bal>=0?"var(--verde)":"var(--acento2)";
+    return `<div style="background:${bal>=0?"#4A7A5512":"#d1362612"};border-radius:10px;padding:${grande?"12px":"8px 10px"};margin:${grande?"10px 0 0":"0 0 10px"}">
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--gris)"><span>💰 Ingresos</span><span>${fmt$(ing)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--gris)"><span>📊 Gastos pagados</span><span>− ${fmt$(gas)}</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;padding-top:4px;border-top:1px dashed var(--hueso2)"><span style="font-weight:800;font-size:${grande?"14px":"13px"}">Balance</span><span style="font-weight:800;font-size:${grande?"20px":"15px"};color:${color}">${bal<0?"− ":""}${fmt$(bal)}</span></div>
+      ${pend>0?`<div style="font-size:11px;color:var(--oro);font-weight:700;margin-top:4px">📋 Gastos pendientes de pagar este mes: ${fmt$(pend)} (no se restan aún)</div>`:""}
+    </div>`;
+  };
+  window._porMesIngresos=porMes;window._gastosAll=gastosAll;
   const meses=Object.keys(porMes).sort().reverse(),total=Object.values(porMes).reduce((t,md)=>t+(md.total||0),0);
 
   // Deudas
@@ -1852,6 +1897,7 @@ window.renderIngresosInterno=()=>{
       <div style="flex:1;background:var(--fondo);border-radius:10px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:800;color:var(--principal)">$${(mesActualData.transferencia||0).toLocaleString("es-MX")}</div><div style="font-size:11px;color:var(--gris)">🏦 Transferencia</div></div>
       ${mesActualData.mixto>0?`<div style="flex:1;background:var(--fondo);border-radius:10px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:800;color:var(--oro)">$${(mesActualData.mixto||0).toLocaleString("es-MX")}</div><div style="font-size:11px;color:var(--gris)">🔀 Mixto</div></div>`:""}
     </div>
+    ${balanceHTML(mesActualKey,true)}
   </div>`;
 
   // Sección deudas
@@ -1876,6 +1922,8 @@ window.renderIngresosInterno=()=>{
     ].sort((a,b)=>b.fechaOrden.localeCompare(a.fechaOrden));
     html+=`<div class="card" style="margin-bottom:14px"><div class="row-space" style="margin-bottom:6px"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif;text-transform:capitalize">${mesAnio(mes)}</div><div class="display" style="font-weight:800;font-size:18px;color:var(--principal)">$${t.toLocaleString("es-MX")}</div></div>
     <div style="font-size:11px;color:var(--gris);margin-bottom:10px;padding-bottom:8px;border-bottom:1px dashed var(--hueso2)">💵 $${(mEfectivo||0).toLocaleString("es-MX")} efectivo &nbsp;·&nbsp; 🏦 $${(mTransferencia||0).toLocaleString("es-MX")} transferencia${mMixto>0?` &nbsp;·&nbsp; 🔀 $${mMixto.toLocaleString("es-MX")} mixto`:""}</div>
+    ${balanceHTML(mes,false)}
+    <button class="btn btn-ghost btn-small" data-descargar-mes="${mes}" style="width:100%;margin-bottom:10px">📥 Descargar movimientos de ${mesAnio(mes)}</button>
     ${itemsCombinados.map((item,i)=>{
       if(item.tipo==="paquete"){
         const p=item.data;
@@ -1896,6 +1944,7 @@ window.renderIngresosInterno=()=>{
     }).join("")}</div>`;
   });
   document.getElementById("tab-ingresos").innerHTML=html;
+  document.querySelectorAll("[data-descargar-mes]").forEach(b=>b.addEventListener("click",()=>descargarMovimientos(b.getAttribute("data-descargar-mes"))));
   
   // + Ingreso libre button
   document.getElementById("btn-abrir-ingreso-libre")?.addEventListener("click",()=>{
