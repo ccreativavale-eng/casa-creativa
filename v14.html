@@ -235,6 +235,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
         <option value="mem_esencial">🎨 Membresía Esencial · 4 sesiones · 60 días · $1,600</option>
         <option value="mem_plus">💎 Membresía Plus · 8 sesiones · 90 días · $2,900</option>
       </optgroup>
+      <optgroup label="── Clases de esmaltado ──">
+        <option value="clase_esmalte">🌈 Clase esmalte 3hrs · 1 clase · 15 días · $300</option>
+        <option value="clase_extra_esmalte">🎨 Clase extra esmaltado · 1 clase · 15 días · $250</option>
+        <option value="pulido_esmaltado">🌈 Pulido + esmaltado · 1 clase · 15 días · según peso</option>
+      </optgroup>
       </select>
     </div>
     <div class="aviso aviso-rosa" id="pkg-info" style="margin-bottom:14px;font-size:13px"></div>
@@ -307,6 +312,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
         <optgroup label="── Membresías ──">
           <option value="mem_esencial">🎨 Membresía Esencial · 4 sesiones · $1,600</option>
           <option value="mem_plus">💎 Membresía Plus · 8 sesiones · $2,900</option>
+        </optgroup>
+        <optgroup label="── Clases de esmaltado ──">
+          <option value="clase_esmalte">🌈 Clase esmalte 3hrs · $300</option>
+          <option value="clase_extra_esmalte">🎨 Clase extra esmaltado · $250</option>
+          <option value="pulido_esmaltado">🌈 Pulido + esmaltado · según peso</option>
         </optgroup>
       </select>
     </div>
@@ -519,6 +529,9 @@ const PAQUETES_DEF = {
   intensivo:   {nombre:"12 sesiones de 2 hrs",       clases:12,dias:90, precio:4080, emoji:"✨", tipo:"paquete"},
   mem_esencial:{nombre:"Membresía Esencial",         clases:4, dias:60, precio:1600, emoji:"🎨", tipo:"membresia"},
   mem_plus:    {nombre:"Membresía Plus",             clases:8, dias:90, precio:2900, emoji:"💎", tipo:"membresia"},
+  clase_esmalte:      {nombre:"Clase esmalte 3hrs",     clases:1, dias:15, precio:300, emoji:"🌈", tipo:"paquete", desc:"Sesión de 3 horas para esmaltar y decorar piezas que ya pasaron por el sancocho."},
+  clase_extra_esmalte:{nombre:"Clase extra esmaltado",  clases:1, dias:15, precio:250, emoji:"🎨", tipo:"paquete", desc:"Para quienes tomaron un evento y no alcanzaron a terminar de pintar su pieza en la segunda sesión, o a quienes solo les faltan detalles por pintar."},
+  pulido_esmaltado:   {nombre:"Pulido + esmaltado",     clases:1, dias:15, precio:0,   emoji:"🌈", tipo:"paquete", desc:"Pulimos la pieza y se esmalta en clase. El precio depende del peso final de la pieza.", porPeso:true},
 };
 const HORARIOS = [
   {id:"mar_a",label:"Martes 9:00–11:00",     dia:"Martes",    hora:"9:00–11:00",   diaN:2, tipo:"paquete"},
@@ -1090,11 +1103,6 @@ window.renderServicios = () => {
           <option value="sancocho_lote">🔥 Sancocho lote</option>
           <option value="esmaltado_lote">✨ Esmaltado lote</option>
           <option value="ambos_lote">🔥✨ Ambos lote</option>
-        </optgroup>
-        <optgroup label="── Otros servicios ──">
-          <option value="clase_esmalte">🌈 Clase esmalte 3hrs · $300 fijo</option>
-          <option value="clase_extra_esmalte">🎨 Clase extra esmaltado · $250 fijo</option>
-          <option value="pulido_esmaltado">🌈 Pulido + esmaltado (por peso)</option>
         </optgroup>
       </select>
     </div>
@@ -1864,13 +1872,13 @@ window.renderIngresosInterno=()=>{
   });
   const fmt$=n=>"$"+Math.abs(Math.round(n)).toLocaleString("es-MX");
   const balanceHTML=(mes,grande)=>{
-    const ing=(porMes[mes]&&porMes[mes].total)||0,gas=gastosMes[mes]||0,pend=gastosPendMes[mes]||0,bal=ing-gas;
+    const ing=(porMes[mes]&&porMes[mes].total)||0,gas=gastosMes[mes]||0,pend=gastosPendMes[mes]||0,bal=ing-gas-pend;
     const color=bal>=0?"var(--verde)":"var(--acento2)";
     return `<div style="background:${bal>=0?"#4A7A5512":"#d1362612"};border-radius:10px;padding:${grande?"12px":"8px 10px"};margin:${grande?"10px 0 0":"0 0 10px"}">
       <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--gris)"><span>💰 Ingresos</span><span>${fmt$(ing)}</span></div>
       <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--gris)"><span>📊 Gastos pagados</span><span>− ${fmt$(gas)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--oro)"><span>📋 Gastos por pagar</span><span>− ${fmt$(pend)}</span></div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;padding-top:4px;border-top:1px dashed var(--hueso2)"><span style="font-weight:800;font-size:${grande?"14px":"13px"}">Balance</span><span style="font-weight:800;font-size:${grande?"20px":"15px"};color:${color}">${bal<0?"− ":""}${fmt$(bal)}</span></div>
-      ${pend>0?`<div style="font-size:11px;color:var(--oro);font-weight:700;margin-top:4px">📋 Gastos pendientes de pagar este mes: ${fmt$(pend)} (no se restan aún)</div>`:""}
     </div>`;
   };
   window._porMesIngresos=porMes;window._gastosAll=gastosAll;
@@ -2050,8 +2058,9 @@ window.updatePkgInfo=()=>{
   const f=document.getElementById("pkg-fecha1").value||hoy();
   let dias=def.dias;
   // previo packages have fixed days
-  document.getElementById("pkg-info").innerHTML=`Precio sugerido: <strong>$${def.precio.toLocaleString("es-MX")}</strong> · Expira el <strong>${fmtFecha(addDias(f,dias))}</strong>`;
-  document.getElementById("pkg-monto1").value=def.precio;
+  const tablaPeso=def.porPeso?`<div style="margin-top:6px;font-size:12px">⚖️ Precio por peso: ${TARIFAS_PULIDO.filter(t=>t.precio>0).map((t,i,arr)=>`hasta ${t.max>=1000?(t.max/1000)+" kg":t.max+" g"} $${t.precio}`).join(" · ")} · más de 4 kg: cotizar</div>`:"";
+  document.getElementById("pkg-info").innerHTML=`${def.desc?`<div style="margin-bottom:6px">${def.desc}</div>`:""}${def.porPeso?"Escribe el precio según el peso de la pieza":`Precio sugerido: <strong>$${def.precio.toLocaleString("es-MX")}</strong>`} · Expira el <strong>${fmtFecha(addDias(f,dias))}</strong>${tablaPeso}`;
+  document.getElementById("pkg-monto1").value=def.porPeso?"":def.precio;
 };
 
 window.guardarPaquete=async()=>{
