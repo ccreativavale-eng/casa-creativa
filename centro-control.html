@@ -74,10 +74,26 @@ window.__fbReady = (async () => {
     messagingSenderId: "874227781556",
     appId: "1:874227781556:web:ceaf624a509bce0f4d2ce1"
   };
-  const app = initializeApp(firebaseConfig);
+  const { getAuth, signInWithEmailAndPassword, signOut } = await import("https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js");
+  // App con nombre propio: así la sesión del Centro de Control no se mezcla con la de Casa Creativa
+  const app = initializeApp(firebaseConfig, "centro-control");
   const db = getFirestore(app);
+  const auth = getAuth(app);
+  await auth.authStateReady();
   const COL = "centro_control_items";
   return {
+    isSignedIn() {
+      return !!(auth.currentUser && !auth.currentUser.isAnonymous);
+    },
+    userEmail() {
+      return auth.currentUser?.email || "";
+    },
+    async login(email, password) {
+      await signInWithEmailAndPassword(auth, email, password);
+    },
+    async logout() {
+      await signOut(auth);
+    },
     async getAll() {
       const snap = await getDocs(collection(db, COL));
       return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -167,21 +183,59 @@ function useItems() {
   const [items, setItems] = useState(null);
   const [error, setError] = useState(false);
   const [fb, setFb] = useState(null);
+  // status: "iniciando" | "login" | "cargando" | "fallo" | "listo"
+  const [status, setStatus] = useState("iniciando");
+  const [loadError, setLoadError] = useState("");
+  const load = useCallback(async (api) => {
+    setStatus("cargando");
+    setLoadError("");
+    try {
+      const all = await api.getAll();
+      setItems(all);
+      setError(false);
+      setStatus("listo");
+    } catch (e) {
+      // Nunca mostramos una lista vacía si no pudimos leer la nube
+      setItems(null);
+      setLoadError(e && e.code ? e.code : String(e && e.message || e));
+      setStatus("fallo");
+    }
+  }, []);
   useEffect(() => {
     (async () => {
       try {
         const api = await window.__fbReady;
         setFb(api);
-        const all = await api.getAll();
-        setItems(all);
+        if (!api.isSignedIn()) {
+          setStatus("login");
+          return;
+        }
+        await load(api);
       } catch (e) {
-        setError(true);
-        setItems([]);
+        setLoadError(String(e && e.message || e));
+        setStatus("fallo");
       }
     })();
-  }, []);
+  }, [load]);
+  const login = useCallback(async (email, password) => {
+    await fb.login(email, password);
+    await load(fb);
+  }, [fb, load]);
+  const logout = useCallback(async () => {
+    if (fb) await fb.logout();
+    setItems(null);
+    setStatus("login");
+  }, [fb]);
+  const retry = useCallback(() => {
+    if (fb) load(fb);
+    else window.location.reload();
+  }, [fb, load]);
   const persist = useCallback(async (next) => {
-    const prev = items || [];
+    if (status !== "listo" || !items) {
+      setError(true);
+      return;
+    }
+    const prev = items;
     setItems(next);
     if (!fb) {
       setError(true);
@@ -199,11 +253,46 @@ function useItems() {
         ...toDelete.map((i) => fb.deleteItem(i.id)),
         ...toSave.map((i) => fb.setItem(i))
       ]);
+      setError(false);
     } catch {
       setError(true);
     }
-  }, [items, fb]);
-  return { items, persist, error };
+  }, [items, fb, status]);
+  return { items, persist, error, status, loadError, login, logout, retry };
+}
+function LoginScreen({ onLogin }) {
+  const [email, setEmail] = useState(() => {
+    try {
+      return localStorage.getItem("cc_correo_maestra") || "";
+    } catch {
+      return "";
+    }
+  });
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    setMsg("");
+    try {
+      await onLogin(email.trim(), password);
+      try {
+        localStorage.setItem("cc_correo_maestra", email.trim());
+      } catch {
+      }
+    } catch (err) {
+      const code = err && err.code || "";
+      setMsg(code.includes("invalid") || code.includes("wrong-password") || code.includes("user-not-found") ? "Correo o contrase\xF1a incorrectos." : code.includes("too-many") ? "Demasiados intentos. Espera unos minutos." : "No se pudo entrar. Revisa tu conexi\xF3n.");
+    }
+    setBusy(false);
+  };
+  const inputStyle = { background: "white", border: `1px solid ${LINE}`, color: INK };
+  return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen flex items-center justify-center px-6", style: { background: PAPER, fontFamily: "'Inter', sans-serif" } }, /* @__PURE__ */ React.createElement("form", { onSubmit: submit, className: "w-full max-w-sm" }, /* @__PURE__ */ React.createElement("h1", { className: "text-3xl font-semibold mb-1", style: { fontFamily: "'Fraunces', serif", color: INK } }, "Centro de Control"), /* @__PURE__ */ React.createElement("p", { className: "text-sm mb-6", style: { color: "#8A8578" } }, "Entra con el mismo correo y contrase\xF1a que usas en Casa Creativa."), /* @__PURE__ */ React.createElement("input", { type: "email", autoComplete: "username", required: true, placeholder: "Correo", value: email, onChange: (e) => setEmail(e.target.value), className: "w-full px-4 py-3 rounded-xl mb-3 text-[15px] outline-none", style: inputStyle }), /* @__PURE__ */ React.createElement("input", { type: "password", autoComplete: "current-password", required: true, placeholder: "Contrase\xF1a", value: password, onChange: (e) => setPassword(e.target.value), className: "w-full px-4 py-3 rounded-xl mb-4 text-[15px] outline-none", style: inputStyle }), /* @__PURE__ */ React.createElement("button", { type: "submit", disabled: busy, className: "w-full py-3 rounded-xl font-semibold text-[15px]", style: { background: INK, color: PAPER, opacity: busy ? 0.6 : 1 } }, busy ? "Entrando…" : "Entrar"), msg && /* @__PURE__ */ React.createElement("p", { className: "text-sm text-center mt-3", style: { color: "#B23A2E" } }, msg)));
+}
+function LoadErrorScreen({ code, onRetry, onLogout }) {
+  const blocked = (code || "").includes("permission");
+  return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen flex items-center justify-center px-6", style: { background: PAPER, fontFamily: "'Inter', sans-serif" } }, /* @__PURE__ */ React.createElement("div", { className: "w-full max-w-sm text-center" }, /* @__PURE__ */ React.createElement("h1", { className: "text-2xl font-semibold mb-2", style: { fontFamily: "'Fraunces', serif", color: INK } }, "No pude cargar tu agenda"), /* @__PURE__ */ React.createElement("p", { className: "text-sm mb-2", style: { color: "#8A8578" } }, "Tus datos siguen guardados en la nube; solo no se pudieron leer ahora. No edites nada hasta que cargue bien."), /* @__PURE__ */ React.createElement("p", { className: "text-xs mb-6", style: { color: "#B23A2E" } }, blocked ? "Firebase rechaz\xF3 el acceso (revisa las Reglas de Firestore)." : "Revisa tu conexi\xF3n a internet.", code ? ` [${code}]` : ""), /* @__PURE__ */ React.createElement("button", { onClick: onRetry, className: "w-full py-3 rounded-xl font-semibold text-[15px] mb-3", style: { background: INK, color: PAPER } }, "Reintentar"), /* @__PURE__ */ React.createElement("button", { onClick: onLogout, className: "w-full py-3 rounded-xl font-medium text-[15px]", style: { background: "white", border: `1px solid ${LINE}`, color: INK } }, "Cerrar sesi\xF3n")));
 }
 function Pill({ children, color, soft }) {
   return /* @__PURE__ */ React.createElement(
@@ -541,7 +630,7 @@ const TABS = [
   { key: "viaje", label: "Viajes", icon: Plane }
 ];
 function App() {
-  const { items, persist, error } = useItems();
+  const { items, persist, error, status, loadError, login, logout, retry } = useItems();
   const [tab, setTab] = useState("hoy");
   const [formState, setFormState] = useState(null);
   const [renewing, setRenewing] = useState(null);
@@ -578,7 +667,13 @@ function App() {
     setRenewing(null);
     setDetail(null);
   };
-  if (items === null) {
+  if (status === "login") {
+    return /* @__PURE__ */ React.createElement(LoginScreen, { onLogin: login });
+  }
+  if (status === "fallo") {
+    return /* @__PURE__ */ React.createElement(LoadErrorScreen, { code: loadError, onRetry: retry, onLogout: logout });
+  }
+  if (status !== "listo" || items === null) {
     return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen flex items-center justify-center", style: { background: PAPER } }, /* @__PURE__ */ React.createElement("p", { className: "text-sm", style: { color: "#8A8578" } }, "Cargando\u2026"));
   }
   return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen w-full flex justify-center", style: { background: PAPER_DIM, fontFamily: "'Inter', sans-serif" } }, /* @__PURE__ */ React.createElement("div", { className: "w-full max-w-md min-h-screen relative", style: { background: PAPER } }, error && /* @__PURE__ */ React.createElement("div", { className: "text-[11px] text-center py-1", style: { background: "#F1DCD4", color: "#A8492F" } }, "No se pudo guardar. Revisa tu conexi\xF3n."), tab === "hoy" && /* @__PURE__ */ React.createElement(HomeView, { items, onOpen: openDetail, onSettings: () => setShowSettings(true), persist }), tab === "calendario" && /* @__PURE__ */ React.createElement(CalendarView, { items, onOpen: openDetail, onAddOnDay: (date) => openNew("pendiente", date) }), ["pago", "cita", "documento", "viaje"].includes(tab) && /* @__PURE__ */ React.createElement(ListView, { category: tab, items, onOpen: openDetail }), /* @__PURE__ */ React.createElement(
