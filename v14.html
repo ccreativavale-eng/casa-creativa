@@ -884,7 +884,7 @@ window.buscarAlumna=()=>{
   cont.innerHTML=res.map(a=>`<button class="alumna-option" onclick="selAlumna('${a.id}')"><span style="font-size:22px">👩‍🎨</span><div><div style="font-weight:700">${a.nombre}</div>${a.correo?`<div style="font-size:12px;color:var(--gris)">✉️ ${a.correo}</div>`:a.telefono?`<div style="font-size:12px;color:var(--gris)">📱 ${a.telefono}</div>`:""}</div></button>`).join("");
 };
 window.selAlumna=id=>{alumnaLoginSel=id;document.getElementById("btn-entrar").disabled=false;};
-window.entrarAlumna=()=>{if(!alumnaLoginSel)return;alumnaActiva=alumnas.find(x=>x.id===alumnaLoginSel);if(!alumnaActiva)return;renderVistaAlumna();showScreen("alumna");};
+window.entrarAlumna=()=>{if(!alumnaLoginSel)return;window._srvVistaAlumna=null;alumnaActiva=alumnas.find(x=>x.id===alumnaLoginSel);if(!alumnaActiva)return;renderVistaAlumna();showScreen("alumna");};
 window.entrarMaestra=async()=>{
   const correo=document.getElementById("input-correo").value.trim();
   const clave=document.getElementById("input-clave").value;
@@ -2564,6 +2564,43 @@ window.marcarAsistencia=async(rId,asistio,nota="")=>{
   renderAgenda();
 };
 
+// ── Lo que debe la alumna (paquetes, servicios, eventos) ──
+const _mismoNombre=(x,y)=>(x||"").trim().toLowerCase()===(y||"").trim().toLowerCase();
+const _srvPagado=s=>s.pagado&&s.pagado!==false&&s.pagado!=="no"&&s.pagado!=="pendiente"&&s.pagado!=="Pendiente";
+window._srvVistaAlumna=null; window._srvVistaCargando=false;
+const cargarServiciosVistaAlumna=async()=>{
+  if(window._srvVistaCargando) return; window._srvVistaCargando=true;
+  try{ const snap=await getDocs(collection(db,"servicios")); window._srvVistaAlumna=snap.docs.map(d=>({id:d.id,...d.data()})); }
+  catch(e){ window._srvVistaAlumna=JSON.parse(localStorage.getItem("cc_servicios")||"[]"); }
+  window._srvVistaCargando=false;
+  if(alumnaActiva && document.getElementById("deudas-alumna")) renderVistaAlumna();
+};
+const deudasDeAlumna=(a,servicios)=>{
+  const tl={sancocho:"🔥 Sancocho",esmaltado:"✨ Esmaltado",ambos:"🔥✨ Sancocho + esmaltado",sancocho_grande:"🔥 Sancocho pieza grande",esmaltado_grande:"✨ Esmaltado pieza grande",ambos_grande:"🔥✨ Ambos pieza grande",sancocho_lote:"🔥 Sancocho lote",esmaltado_lote:"✨ Esmaltado lote",ambos_lote:"🔥✨ Ambos lote",clase_esmalte:"🌈 Clase esmalte",clase_extra_esmalte:"🎨 Clase extra esmaltado",pulido_esmaltado:"🌈 Pulido + esmaltado",venta_arcilla:"🧱 Arcilla"};
+  const d=[];
+  (a.paquetes||[]).filter(p=>p.segundoPago&&!p.segundoPago.pagado).forEach(p=>d.push({detalle:`${p.emoji||"📦"} ${p.nombre} · 2º pago`,monto:p.segundoPago.monto||0,limite:p.segundoPago.fechaLimite,fecha:p.compradoEn}));
+  (servicios||[]).filter(s=>s.tipo!=="libre"&&_mismoNombre(s.nombre,a.nombre)&&!_srvPagado(s)).forEach(s=>d.push({detalle:(tl[s.tipo]||s.tipo)+(s.tipo==="venta_arcilla"&&s.kilos?` · ${s.kilos} kg`:s.gramos?` · ${s.gramos}${s.tipo.includes("grande")?"cm":"g"}`:""),monto:s.precio||s.monto||0,fecha:s.fecha}));
+  (eventos||[]).forEach(ev=>(ev.participantes||[]).filter(p=>_mismoNombre(p.nombre,a.nombre)&&p.segundoPago&&!p.segundoPago.pagado).forEach(p=>d.push({detalle:`🎉 ${ev.nombre} · 2º pago`,monto:p.segundoPago.monto||0,limite:p.segundoPago.fechaLimite,fecha:ev.fecha})));
+  return d.sort((x,y)=>(x.limite||x.fecha||"").localeCompare(y.limite||y.fecha||""));
+};
+const bloqueDeudasAlumna=a=>{
+  if(window._srvVistaAlumna===null){ cargarServiciosVistaAlumna(); }
+  const deudas=deudasDeAlumna(a, window._srvVistaAlumna||[]);
+  const total=deudas.reduce((t,x)=>t+(x.monto||0),0);
+  if(!deudas.length && window._srvVistaAlumna===null){
+    return `<div id="deudas-alumna" class="card" style="margin-bottom:14px"><div style="font-size:13px;color:var(--gris)">💳 Cargando tus pagos…</div></div>`;
+  }
+  if(!deudas.length){
+    return `<div id="deudas-alumna" class="card" style="margin-bottom:14px;background:#4A7A5512;border:1px solid #4A7A5530"><div style="font-weight:700;color:var(--verde)">✅ Estás al corriente</div><div style="font-size:12px;color:var(--gris);margin-top:2px">No tienes pagos pendientes.</div></div>`;
+  }
+  const filas=deudas.map(x=>{const venc=x.limite&&x.limite<hoy();return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:7px 0;border-bottom:1px solid var(--hueso2)"><div><div style="font-weight:600">${x.detalle}</div><div style="font-size:11px;color:${venc?"var(--acento2)":"var(--gris)"}">${x.limite?(venc?"🔴 Venció el ":"Pagar antes del ")+fmtFecha(x.limite):x.fecha?fmtFecha(x.fecha):""}</div></div><strong>$${(x.monto||0).toLocaleString("es-MX")}</strong></div>`;}).join("");
+  return `<div id="deudas-alumna" class="card" style="margin-bottom:14px;border:2px solid var(--oro)">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><div style="font-size:11px;color:var(--oro);font-weight:800;letter-spacing:1px">💳 LO QUE DEBES</div><div class="display" style="font-size:24px;font-weight:900;color:var(--principal)">$${total.toLocaleString("es-MX")}</div></div>
+    ${filas}
+    <div style="font-size:11px;color:var(--gris);margin-top:8px">Si ya pagaste y aún aparece aquí, avísanos para actualizarlo 💛</div>
+  </div>`;
+};
+
 window.renderVistaAlumna=()=>{
   const a=alumnaActiva;document.getElementById("alumna-saludo").textContent="Hola, "+a.nombre.split(" ")[0]+" 👋";
   const paquete=getPaqueteActivo(a),misRes=reservas.filter(r=>r.alumnaId===a.id&&r.fecha>=hoy()&&r.estado==="reservada").sort((x,y)=>x.fecha.localeCompare(y.fecha)),misAsist=asistencias.filter(x=>x.alumnaId===a.id),diasExp=paquete?diasRestantes(paquete.expira):0,pct=paquete?(paquete.clasesRestantes/paquete.clasesTotal*100):0;
@@ -2577,6 +2614,7 @@ window.renderVistaAlumna=()=>{
   }else{
     html+=`<div class="card" style="background:#d1362610;border:1px solid #d1362630;margin-bottom:14px"><div style="font-weight:700;color:var(--acento2)">Sin paquete activo</div><div style="font-size:13px;color:var(--gris);margin-top:4px">Contáctanos para adquirir o renovar tu paquete.</div></div>`;
   }
+  html+=bloqueDeudasAlumna(a);
   html+=`<div class="aviso aviso-rosa" style="margin-bottom:16px"><div style="font-weight:700;color:var(--principal);margin-bottom:4px">⚠️ Política de cancelación</div><div style="color:var(--grafito);line-height:1.6">Cancela con <strong>mínimo 24 horas de anticipación</strong>. Las cancelaciones tardías o inasistencias sin aviso <strong>se descuentan como clase tomada</strong>.</div></div>`;
   html+=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif">Mis clases agendadas</div>${paquete?`<button class="btn btn-primary btn-small" id="btn-agendar-alumna">+ Agendar</button>`:`<button class="btn btn-primary btn-small" disabled>+ Agendar</button>`}</div>`;
   if(!misRes.length)html+=`<div class="card" style="text-align:center;color:var(--gris);padding:28px;margin-bottom:16px"><div style="font-size:28px;margin-bottom:6px">📅</div><div>${paquete?"¡Agenda tu próxima clase!":"Sin clases agendadas."}</div></div>`;
