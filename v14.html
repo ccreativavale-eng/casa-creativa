@@ -502,6 +502,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
       <select id="fp-metodo">
         <option value="efectivo">💵 Efectivo</option>
         <option value="transferencia">🏦 Transferencia</option>
+        <option value="mixto">🔀 Mixto</option>
       </select>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
@@ -1203,7 +1204,7 @@ window.renderServicios = () => {
     </div>
     <div id="srv-precio-preview" style="display:none" class="aviso aviso-rosa" style="font-size:14px;font-weight:700;margin-bottom:14px"></div>
     <div class="field"><label>Fecha</label><input type="date" id="srv-fecha"></div>
-    <div class="field"><label>Método de pago</label>
+    <div class="field" id="srv-metodo-campo"><label>Método de pago</label>
       <select id="srv-metodo">
         <option value="efectivo">💵 Efectivo</option>
         <option value="transferencia">🏦 Transferencia</option>
@@ -1211,7 +1212,7 @@ window.renderServicios = () => {
       </select>
     </div>
     <div class="field"><label>Estado del pago</label>
-      <select id="srv-pagado">
+      <select id="srv-pagado" onchange="document.getElementById('srv-metodo-campo').style.display=this.value==='si'?'block':'none'">
         <option value="si">✅ Ya pagó</option>
         <option value="no">⏳ Pago pendiente</option>
       </select>
@@ -1230,11 +1231,11 @@ window.renderServicios = () => {
           <div>
             <div style="font-weight:700">${s.nombre}</div>
             <div style="font-size:12px;color:var(--gris)">${tipoLabel} · ${s.tipo==="venta_arcilla"?(s.arcillaTipo||"Arcilla")+" "+(s.kilos||0)+" kg · ":""}${s.gramos?s.gramos+"g · ":""}${fmtFecha(s.fecha)}</div>
-            <div style="font-size:11px;font-weight:700;color:${s.pagado?"var(--verde)":"var(--oro)"}">${s.pagado?"✅ Pagado"+(s.fechaPago?" el "+fmtFecha(s.fechaPago):""):"⏳ Pendiente"} ${s.metodo?"· "+metodoLabel(s.metodo):""}</div>
+            <div style="font-size:11px;font-weight:700;color:${s.pagado?"var(--verde)":"var(--oro)"}">${s.pagado?"✅ Pagado"+(s.fechaPago?" el "+fmtFecha(s.fechaPago):"")+(s.metodo?" · "+metodoLabel(s.metodo):""):"⏳ Pendiente"}</div>
           </div>
           <div style="text-align:right;display:flex;flex-direction:column;gap:4px;align-items:flex-end">
             <div style="font-weight:800;font-size:16px;color:var(--principal)">$${s.precio}</div>
-            ${!s.pagado?`<button data-srv-id="${s.id}" style="font-size:11px;background:var(--verde);color:white;border:none;border-radius:6px;padding:2px 8px;cursor:pointer;font-family:inherit">✓ Pagado</button>`:""}
+            ${!s.pagado?`<button data-srv-id="${s.id}" style="font-size:11px;background:var(--verde);color:white;border:none;border-radius:6px;padding:2px 8px;cursor:pointer;font-family:inherit">✓ Pagado</button>`:`<button data-srv-metodo="${s.id}" title="Cambiar método o fecha de pago" style="font-size:11px;background:var(--principal);color:white;border:none;border-radius:6px;padding:2px 8px;cursor:pointer;font-family:inherit">✏️ Pago</button>`}
             <button data-srv-del="${s.id}" style="font-size:13px;background:none;color:var(--acento2);border:none;cursor:pointer;font-family:inherit;padding:2px 4px">✕</button>
           </div>
         </div>
@@ -1313,19 +1314,38 @@ window.renderServicios = () => {
     });
     document.addEventListener("click", e => { if(!inputNombre.contains(e.target)) sugerencias.style.display="none"; });
   }
+  const _actualizarServicio = async (id, cambios) => {
+    const servicios = JSON.parse(localStorage.getItem("cc_servicios")||"[]");
+    let srv = servicios.find(s=>s.id===id) || (window._serviciosFirebase||[]).find(s=>s.id===id);
+    if(!srv) throw new Error("Servicio no encontrado");
+    srv = {...srv, ...cambios};
+    localStorage.setItem("cc_servicios", JSON.stringify(servicios.map(s => s.id === id ? srv : s)));
+    await fbSet("servicios", id, srv);
+    if(window._serviciosFirebase) window._serviciosFirebase = window._serviciosFirebase.map(s => s.id === id ? srv : s);
+    renderServicios();
+    if(document.getElementById("tab-ingresos").style.display!=="none") renderIngresos();
+  };
+  const _srvPorId = id => JSON.parse(localStorage.getItem("cc_servicios")||"[]").find(s=>s.id===id);
+  const _detalleSrv = s => `${s.nombre} · ${tipoLabelSimple(s.tipo)}`;
   document.querySelectorAll("[data-srv-id]").forEach(btn => {
-    btn.addEventListener("click", async() => {
+    btn.addEventListener("click", () => {
       const id = btn.getAttribute("data-srv-id");
-      const servicios = JSON.parse(localStorage.getItem("cc_servicios")||"[]");
-      const srvToUpdate = servicios.find(s=>s.id===id);
-      const fechaPagoHoy = hoy();
-      const updated = servicios.map(s => s.id === id ? {...s, pagado: true, fechaPago: fechaPagoHoy} : s);
-      localStorage.setItem("cc_servicios", JSON.stringify(updated));
-      if(srvToUpdate) await fbSet("servicios", id, {...srvToUpdate, pagado: true, fechaPago: fechaPagoHoy});
-      if(window._serviciosFirebase) window._serviciosFirebase = window._serviciosFirebase.map(s => s.id === id ? {...s, pagado:true, fechaPago:fechaPagoHoy} : s);
-      showToast("✅ Servicio marcado como pagado hoy");
-      renderServicios();
-      if(document.getElementById("tab-ingresos").style.display!=="none") renderIngresos();
+      const srv = _srvPorId(id); if(!srv) return;
+      pedirFechaPago({detalle:_detalleSrv(srv), monto:srv.precio||srv.monto||0, metodo:srv.metodo}, async (fecha, metodo) => {
+        await _actualizarServicio(id, {pagado:true, fechaPago:fecha, metodo});
+        showToast(`✅ Pagado · ${metodoLabel(metodo)}`);
+      });
+    });
+  });
+  document.querySelectorAll("[data-srv-metodo]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-srv-metodo");
+      const srv = _srvPorId(id); if(!srv) return;
+      pedirFechaPago({detalle:_detalleSrv(srv), monto:srv.precio||srv.monto||0, metodo:srv.metodo}, async (fecha, metodo) => {
+        await _actualizarServicio(id, {fechaPago:fecha, metodo});
+        showToast(`✓ Pago actualizado · ${metodoLabel(metodo)}`);
+      });
+      if(srv.fechaPago) document.getElementById("fp-fecha").value = srv.fechaPago;
     });
   });
   document.querySelectorAll("[data-srv-del]").forEach(btn => {
@@ -2596,7 +2616,7 @@ window.toggleEditSegundoPago=()=>{
 window.pedirFechaPago=({detalle,monto,metodo},alConfirmar)=>{
   document.getElementById("fp-detalle").textContent=detalle+" · $"+(monto||0).toLocaleString("es-MX");
   document.getElementById("fp-fecha").value=hoy();
-  document.getElementById("fp-metodo").value=(metodo==="transferencia")?"transferencia":"efectivo";
+  document.getElementById("fp-metodo").value=(metodo==="transferencia"||metodo==="mixto")?metodo:"efectivo";
   const btn=document.getElementById("fp-confirmar");
   btn.onclick=async()=>{
     const fecha=document.getElementById("fp-fecha").value;
