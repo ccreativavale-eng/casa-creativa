@@ -2397,7 +2397,9 @@ window.verAlumna=async id=>{
     });
   });
 
-  document.getElementById("btn-abrir-editar-alumna")?.addEventListener("click",()=>{
+  // .onclick (no addEventListener): el botón está fijo en el encabezado y si no, se acumulaban las alumnas anteriores
+  const _btnEditarAlumna=document.getElementById("btn-abrir-editar-alumna");
+  if(_btnEditarAlumna) _btnEditarAlumna.onclick=()=>{
     if(document.getElementById("ea-nombre-inline"))return; // ya está abierto, evita duplicar
     const content = document.getElementById("ver-alumna-content");
     const editForm = `<div style="background:var(--fondo);border-radius:10px;padding:14px;margin-bottom:12px;border:2px solid var(--principal)">
@@ -2418,13 +2420,14 @@ window.verAlumna=async id=>{
       if(!nombre)return;
       a.nombre=nombre;
       a.telefono=document.getElementById("ea-tel-inline")?.value||"";
-      a.correo=document.getElementById("ea-email-inline")?.value||"";
+      a.correo=(document.getElementById("ea-email-inline")?.value||"").trim().toLowerCase();
+      a.telefono=a.telefono.trim();
       await fbUpdate("alumnas",id,{nombre:a.nombre,telefono:a.telefono,correo:a.correo});
       closeModal("modal-ver-alumna");
       renderAlumnas();
       showToast("✓ Alumna actualizada");
     });
-  });
+  };
   
   // Guardar nota
   document.querySelectorAll("[data-guardar-nota]").forEach(btn=>{
