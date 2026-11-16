@@ -1893,7 +1893,7 @@ window.renderAlumnas=()=>{
 
   let html=`<div class="row-space" style="margin-bottom:10px"><span style="font-weight:800;font-size:16px;font-family:'DM Serif Display',serif">${alumnas.length} alumna${alumnas.length!==1?"s":""}</span><div style="display:flex;gap:6px"><button class="btn btn-ghost btn-small" id="btn-abrir-migracion">📦 Migrar</button><button class="btn btn-primary btn-small" onclick="openModal('modal-nueva-alumna')">+ Nueva</button></div></div>
   <div style="display:flex;gap:8px;margin-bottom:14px">
-    <div style="flex:1;background:var(--blanco);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--hueso2)"><div style="font-size:22px;font-weight:800;color:var(--principal)">${activas}</div><div style="font-size:10px;color:var(--gris)">Activas</div></div>
+    <div id="btn-filtro-activas" title="Ver solo alumnas con paquete activo" style="flex:1;background:${window._filtroActivas?"var(--principal)":"var(--blanco)"};border-radius:10px;padding:10px;text-align:center;border:${window._filtroActivas?"2px solid var(--principal)":"1px solid var(--hueso2)"};cursor:pointer;transition:background .15s"><div style="font-size:22px;font-weight:800;color:${window._filtroActivas?"white":"var(--principal)"}">${activas}</div><div style="font-size:10px;color:${window._filtroActivas?"white":"var(--gris)"}">${window._filtroActivas?"✓ Activas":"Activas 👆"}</div></div>
     <div style="flex:1;background:var(--blanco);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--hueso2)"><div style="font-size:22px;font-weight:800;color:var(--verde)">${resUltSemana}</div><div style="font-size:10px;color:var(--gris)">Clases esta semana</div></div>
     <div style="flex:1;background:var(--blanco);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--hueso2)"><div style="font-size:22px;font-weight:800;color:var(--oro)">${resSemana}</div><div style="font-size:10px;color:var(--gris)">Próxima semana</div></div>
     <div style="flex:1;background:var(--blanco);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--hueso2)"><div style="font-size:22px;font-weight:800;color:var(--complemento)">${nuevasEsteMes}</div><div style="font-size:10px;color:var(--gris)">Nuevas este mes</div></div>
@@ -1901,7 +1901,8 @@ window.renderAlumnas=()=>{
   <div style="margin-bottom:14px"><input type="text" id="buscar-alumna" placeholder="🔍 Buscar alumna..." value="${buscarExistente}" style="width:100%;padding:10px 13px;border:1.5px solid var(--hueso2);border-radius:9px;font-size:14px;font-family:inherit;background:var(--blanco);color:var(--grafito);outline:none"></div>${alertas}`;
   if(!alumnas.length)html+=`<div class="card empty-state"><div style="font-size:36px;margin-bottom:8px">👩‍🎨</div><div>Aún no hay alumnas.</div></div>`;
   const busqueda = buscarExistente.toLowerCase();
-  const alumnasFiltradas = [...alumnas].filter(a=>a.nombre.toLowerCase().includes(busqueda)).sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
+  const alumnasFiltradas = [...alumnas].filter(a=>a.nombre.toLowerCase().includes(busqueda)&&(!window._filtroActivas||getPaqueteActivo(a))).sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
+  if(window._filtroActivas) html+=`<div style="display:flex;justify-content:space-between;align-items:center;background:var(--secundario);border-radius:9px;padding:8px 12px;margin-bottom:12px;font-size:13px"><span>Mostrando solo <strong>alumnas activas</strong> (${alumnasFiltradas.length})</span><button id="btn-quitar-filtro-activas" style="background:var(--blanco);border:none;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:700">✕ Ver todas</button></div>`;
   alumnasFiltradas.forEach(a=>{
     const act=getPaqueteActivo(a),pend=act?.clasesRestantes||0,diasExp=act?diasRestantes(act.expira):0;
     const esMembresia=act?PAQUETES_DEF[act.paqueteDefId]?.tipo==="membresia":false;
@@ -1915,6 +1916,8 @@ window.renderAlumnas=()=>{
   const searchInput = document.getElementById("buscar-alumna");
   if(searchInput){
     searchInput.addEventListener("input", renderAlumnas);
+    document.getElementById("btn-filtro-activas")?.addEventListener("click",()=>{ window._filtroActivas=!window._filtroActivas; renderAlumnas(); });
+    document.getElementById("btn-quitar-filtro-activas")?.addEventListener("click",()=>{ window._filtroActivas=false; renderAlumnas(); });
     if(buscarExistente) {
       searchInput.focus();
       searchInput.setSelectionRange(buscarExistente.length, buscarExistente.length);
