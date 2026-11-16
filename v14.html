@@ -547,6 +547,13 @@ const HORARIOS = [
   {id:"sab_m",label:"Sábado 16:00–19:00",  dia:"Sábado", hora:"16:00–19:00", diaN:6, tipo:"membresia"},
 ];
 
+// Horas incluidas en cada membresía (sesiones de 3 hrs)
+const HORAS_MEMBRESIA = {mem_esencial:12, mem_plus:24};
+const esMembresiaPkg = p => PAQUETES_DEF[p?.paqueteDefId]?.tipo==="membresia";
+const horasTotalPkg = p => p.horasTotal ?? HORAS_MEMBRESIA[p.paqueteDefId] ?? ((p.clasesTotal||0)*3);
+const horasUsadasPkg = p => Math.round((p.registroHoras||[]).reduce((t,r)=>t+(parseFloat(r.horas)||0),0)*100)/100;
+const fmtHoras = h => (Math.round(h*100)/100).toLocaleString("es-MX")+" h";
+const horaAhora = () => { const d=new Date(); return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); };
 let alumnas=[],reservas=[],asistencias=[],eventos=[];
 let alumnaActiva=null,semanaOffset=0,pkgAlumnaId=null,vistaAgenda="mes",mesOffset=0;
 let bloqueos=[];
@@ -2136,9 +2143,32 @@ window.guardarPaquete=async()=>{
   let diasPkg = def.dias;
   if(defId.startsWith("previo")) diasPkg = def.dias;
   const nuevo={id:uid(),paqueteDefId:defId,nombre:def.nombre,emoji:def.emoji,clasesTotal:clasesRestantes,clasesRestantes,monto:monto1,montoTotal,metodoPago:metodo,compradoEn:fc,expira:addDias(fc,diasPkg),segundoPago};
+  if(def.tipo==="membresia"){ nuevo.horasTotal=HORAS_MEMBRESIA[defId]??def.clases*3; nuevo.registroHoras=[]; }
   const a=alumnas.find(x=>x.id===pkgAlumnaId);a.paquetes=[...(a.paquetes||[]),nuevo];
   await fbUpdate("alumnas",pkgAlumnaId,{paquetes:a.paquetes});
   closeModal("modal-paquete");renderAlumnas();showToast("✓ Paquete "+def.nombre+" agregado");
+};
+
+const bloqueHorasMembresia=(a,p)=>{
+  const total=horasTotalPkg(p), usadas=horasUsadasPkg(p), quedan=Math.max(0,total-usadas);
+  const pct=total?Math.min(100,usadas/total*100):0;
+  const regs=[...(p.registroHoras||[])].sort((x,y)=>(y.fecha+(y.hora||"")).localeCompare(x.fecha+(x.hora||"")));
+  const inp="padding:7px 8px;border:1.5px solid var(--hueso2);border-radius:8px;font-size:13px;font-family:inherit;background:var(--blanco);color:var(--grafito);width:100%;box-sizing:border-box";
+  return `<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--hueso2)">
+    <div style="display:flex;justify-content:space-between;align-items:baseline">
+      <div style="font-weight:700;font-size:13px">⏱ Horas de membresía</div>
+      <div style="font-size:13px"><strong style="color:${quedan>0?"var(--principal)":"var(--acento2)"}">${fmtHoras(usadas)}</strong> <span style="color:var(--gris)">de ${fmtHoras(total)}</span> <button data-horas-total="${p.id}" title="Cambiar total de horas" style="font-size:10px;background:none;border:none;cursor:pointer;padding:0 2px">✏️</button></div>
+    </div>
+    <div class="progress-bg" style="margin:6px 0"><div class="progress-fill" style="width:${pct}%;${quedan<=0?"background:var(--acento2)":""}"></div></div>
+    <div style="font-size:12px;font-weight:700;color:${quedan>0?"var(--verde)":"var(--acento2)"};margin-bottom:8px">${quedan>0?"Le quedan "+fmtHoras(quedan):"⚠️ Ya usó todas sus horas"}</div>
+    <div style="display:grid;grid-template-columns:1.3fr 1fr 0.8fr;gap:6px;margin-bottom:6px">
+      <div><div style="font-size:10px;color:var(--gris)">Fecha</div><input type="date" id="hrs-fecha-${p.id}" value="${hoy()}" style="${inp}"></div>
+      <div><div style="font-size:10px;color:var(--gris)">Hora</div><input type="time" id="hrs-hora-${p.id}" value="${horaAhora()}" style="${inp}"></div>
+      <div><div style="font-size:10px;color:var(--gris)">Horas</div><input type="number" id="hrs-cant-${p.id}" value="3" min="0.5" step="0.5" style="${inp}"></div>
+    </div>
+    <button data-horas-add="${p.id}" style="width:100%;font-size:12px;background:var(--principal);color:white;border:none;border-radius:8px;padding:7px 10px;cursor:pointer;font-family:inherit;font-weight:700">+ Registrar horas</button>
+    ${regs.length?`<div style="margin-top:8px">${regs.map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:5px 0;border-bottom:1px solid var(--hueso2)"><span>${fmtFecha(r.fecha)}${r.hora?" · "+r.hora:""}</span><span style="display:flex;align-items:center;gap:6px"><strong>${fmtHoras(parseFloat(r.horas)||0)}</strong><button data-horas-del="${p.id}|${r.id}" style="font-size:12px;background:none;color:var(--acento2);border:none;cursor:pointer;padding:0 2px">✕</button></span></div>`).join("")}</div>`:`<div style="font-size:11px;color:var(--gris);margin-top:6px">Aún no hay horas registradas.</div>`}
+  </div>`;
 };
 
 window.verAlumna=async id=>{
@@ -2160,7 +2190,7 @@ window.verAlumna=async id=>{
   if(!_allPkgs.length)html+=`<div style="font-size:13px;color:var(--gris);margin-bottom:12px">Sin paquetes.</div>`;
   _showPkgs.forEach(p=>{
     const dias=diasRestantes(p.expira),venc=pagoVencido(p),pend=pagoPendiente(p);
-    html+=`<div style="background:var(--fondo);border-radius:10px;padding:10px 14px;margin-bottom:8px;border:${venc?"2px solid var(--acento2)":pend?"2px solid var(--oro)":"1px solid var(--hueso2)"}"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div style="font-weight:700;font-family:'DM Serif Display',serif">${p.emoji} ${p.nombre}</div><div style="display:flex;gap:6px;align-items:center">${badge(p.clasesRestantes+"/"+p.clasesTotal,p.clasesRestantes>0?"var(--verde)":"var(--acento2)")}<button data-edit-pkg="${p.id}" data-edit-alumna="${a.id}" style="font-size:11px;background:var(--principal);color:white;border:none;border-radius:6px;padding:2px 8px;cursor:pointer;font-family:inherit">✏️</button><button data-del-pkg="${p.id}" data-del-alumna="${a.id}" style="font-size:11px;background:var(--acento2);color:white;border:none;border-radius:6px;padding:2px 8px;cursor:pointer;font-family:inherit">✕</button></div></div><div style="font-size:12px;color:var(--gris)">Comprado ${fmtFecha(p.compradoEn)} · ${metodoLabel(p.metodoPago||"efectivo")}</div><div style="font-size:12px;color:var(--gris)">Pagado: $${(p.monto||0).toLocaleString("es-MX")} · Total: $${(p.montoTotal||p.monto||0).toLocaleString("es-MX")}</div><div style="font-size:12px;color:${dias<14?"var(--acento2)":"var(--gris)"}">Expira ${fmtFecha(p.expira)} (${dias}d)</div>${venc?`<div class="pago-vencido">🔴 Pago vencido desde ${fmtFecha(p.segundoPago.fechaLimite)} · $${(p.segundoPago.monto||0).toLocaleString("es-MX")}</div>`:""}${pend?`<div class="pago-pendiente">⏳ Segundo pago: $${(p.segundoPago.monto||0).toLocaleString("es-MX")} · Límite: ${fmtFecha(p.segundoPago.fechaLimite)} <button onclick="marcarSegundoPago('${a.id}','${p.id}')" style="margin-left:8px;background:var(--verde);color:white;border:none;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;font-family:inherit">✓ Marcar pagado</button></div>`:""}</div>`;
+    html+=`<div style="background:var(--fondo);border-radius:10px;padding:10px 14px;margin-bottom:8px;border:${venc?"2px solid var(--acento2)":pend?"2px solid var(--oro)":"1px solid var(--hueso2)"}"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div style="font-weight:700;font-family:'DM Serif Display',serif">${p.emoji} ${p.nombre}</div><div style="display:flex;gap:6px;align-items:center">${badge(p.clasesRestantes+"/"+p.clasesTotal,p.clasesRestantes>0?"var(--verde)":"var(--acento2)")}<button data-edit-pkg="${p.id}" data-edit-alumna="${a.id}" style="font-size:11px;background:var(--principal);color:white;border:none;border-radius:6px;padding:2px 8px;cursor:pointer;font-family:inherit">✏️</button><button data-del-pkg="${p.id}" data-del-alumna="${a.id}" style="font-size:11px;background:var(--acento2);color:white;border:none;border-radius:6px;padding:2px 8px;cursor:pointer;font-family:inherit">✕</button></div></div><div style="font-size:12px;color:var(--gris)">Comprado ${fmtFecha(p.compradoEn)} · ${metodoLabel(p.metodoPago||"efectivo")}</div><div style="font-size:12px;color:var(--gris)">Pagado: $${(p.monto||0).toLocaleString("es-MX")} · Total: $${(p.montoTotal||p.monto||0).toLocaleString("es-MX")}</div><div style="font-size:12px;color:${dias<14?"var(--acento2)":"var(--gris)"}">Expira ${fmtFecha(p.expira)} (${dias}d)</div>${venc?`<div class="pago-vencido">🔴 Pago vencido desde ${fmtFecha(p.segundoPago.fechaLimite)} · $${(p.segundoPago.monto||0).toLocaleString("es-MX")}</div>`:""}${pend?`<div class="pago-pendiente">⏳ Segundo pago: $${(p.segundoPago.monto||0).toLocaleString("es-MX")} · Límite: ${fmtFecha(p.segundoPago.fechaLimite)} <button onclick="marcarSegundoPago('${a.id}','${p.id}')" style="margin-left:8px;background:var(--verde);color:white;border:none;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;font-family:inherit">✓ Marcar pagado</button></div>`:""}${esMembresiaPkg(p)?bloqueHorasMembresia(a,p):""}</div>`;
   });
   html+=`<div style="font-weight:800;margin:14px 0 8px;font-family:'DM Serif Display',serif">Clases tomadas</div>`;
   if(!asistA.length)html+=`<div style="font-size:13px;color:var(--gris)">Sin asistencias registradas.</div>`;
@@ -2361,6 +2391,43 @@ window.verAlumna=async id=>{
       if(document.getElementById("tab-ingresos").style.display!=="none") renderIngresos();
     });
   });
+  // Horas de membresía
+  const _guardarPkgsHoras = async (al, msg) => { await fbUpdate("alumnas", al.id, {paquetes: al.paquetes}); showToast(msg); verAlumna(al.id); };
+  document.querySelectorAll("[data-horas-add]").forEach(btn=>{
+    btn.addEventListener("click", async()=>{
+      const pkgId=btn.getAttribute("data-horas-add");
+      const p=(a.paquetes||[]).find(x=>x.id===pkgId); if(!p) return;
+      const fecha=document.getElementById("hrs-fecha-"+pkgId)?.value;
+      const hora=document.getElementById("hrs-hora-"+pkgId)?.value||"";
+      const horas=parseFloat(document.getElementById("hrs-cant-"+pkgId)?.value||0);
+      if(!fecha||!horas||horas<=0){ showToast("Pon la fecha y cuántas horas"); return; }
+      if(p.horasTotal==null) p.horasTotal=horasTotalPkg(p);
+      p.registroHoras=[...(p.registroHoras||[]), {id:uid(), fecha, hora, horas, creadoEn:new Date().toISOString()}];
+      const quedan=p.horasTotal-horasUsadasPkg(p);
+      await _guardarPkgsHoras(a, quedan<=0?`✓ ${fmtHoras(horas)} registradas · ⚠️ Ya usó todas sus horas`:`✓ ${fmtHoras(horas)} registradas · le quedan ${fmtHoras(quedan)}`);
+    });
+  });
+  document.querySelectorAll("[data-horas-del]").forEach(btn=>{
+    btn.addEventListener("click", async()=>{
+      const [pkgId,regId]=btn.getAttribute("data-horas-del").split("|");
+      const p=(a.paquetes||[]).find(x=>x.id===pkgId); if(!p) return;
+      if(!confirm("¿Borrar este registro de horas?")) return;
+      if(p.horasTotal==null) p.horasTotal=horasTotalPkg(p);
+      p.registroHoras=(p.registroHoras||[]).filter(r=>r.id!==regId);
+      await _guardarPkgsHoras(a, "Registro de horas eliminado");
+    });
+  });
+  document.querySelectorAll("[data-horas-total]").forEach(btn=>{
+    btn.addEventListener("click", async()=>{
+      const pkgId=btn.getAttribute("data-horas-total");
+      const p=(a.paquetes||[]).find(x=>x.id===pkgId); if(!p) return;
+      const r=prompt("¿Cuántas horas tiene en total esta membresía?", horasTotalPkg(p));
+      if(r===null) return;
+      const n=parseFloat(r); if(!n||n<=0){ showToast("Número no válido"); return; }
+      p.horasTotal=n;
+      await _guardarPkgsHoras(a, "✓ Total de horas actualizado a "+fmtHoras(n));
+    });
+  });
   const btnClaseHoy = document.getElementById("btn-clase-hoy-"+id);
   if(btnClaseHoy){
     btnClaseHoy.addEventListener("click", async ()=>{
@@ -2503,6 +2570,7 @@ window.renderVistaAlumna=()=>{
   let html="";
   if(paquete){
     html+=`<div class="card" style="margin-bottom:14px;border:2px solid var(--secundario)"><div style="font-size:11px;color:var(--principal);font-weight:800;letter-spacing:1px;margin-bottom:6px">TU PAQUETE</div><div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="font-weight:700;font-size:17px;font-family:'DM Serif Display',serif">${paquete.emoji} ${paquete.nombre}</div><div style="text-align:right"><div class="display" style="font-size:32px;font-weight:900;color:var(--principal);line-height:1">${paquete.clasesRestantes}</div><div style="font-size:11px;color:var(--gris)">de ${paquete.clasesTotal} clases</div></div></div><div class="progress-bg"><div class="progress-fill" style="width:${pct}%"></div></div><div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--gris)">Expira: ${fmtFecha(paquete.expira)}</span><span style="color:${diasExp<=14?"var(--acento2)":"var(--gris)"};font-weight:700">${diasExp>0?diasExp+" días restantes":"⚠️ Vencido"}</span></div></div>`;
+    if(esMembresiaPkg(paquete)){ const _t=horasTotalPkg(paquete),_u=horasUsadasPkg(paquete); html+=`<div class="card" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-weight:700">⏱ Horas de membresía</span><span><strong style="color:var(--principal)">${fmtHoras(_u)}</strong> <span style="font-size:12px;color:var(--gris)">de ${fmtHoras(_t)}</span></span></div><div class="progress-bg" style="margin-top:6px"><div class="progress-fill" style="width:${_t?Math.min(100,_u/_t*100):0}%"></div></div><div style="font-size:12px;color:var(--gris)">Te quedan ${fmtHoras(Math.max(0,_t-_u))}</div></div>`; }
     if(necesitaRenovar(a))html+=`<div class="renovar-aviso" style="margin-bottom:14px">🔔 Te quedan pocas clases — ¡contáctanos para renovar tu paquete a tiempo!</div>`;
     if(pagoVencido(paquete))html+=`<div class="pago-vencido" style="margin-bottom:14px">🔴 Tienes un pago pendiente vencido desde ${fmtFecha(paquete.segundoPago.fechaLimite)}. Por favor contáctanos para regularizarlo.</div>`;
     else if(pagoPendiente(paquete))html+=`<div class="pago-pendiente" style="margin-bottom:14px">⏳ Recuerda que tienes un segundo pago pendiente de $${(paquete.segundoPago.monto||0).toLocaleString("es-MX")} antes del ${fmtFecha(paquete.segundoPago.fechaLimite)}.</div>`;
