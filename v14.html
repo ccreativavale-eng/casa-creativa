@@ -50,7 +50,12 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
 .login-header{background:linear-gradient(135deg,var(--principal),var(--principal-osc));padding:28px 24px 32px;text-align:center;}
 .login-body{flex:1;display:flex;align-items:flex-start;justify-content:center;padding:32px 24px;}
 .login-inner{width:100%;max-width:380px;}
-.alumna-option{width:100%;text-align:left;padding:12px 16px;margin-bottom:8px;background:var(--blanco);border:2px solid var(--secundario);border-radius:10px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:12px;}
+.alumna-option{width:100%;text-align:left;padding:12px 16px;margin-bottom:8px;background:var(--blanco);border:2px solid var(--secundario);border-radius:10px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:12px;transition:background .15s,border-color .15s,transform .1s;color:var(--grafito);}
+.alumna-option:hover{background:var(--secundario);border-color:var(--principal);}
+.alumna-option:active{transform:scale(.98);}
+.alumna-option.seleccionada{background:var(--principal);border-color:var(--principal);color:white;box-shadow:0 3px 10px rgba(0,0,0,.15);}
+.alumna-option.seleccionada .check-sel{display:inline;}
+.check-sel{display:none;margin-left:auto;font-size:20px;}
 .progress-bg{background:var(--hueso2);border-radius:20px;height:8px;margin:12px 0 8px;overflow:hidden;}
 .progress-fill{height:100%;border-radius:20px;background:linear-gradient(90deg,var(--principal),var(--complemento));transition:width .4s;}
 .semana-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
@@ -105,6 +110,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
       <div style="font-size:14px;color:var(--gris);margin-bottom:20px">Escribe tu nombre para ver tu espacio personal.</div>
       <div class="field"><input type="text" id="input-nombre-login" placeholder="Ej. María García" oninput="buscarAlumna()" autocomplete="off"></div>
       <div id="resultados-login"></div>
+      <div id="verif-login" style="display:none" class="field">
+        <label id="verif-login-label" style="font-weight:700">Para entrar, escribe tu correo</label>
+        <input type="text" id="input-verif-login" autocomplete="off" onkeydown="if(event.key==='Enter')entrarAlumna()">
+        <div id="error-verif" style="display:none;font-size:13px;color:var(--acento2);margin-top:6px;font-weight:600"></div>
+      </div>
       <div id="error-login" style="display:none" class="aviso aviso-rojo"><span style="color:var(--acento2)">No encontramos tu nombre. Contáctanos para registrarte.</span></div>
       <button class="btn btn-primary btn-full" id="btn-entrar" onclick="entrarAlumna()" disabled>Entrar</button>
       <div style="text-align:center;margin-top:32px">
@@ -871,20 +881,51 @@ window.goLogin=async()=>{
   showScreen("login");showAlumnaLogin();
 };
 window.showMaestra=()=>{document.getElementById("login-alumna-panel").style.display="none";document.getElementById("login-maestra-panel").style.display="block";document.getElementById("input-clave").value="";document.getElementById("error-clave").style.display="none";try{document.getElementById("input-correo").value=localStorage.getItem("cc_correo_maestra")||"";}catch(e){}};
-window.showAlumnaLogin=()=>{document.getElementById("login-alumna-panel").style.display="block";document.getElementById("login-maestra-panel").style.display="none";document.getElementById("input-nombre-login").value="";document.getElementById("resultados-login").innerHTML="";document.getElementById("error-login").style.display="none";document.getElementById("btn-entrar").disabled=true;alumnaLoginSel=null;};
+window.showAlumnaLogin=()=>{document.getElementById("login-alumna-panel").style.display="block";document.getElementById("login-maestra-panel").style.display="none";document.getElementById("input-nombre-login").value="";document.getElementById("resultados-login").innerHTML="";document.getElementById("error-login").style.display="none";document.getElementById("btn-entrar").disabled=true;alumnaLoginSel=null;document.getElementById("verif-login").style.display="none";document.getElementById("input-verif-login").value="";};
 
 let alumnaLoginSel=null;
 window.buscarAlumna=()=>{
   const q=document.getElementById("input-nombre-login").value.toLowerCase();
   alumnaLoginSel=null;document.getElementById("btn-entrar").disabled=true;document.getElementById("error-login").style.display="none";
+  document.getElementById("verif-login").style.display="none";
   const cont=document.getElementById("resultados-login");
   if(q.length<2){cont.innerHTML="";return;}
   const res=alumnas.filter(a=>a.nombre.toLowerCase().includes(q));
   if(!res.length){cont.innerHTML=`<div style="font-size:13px;color:var(--gris);text-align:center;padding:12px 0">No encontramos ese nombre.</div>`;return;}
-  cont.innerHTML=res.map(a=>`<button class="alumna-option" onclick="selAlumna('${a.id}')"><span style="font-size:22px">👩‍🎨</span><div><div style="font-weight:700">${a.nombre}</div>${a.correo?`<div style="font-size:12px;color:var(--gris)">✉️ ${a.correo}</div>`:a.telefono?`<div style="font-size:12px;color:var(--gris)">📱 ${a.telefono}</div>`:""}</div></button>`).join("");
+  cont.innerHTML=res.map(a=>`<button class="alumna-option" data-alumna-op="${a.id}" onclick="selAlumna('${a.id}')"><span style="font-size:22px">👩‍🎨</span><div style="font-weight:700">${a.nombre}</div><span class="check-sel">✓</span></button>`).join("");
 };
-window.selAlumna=id=>{alumnaLoginSel=id;document.getElementById("btn-entrar").disabled=false;};
-window.entrarAlumna=()=>{if(!alumnaLoginSel)return;window._srvVistaAlumna=null;alumnaActiva=alumnas.find(x=>x.id===alumnaLoginSel);if(!alumnaActiva)return;renderVistaAlumna();showScreen("alumna");};
+const _soloDigitos=t=>(t||"").replace(/\D/g,"");
+window.selAlumna=id=>{
+  alumnaLoginSel=id;document.getElementById("btn-entrar").disabled=false;
+  document.querySelectorAll("[data-alumna-op]").forEach(b=>b.classList.toggle("seleccionada",b.getAttribute("data-alumna-op")===id));
+  const a=alumnas.find(x=>x.id===id);
+  const box=document.getElementById("verif-login"),inp=document.getElementById("input-verif-login"),lbl=document.getElementById("verif-login-label");
+  document.getElementById("error-verif").style.display="none";inp.value="";
+  if(a?.correo){ box.style.display="block"; lbl.textContent="Para entrar, escribe tu correo"; inp.type="email"; inp.placeholder="tucorreo@ejemplo.com"; setTimeout(()=>inp.focus(),50); }
+  else if(_soloDigitos(a?.telefono).length>=4){ box.style.display="block"; lbl.textContent="Para entrar, escribe tu número de celular"; inp.type="tel"; inp.placeholder="Ej. 5512345678"; setTimeout(()=>inp.focus(),50); }
+  else {
+    box.style.display="block"; lbl.textContent="Tu acceso aún no está activado"; inp.style.display="none";
+    const e=document.getElementById("error-verif"); e.textContent="Escríbenos por WhatsApp y compártenos tu correo para activar tu acceso 💛"; e.style.display="block";
+    document.getElementById("btn-entrar").disabled=true;
+  }
+  if(a?.correo||_soloDigitos(a?.telefono).length>=4) inp.style.display="";
+};
+window.entrarAlumna=()=>{
+  if(!alumnaLoginSel)return;
+  const a=alumnas.find(x=>x.id===alumnaLoginSel);if(!a)return;
+  const val=(document.getElementById("input-verif-login")?.value||"").trim();
+  const err=document.getElementById("error-verif");
+  if(a.correo){
+    if(val.toLowerCase()!==a.correo.trim().toLowerCase()){ err.textContent=val?"Ese correo no coincide. Escríbenos por WhatsApp para ayudarte a entrar.":"Escribe tu correo para entrar."; err.style.display="block"; return; }
+  } else if(_soloDigitos(a.telefono).length>=4){
+    const t=_soloDigitos(a.telefono),v=_soloDigitos(val);
+    if(!v||v.slice(-10)!==t.slice(-10)){ err.textContent=val?"Ese número no coincide. Escríbenos por WhatsApp para ayudarte a entrar.":"Escribe tu número de celular para entrar."; err.style.display="block"; return; }
+  } else {
+    err.textContent="Escríbenos por WhatsApp y compártenos tu correo para activar tu acceso 💛"; err.style.display="block"; return;
+  }
+  err.style.display="none";
+  window._srvVistaAlumna=null;alumnaActiva=a;renderVistaAlumna();showScreen("alumna");
+};
 window.entrarMaestra=async()=>{
   const correo=document.getElementById("input-correo").value.trim();
   const clave=document.getElementById("input-clave").value;
