@@ -565,6 +565,10 @@ const horasUsadasPkg = p => Math.round((p.registroHoras||[]).reduce((t,r)=>t+(pa
 const fmtHoras = h => (Math.round(h*100)/100).toLocaleString("es-MX")+" h";
 const horaAhora = () => { const d=new Date(); return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); };
 let alumnas=[],reservas=[],asistencias=[],eventos=[];
+let quemas=[];
+const TIPOS_QUEMA={sancocho:"🔥 Sancocho",esmaltado:"🎨 Esmaltado",ambos:"🔥🎨 Sancocho y esmaltado"};
+const proximasQuemas=()=>quemas.filter(q=>q.fecha>=hoy()).sort((x,y)=>x.fecha.localeCompare(y.fecha));
+const fmtFechaLarga=d=>new Date(d+"T12:00:00").toLocaleDateString("es-MX",{weekday:"long",day:"numeric",month:"long"});
 let alumnaActiva=null,semanaOffset=0,pkgAlumnaId=null,vistaAgenda="mes",mesOffset=0;
 let bloqueos=[];
 let clasesCerradas=[];
@@ -845,6 +849,7 @@ async function cargarDatos(){
     try { const bSnap = await getDocs(collection(db,"bloqueos")); bloqueos = bSnap.docs.map(d=>({id:d.id,...d.data()})); } catch(e) { bloqueos=[]; }
     try { const ccSnap = await getDocs(collection(db,"clases_cerradas")); clasesCerradas = ccSnap.docs.map(d=>({id:d.id,...d.data()})); } catch(e) { clasesCerradas=[]; }
     try { const evSnap = await getDocs(collection(db,"eventos")); eventos = evSnap.docs.map(d=>({id:d.id,...d.data()})); } catch(e) { eventos=[]; }
+    try { const qSnap = await getDocs(collection(db,"quemas")); quemas = qSnap.docs.map(d=>({id:d.id,...d.data()})); } catch(e) { quemas=[]; }
     document.getElementById("loading").style.display="none";
     showScreen("login");
   }catch(e){
@@ -1139,6 +1144,20 @@ window.renderServicios = () => {
   </div>
   <button id="btn-migrar-servicios" style="font-size:11px;background:var(--gris);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-family:inherit;margin-bottom:10px">🔧 Marcar todos como pagados</button>`;
 
+  // Próximas quemas
+  const _prox=proximasQuemas();
+  html += `<div class="card" style="margin-bottom:16px;border:2px solid var(--oro)">
+    <div style="font-weight:800;font-size:14px;font-family:'DM Serif Display',serif;margin-bottom:4px">📅 Próximas quemas</div>
+    <div style="font-size:12px;color:var(--gris);margin-bottom:12px">Las alumnas las ven en su espacio.</div>
+    ${_prox.length?_prox.map(q=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--hueso2)"><div><div style="font-weight:700;font-size:14px;text-transform:capitalize">${fmtFechaLarga(q.fecha)}</div><div style="font-size:12px;color:var(--gris)">${TIPOS_QUEMA[q.tipo]||q.tipo}${q.nota?" · "+q.nota:""}</div></div><button data-quema-del="${q.id}" style="font-size:13px;background:none;color:var(--acento2);border:none;cursor:pointer;font-family:inherit;padding:2px 6px">✕</button></div>`).join(""):`<div style="font-size:13px;color:var(--gris);margin-bottom:6px">No hay quemas programadas.</div>`}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
+      <div class="field" style="margin:0"><label>Fecha</label><input type="date" id="quema-fecha"></div>
+      <div class="field" style="margin:0"><label>Tipo</label><select id="quema-tipo"><option value="sancocho">🔥 Sancocho</option><option value="esmaltado">🎨 Esmaltado</option><option value="ambos">🔥🎨 Ambos</option></select></div>
+    </div>
+    <div class="field" style="margin:8px 0"><label>Nota (opcional)</label><input type="text" id="quema-nota" placeholder="Ej. Entrega tus piezas antes del jueves"></div>
+    <button class="btn btn-primary btn-full" id="btn-guardar-quema">+ Agregar quema</button>
+  </div>`;
+
   // Formulario nuevo servicio
   html += `<div class="card" style="margin-bottom:16px;border:2px solid var(--secundario)">
     <div style="font-weight:800;font-size:14px;font-family:'DM Serif Display',serif;margin-bottom:14px">+ Registrar servicio</div>
@@ -1236,6 +1255,28 @@ window.renderServicios = () => {
   document.getElementById("srv-kilos-mas").addEventListener("click", ()=>{ _kilosInp.value = (parseFloat(_kilosInp.value)||0)+1; calcServicio(); });
   document.getElementById("srv-tipo").addEventListener("change", toggleSrvInput);
   document.getElementById("btn-guardar-servicio").addEventListener("click", guardarServicio);
+  document.getElementById("btn-guardar-quema").addEventListener("click", async()=>{
+    const fecha=document.getElementById("quema-fecha").value;
+    const tipo=document.getElementById("quema-tipo").value;
+    const nota=document.getElementById("quema-nota").value.trim();
+    if(!fecha){ showToast("Elige la fecha de la quema"); return; }
+    if(fecha<hoy()){ showToast("Esa fecha ya pasó"); return; }
+    const q={id:uid(),fecha,tipo,nota,creadoEn:new Date().toISOString()};
+    try{ await fbSet("quemas",q.id,q); }catch(e){ console.error(e); showToast("⚠️ No se pudo guardar la quema (permiso de Firebase)"); return; }
+    quemas.push(q);
+    showToast("✓ Quema agregada · "+fmtFecha(fecha));
+    renderServicios();
+  });
+  document.querySelectorAll("[data-quema-del]").forEach(btn=>{
+    btn.addEventListener("click", async()=>{
+      const id=btn.getAttribute("data-quema-del");
+      if(!confirm("¿Borrar esta quema?")) return;
+      try{ await fbDelete("quemas",id); }catch(e){ showToast("⚠️ No se pudo borrar"); return; }
+      quemas=quemas.filter(q=>q.id!==id);
+      showToast("Quema eliminada");
+      renderServicios();
+    });
+  });
   
   document.getElementById("btn-migrar-servicios")?.addEventListener("click", async()=>{
     if(!confirm("¿Marcar TODOS los servicios como pagados?")) return;
@@ -2664,6 +2705,8 @@ window.renderVistaAlumna=()=>{
     html+=`<div class="card" style="background:#d1362610;border:1px solid #d1362630;margin-bottom:14px"><div style="font-weight:700;color:var(--acento2)">Sin paquete activo</div><div style="font-size:13px;color:var(--gris);margin-top:4px">Contáctanos para adquirir o renovar tu paquete.</div></div>`;
   }
   html+=bloqueDeudasAlumna(a);
+  { const _pq=proximasQuemas().slice(0,5);
+    html+=`<div class="card" style="margin-bottom:14px"><div style="font-size:11px;color:var(--principal);font-weight:800;letter-spacing:1px;margin-bottom:8px">📅 PRÓXIMAS QUEMAS</div>${_pq.length?_pq.map((q,i)=>`<div style="padding:7px 0;${i<_pq.length-1?"border-bottom:1px solid var(--hueso2)":""}"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;font-size:14px;text-transform:capitalize">${fmtFechaLarga(q.fecha)}</span><span style="font-size:12px;color:var(--gris)">${TIPOS_QUEMA[q.tipo]||q.tipo}</span></div>${q.nota?`<div style="font-size:12px;color:var(--gris);margin-top:2px">📝 ${q.nota}</div>`:""}</div>`).join(""):`<div style="font-size:13px;color:var(--gris)">Por ahora no hay quemas programadas.</div>`}</div>`; }
   html+=`<div class="aviso aviso-rosa" style="margin-bottom:16px"><div style="font-weight:700;color:var(--principal);margin-bottom:4px">⚠️ Política de cancelación</div><div style="color:var(--grafito);line-height:1.6">Cancela con <strong>mínimo 24 horas de anticipación</strong>. Las cancelaciones tardías o inasistencias sin aviso <strong>se descuentan como clase tomada</strong>.</div></div>`;
   html+=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif">Mis clases agendadas</div>${paquete?`<button class="btn btn-primary btn-small" id="btn-agendar-alumna">+ Agendar</button>`:`<button class="btn btn-primary btn-small" disabled>+ Agendar</button>`}</div>`;
   if(!misRes.length)html+=`<div class="card" style="text-align:center;color:var(--gris);padding:28px;margin-bottom:16px"><div style="font-size:28px;margin-bottom:6px">📅</div><div>${paquete?"¡Agenda tu próxima clase!":"Sin clases agendadas."}</div></div>`;
