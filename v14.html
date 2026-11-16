@@ -898,30 +898,38 @@ const _soloDigitos=t=>(t||"").replace(/\D/g,"");
 window.selAlumna=id=>{
   alumnaLoginSel=id;document.getElementById("btn-entrar").disabled=false;
   document.querySelectorAll("[data-alumna-op]").forEach(b=>b.classList.toggle("seleccionada",b.getAttribute("data-alumna-op")===id));
-  const a=alumnas.find(x=>x.id===id);
+  window._verifPaso="correo";
   const box=document.getElementById("verif-login"),inp=document.getElementById("input-verif-login"),lbl=document.getElementById("verif-login-label");
-  document.getElementById("error-verif").style.display="none";inp.value="";
-  if(a?.correo){ box.style.display="block"; lbl.textContent="Para entrar, escribe tu correo"; inp.type="email"; inp.placeholder="tucorreo@ejemplo.com"; setTimeout(()=>inp.focus(),50); }
-  else if(_soloDigitos(a?.telefono).length>=4){ box.style.display="block"; lbl.textContent="Para entrar, escribe tu número de celular"; inp.type="tel"; inp.placeholder="Ej. 5512345678"; setTimeout(()=>inp.focus(),50); }
-  else {
-    box.style.display="block"; lbl.textContent="Tu acceso aún no está activado"; inp.style.display="none";
-    const e=document.getElementById("error-verif"); e.textContent="Escríbenos por WhatsApp y compártenos tu correo para activar tu acceso 💛"; e.style.display="block";
-    document.getElementById("btn-entrar").disabled=true;
-  }
-  if(a?.correo||_soloDigitos(a?.telefono).length>=4) inp.style.display="";
+  document.getElementById("error-verif").style.display="none";inp.value="";inp.style.display="";
+  box.style.display="block"; lbl.textContent="Para entrar, escribe tu correo"; inp.type="email"; inp.placeholder="tucorreo@ejemplo.com"; setTimeout(()=>inp.focus(),50);
 };
 window.entrarAlumna=()=>{
   if(!alumnaLoginSel)return;
   const a=alumnas.find(x=>x.id===alumnaLoginSel);if(!a)return;
-  const val=(document.getElementById("input-verif-login")?.value||"").trim();
+  const inp=document.getElementById("input-verif-login"),lbl=document.getElementById("verif-login-label");
+  const val=(inp?.value||"").trim();
   const err=document.getElementById("error-verif");
-  if(a.correo){
-    if(val.toLowerCase()!==a.correo.trim().toLowerCase()){ err.textContent=val?"Ese correo no coincide. Escríbenos por WhatsApp para ayudarte a entrar.":"Escribe tu correo para entrar."; err.style.display="block"; return; }
-  } else if(_soloDigitos(a.telefono).length>=4){
-    const t=_soloDigitos(a.telefono),v=_soloDigitos(val);
-    if(!v||v.slice(-10)!==t.slice(-10)){ err.textContent=val?"Ese número no coincide. Escríbenos por WhatsApp para ayudarte a entrar.":"Escribe tu número de celular para entrar."; err.style.display="block"; return; }
+  const mostrar=t=>{err.textContent=t;err.style.display="block";};
+  const tieneCel=_soloDigitos(a.telefono).length>=4;
+  if(window._verifPaso!=="cel"){
+    // Paso 1: siempre el correo
+    if(!val){ mostrar("Escribe tu correo para entrar."); return; }
+    if(a.correo){
+      if(val.toLowerCase()!==a.correo.trim().toLowerCase()){ mostrar("Ese correo no coincide. Escríbenos por WhatsApp para ayudarte a entrar."); return; }
+    } else if(tieneCel){
+      // No tiene correo guardado: ahora pedir el celular
+      window._verifPaso="cel"; inp.value=""; inp.type="tel"; inp.placeholder="Ej. 5512345678";
+      lbl.textContent="Ahora escribe tu número de celular";
+      mostrar("No tenemos tu correo registrado. Entra con tu celular y escríbenos por WhatsApp para darnos tu correo 💛");
+      setTimeout(()=>inp.focus(),50); return;
+    } else {
+      mostrar("No tenemos tu correo registrado. Escríbenos por WhatsApp y compártenos tu correo para activar tu acceso 💛"); return;
+    }
   } else {
-    err.textContent="Escríbenos por WhatsApp y compártenos tu correo para activar tu acceso 💛"; err.style.display="block"; return;
+    // Paso 2: celular (solo si no tiene correo guardado)
+    const t=_soloDigitos(a.telefono),v=_soloDigitos(val);
+    if(!v){ mostrar("Escribe tu número de celular para entrar."); return; }
+    if(v.slice(-10)!==t.slice(-10)){ mostrar("Ese número no coincide. Escríbenos por WhatsApp para ayudarte a entrar."); return; }
   }
   err.style.display="none";
   window._srvVistaAlumna=null;alumnaActiva=a;renderVistaAlumna();showScreen("alumna");
