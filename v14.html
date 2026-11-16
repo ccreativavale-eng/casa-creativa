@@ -874,7 +874,26 @@ async function cargarDatosMaestra(){
   const gastosMerged=[...gastosFirebase];
   gastosLocal.forEach(g=>{ if(!gastosMerged.find(x=>x.id===g.id)) gastosMerged.push(g); });
   localStorage.setItem("cc_gastos", JSON.stringify(gastosMerged));
+  sincronizarDeudasServicios();
 }
+// Copia los servicios pendientes de cada alumna a su ficha, para que ella los vea (no puede leer "servicios")
+window.sincronizarDeudasServicios=async()=>{
+  try{
+    const todos=JSON.parse(localStorage.getItem("cc_servicios")||"[]");
+    const pag=s=>s.pagado&&s.pagado!==false&&s.pagado!=="no"&&s.pagado!=="pendiente"&&s.pagado!=="Pendiente";
+    const pend=todos.filter(s=>s.tipo!=="libre"&&!pag(s));
+    for(const a of alumnas){
+      const nom=(a.nombre||"").trim().toLowerCase();
+      const lista=pend.filter(s=>(s.nombre||"").trim().toLowerCase()===nom)
+        .map(s=>({id:s.id,tipo:s.tipo,precio:s.precio||s.monto||0,fecha:s.fecha||"",gramos:s.gramos||0,kilos:s.kilos||0}))
+        .sort((x,y)=>x.id.localeCompare(y.id));
+      if(JSON.stringify(lista)!==JSON.stringify(a.serviciosPendientes||[])){
+        a.serviciosPendientes=lista;
+        await fbUpdate("alumnas",a.id,{serviciosPendientes:lista});
+      }
+    }
+  }catch(e){ console.error("sincronizarDeudasServicios",e); }
+};
 window.reintentarCarga=()=>cargarDatos();
 async function fbSet(col,id,data){await setDoc(doc(db,col,id),data);}
 async function fbUpdate(col,id,data){await updateDoc(doc(db,col,id),data);}
@@ -1360,6 +1379,7 @@ window.renderServicios = () => {
       renderServicios();
     });
   });
+  sincronizarDeudasServicios();
 };
 
 window.toggleSrvInput = () => {
@@ -2677,14 +2697,6 @@ window.marcarAsistencia=async(rId,asistio,nota="")=>{
 // ── Lo que debe la alumna (paquetes, servicios, eventos) ──
 const _mismoNombre=(x,y)=>(x||"").trim().toLowerCase()===(y||"").trim().toLowerCase();
 const _srvPagado=s=>s.pagado&&s.pagado!==false&&s.pagado!=="no"&&s.pagado!=="pendiente"&&s.pagado!=="Pendiente";
-window._srvVistaAlumna=null; window._srvVistaCargando=false;
-const cargarServiciosVistaAlumna=async()=>{
-  if(window._srvVistaCargando) return; window._srvVistaCargando=true;
-  try{ const snap=await getDocs(collection(db,"servicios")); window._srvVistaAlumna=snap.docs.map(d=>({id:d.id,...d.data()})); }
-  catch(e){ window._srvVistaAlumna=JSON.parse(localStorage.getItem("cc_servicios")||"[]"); }
-  window._srvVistaCargando=false;
-  if(alumnaActiva && document.getElementById("deudas-alumna")) renderVistaAlumna();
-};
 const deudasDeAlumna=(a,servicios)=>{
   const tl={sancocho:"🔥 Sancocho",esmaltado:"✨ Esmaltado",ambos:"🔥✨ Sancocho + esmaltado",sancocho_grande:"🔥 Sancocho pieza grande",esmaltado_grande:"✨ Esmaltado pieza grande",ambos_grande:"🔥✨ Ambos pieza grande",sancocho_lote:"🔥 Sancocho lote",esmaltado_lote:"✨ Esmaltado lote",ambos_lote:"🔥✨ Ambos lote",clase_esmalte:"🌈 Clase esmalte",clase_extra_esmalte:"🎨 Clase extra esmaltado",pulido_esmaltado:"🌈 Pulido + esmaltado",venta_arcilla:"🧱 Arcilla"};
   const d=[];
@@ -2694,12 +2706,8 @@ const deudasDeAlumna=(a,servicios)=>{
   return d.sort((x,y)=>(x.limite||x.fecha||"").localeCompare(y.limite||y.fecha||""));
 };
 const bloqueDeudasAlumna=a=>{
-  if(window._srvVistaAlumna===null){ cargarServiciosVistaAlumna(); }
-  const deudas=deudasDeAlumna(a, window._srvVistaAlumna||[]);
+  const deudas=deudasDeAlumna(a, (a.serviciosPendientes||[]).map(x=>({...x,nombre:a.nombre,pagado:false})));
   const total=deudas.reduce((t,x)=>t+(x.monto||0),0);
-  if(!deudas.length && window._srvVistaAlumna===null){
-    return `<div id="deudas-alumna" class="card" style="margin-bottom:14px"><div style="font-size:13px;color:var(--gris)">💳 Cargando tus pagos…</div></div>`;
-  }
   if(!deudas.length){
     return `<div id="deudas-alumna" class="card" style="margin-bottom:14px;background:#4A7A5512;border:1px solid #4A7A5530"><div style="font-weight:700;color:var(--verde)">✅ Estás al corriente</div><div style="font-size:12px;color:var(--gris);margin-top:2px">No tienes pagos pendientes.</div></div>`;
   }
