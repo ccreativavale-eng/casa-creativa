@@ -39,6 +39,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
 .field input,.field select,.field textarea{width:100%;padding:10px 13px;border:1.5px solid var(--hueso2);border-radius:9px;background:var(--blanco);font-size:14px;color:var(--grafito);outline:none;font-family:inherit;}
 .field textarea{resize:vertical;min-height:70px;}
 .badge{display:inline-block;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:700;white-space:nowrap;}
+#modal-agendar{z-index:220!important;}
 .modal-overlay{display:none;position:fixed;inset:0;background:#00000077;z-index:200;align-items:center;justify-content:center;padding:16px;}
 .modal-overlay.open{display:flex;z-index:300;}
 .modal-overlay.open{display:flex;}
@@ -463,6 +464,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
       <div class="field" style="flex:1"><label>Celular</label><input type="tel" id="pev-tel" placeholder="5512345678"></div>
       <div class="field" style="flex:1"><label>Correo</label><input type="email" id="pev-email" placeholder="correo@ejemplo.com"></div>
     </div>
+    <div id="pev-info-alumna" style="display:none;margin:-2px 0 12px"></div>
     <div style="font-size:11px;color:var(--gris);margin:-4px 0 10px">💡 Se agrega sola a Alumnas con su 2ª sesión de esmaltado. Con celular o correo ya puede entrar a agendar.</div>
     <div class="field"><label>¿Cuántos pagos?</label>
       <select id="pev-tipo-pago" onchange="toggleSegundoPagoEvento()">
@@ -1548,6 +1550,13 @@ window.guardarServicio = async() => {
 // ── EVENTOS ─────────────────────────────────────────────
 const _numLimpio=(v)=>parseFloat((v||"0").toString().replace(/,/g,""))||0;
 
+function pendientesPorAgendar(a){
+  if(!a) return 0;
+  const activos=(a.paquetes||[]).filter(p=>p.clasesRestantes>0&&diasRestantes(p.expira)>0);
+  const total=activos.reduce((t,p)=>t+(p.clasesRestantes||0),0);
+  const futuras=reservas.filter(r=>r.alumnaId===a.id&&r.fecha>=hoy()&&r.estado==="reservada").length;
+  return Math.max(0,total-futuras);
+}
 function horaEvento(ev){ return ev.horaInicio ? ev.horaInicio+(ev.horaFin?"–"+ev.horaFin:"") : ""; }
 function eventosDelDia(f){ return (eventos||[]).filter(e=>e.fecha===f).sort((a,b)=>(a.horaInicio||"99").localeCompare(b.horaInicio||"99")); }
 function tarjetaEventoAgenda(ev){ return `<div style="background:#ff9e9722;border:1.5px solid #ff9e97;border-radius:10px;padding:8px 12px;margin-bottom:8px"><div style="font-weight:800;font-size:14px">🎉 ${ev.nombre}</div><div style="font-size:12px;color:var(--gris)">${horaEvento(ev)?"🕐 "+horaEvento(ev)+" · ":""}${(ev.participantes||[]).length} participante${(ev.participantes||[]).length!==1?"s":""}${ev.notas?" · "+ev.notas:""}</div></div>`; }
@@ -1588,6 +1597,7 @@ window.renderEventos = () => {
               <div>
                 <div style="font-weight:700;font-size:13px">${p.nombre}</div>
                 <div style="font-size:11px;color:var(--gris)">${metodoLabel(p.metodoPago||"efectivo")}${p.segundoPago?" · Dos pagos":""}${p.alumnaId?` · <span style="color:var(--verde);font-weight:700">✓ En Alumnas</span>`:""}</div>
+                ${(()=>{const _al=p.alumnaId&&alumnas.find(a=>a.id===p.alumnaId);const _n=pendientesPorAgendar(_al);return _n>0?`<button data-agendar-part="${_al.id}" style="margin-top:4px;font-size:11px;background:var(--principal);color:white;border:none;border-radius:6px;padding:3px 8px;cursor:pointer;font-family:inherit;font-weight:700">📅 Agendar (${_n} pendiente${_n!==1?"s":""})</button>`:"";})()}
               </div>
               <div style="text-align:right;display:flex;align-items:center;gap:6px">
                 <div>
@@ -1680,6 +1690,10 @@ window.renderEventos = () => {
     });
   });
 
+  document.querySelectorAll("[data-agendar-part]").forEach(btn=>{
+    btn.addEventListener("click",()=>abrirAgendarMaestra(btn.getAttribute("data-agendar-part")));
+  });
+
   document.querySelectorAll("[data-pasar-alumnas]").forEach(btn=>{
     btn.addEventListener("click",async()=>{
       btn.disabled=true; btn.textContent="Pasando…";
@@ -1740,6 +1754,26 @@ window.toggleSegundoPagoEvento = () => {
   document.getElementById("pev-metodo1-label").textContent = dosPag?"Método primer pago":"Método de pago";
 };
 
+function mostrarInfoAlumnaPev(a, o){
+  const box=document.getElementById("pev-info-alumna");
+  if(!box) return;
+  if(!a && !o){ box.style.display="none"; box.innerHTML=""; return; }
+  if(!a){
+    box.style.display="block";
+    box.innerHTML=`<div style="background:var(--fondo);border-radius:9px;padding:8px 12px;font-size:12px">↩️ Ya vino antes${o?.eventos?.length?" a "+o.eventos.join(", "):""}. Se jalaron sus datos.</div>`;
+    return;
+  }
+  const pend=pendientesPorAgendar(a);
+  const act=getPaqueteActivo(a);
+  box.style.display="block";
+  box.innerHTML=`<div style="background:var(--fondo);border:1.5px solid var(--secundario);border-radius:9px;padding:8px 12px;font-size:12px">
+    <div style="font-weight:700">✓ Ya es alumna · se jalaron sus datos</div>
+    ${act?`<div style="color:var(--gris);margin-top:2px">${act.emoji||""} ${act.nombre}</div>`:""}
+    ${pend>0?`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px"><span style="color:var(--principal);font-weight:700">📅 Tiene ${pend} clase${pend!==1?"s":""} por agendar</span><button type="button" data-pev-agendar="${a.id}" class="btn btn-primary btn-small">Agendar ahora</button></div>`:`<div style="color:var(--gris);margin-top:4px">No tiene clases pendientes por agendar</div>`}
+  </div>`;
+  box.querySelector("[data-pev-agendar]")?.addEventListener("click",()=>abrirAgendarMaestra(a.id));
+}
+
 window.abrirParticipanteEvento = (eventoId) => {
   window._eventoActualId = eventoId;
   window._editingParticipanteId = null;
@@ -1759,15 +1793,36 @@ window.abrirParticipanteEvento = (eventoId) => {
 
   const input = document.getElementById("pev-nombre");
   const sugs = document.getElementById("pev-sugerencias");
+  window._pevAlumnaSel = null;
+  mostrarInfoAlumnaPev(null);
   input.oninput = () => {
-    const q = input.value.toLowerCase();
-    if(q.length<1){ sugs.style.display="none"; return; }
-    const matches = alumnas.filter(a=>a.nombre.toLowerCase().includes(q)).slice(0,5);
+    // Si cambia el nombre a mano, ya no está ligada a la alumna elegida
+    if(window._pevAlumnaSel){ window._pevAlumnaSel=null; mostrarInfoAlumnaPev(null); }
+    const q = input.value.trim().toLowerCase();
+    const qDig = q.replace(/\D/g,"");
+    if(q.length<2){ sugs.style.display="none"; return; }
+    // Alumnas + participantes de eventos pasados que aún no están en Alumnas
+    const opciones = alumnas.map(a=>({tipo:"alumna",id:a.id,nombre:a.nombre,telefono:a.telefono||"",correo:a.correo||"",eventos:(a.eventosOrigen||[]).map(o=>o.nombre)}));
+    eventos.forEach(ev=>(ev.participantes||[]).forEach(p=>{
+      if(p.alumnaId && alumnas.some(a=>a.id===p.alumnaId)) return;
+      const ya = opciones.find(o=>(o.nombre||"").trim().toLowerCase()===(p.nombre||"").trim().toLowerCase());
+      if(ya){ if(!ya.eventos.includes(ev.nombre)) ya.eventos.push(ev.nombre); if(!ya.telefono&&p.telefono) ya.telefono=p.telefono; if(!ya.correo&&p.correo) ya.correo=p.correo; return; }
+      opciones.push({tipo:"participante",id:null,nombre:p.nombre,telefono:p.telefono||"",correo:p.correo||"",eventos:[ev.nombre]});
+    }));
+    const matches = opciones.filter(o=>(o.nombre||"").toLowerCase().includes(q) || (qDig.length>=4 && (o.telefono||"").replace(/\D/g,"").includes(qDig))).slice(0,6);
     if(!matches.length){ sugs.style.display="none"; return; }
     sugs.style.display="block";
-    sugs.innerHTML = matches.map(a=>`<div data-pev-nombre="${a.nombre}" style="padding:8px 13px;cursor:pointer;font-size:14px;border-bottom:1px solid var(--hueso2)">${a.nombre}</div>`).join("");
-    sugs.querySelectorAll("[data-pev-nombre]").forEach(d=>{
-      d.addEventListener("click",()=>{ input.value=d.getAttribute("data-pev-nombre"); sugs.style.display="none"; const _al=alumnas.find(x=>x.nombre===input.value); if(_al){ if(_al.telefono) document.getElementById("pev-tel").value=_al.telefono; if(_al.correo) document.getElementById("pev-email").value=_al.correo; } });
+    sugs.innerHTML = matches.map((o,k)=>`<div data-pev-op="${k}" style="padding:8px 13px;cursor:pointer;border-bottom:1px solid var(--hueso2)"><div style="font-size:14px;font-weight:700">${o.nombre}</div><div style="font-size:11px;color:var(--gris)">${o.telefono?"📱 "+o.telefono+" · ":""}${o.eventos.length?"🎉 "+o.eventos.slice(-2).join(", "):(o.tipo==="alumna"?"👩‍🎨 Alumna":"")}</div></div>`).join("");
+    sugs.querySelectorAll("[data-pev-op]").forEach(d=>{
+      d.addEventListener("click",()=>{
+        const o = matches[parseInt(d.getAttribute("data-pev-op"))];
+        input.value = o.nombre;
+        document.getElementById("pev-tel").value = o.telefono||"";
+        document.getElementById("pev-email").value = o.correo||"";
+        sugs.style.display="none";
+        window._pevAlumnaSel = o.id;
+        mostrarInfoAlumnaPev(o.id ? alumnas.find(a=>a.id===o.id) : null, o);
+      });
     });
   };
 };
@@ -1778,6 +1833,7 @@ window.abrirEditarParticipanteEvento = (eventoId, participanteId) => {
   if(!p)return;
   window._eventoActualId = eventoId;
   window._editingParticipanteId = participanteId;
+  window._pevAlumnaSel = null; try{ mostrarInfoAlumnaPev(null); }catch(e){}
   document.getElementById("modal-participante-evento").querySelector(".modal-header span").textContent = "✏️ Editar participante";
   document.getElementById("pev-nombre").value = p.nombre||"";
   { const _al = p.alumnaId && alumnas.find(x=>x.id===p.alumnaId);
@@ -1904,6 +1960,7 @@ document.getElementById("btn-guardar-participante-evento").onclick = async()=>{
     return;
   }
   const nuevoParticipante = {id:uid(),nombre,telefono,correo,monto:monto1,metodoPago:metodo1,fechaPago:hoy(),segundoPago};
+  if(window._pevAlumnaSel && alumnas.some(a=>a.id===window._pevAlumnaSel)) nuevoParticipante.alumnaId = window._pevAlumnaSel;
   let rAlumna = {};
   try{ rAlumna = await pasarParticipanteAAlumna(ev,nuevoParticipante); }catch(e){ console.error(e); }
   if(rAlumna.alumna) nuevoParticipante.alumnaId = rAlumna.alumna.id;
@@ -2961,7 +3018,7 @@ window.confirmarReserva=async()=>{
   const nueva={id:uid(),alumnaId:alumnaActiva.id,paqueteId:paquete?.id||"sin-paquete",horarioId:agendarHorarioSel,fecha:agendarFechaSel,estado:"reservada",creadaEn:new Date().toISOString()};
   reservas.push(nueva);await fbSet("reservas",nueva.id,nueva);
   closeModal("modal-agendar");
-  if(window._agendarDesdeMaestra){ try{renderAlumnas();}catch(e){} try{renderAgenda();}catch(e){} showToast("✓ Clase agendada para "+alumnaActiva.nombre.split(" ")[0]); }
+  if(window._agendarDesdeMaestra){ try{renderAlumnas();}catch(e){} try{renderAgenda();}catch(e){} try{renderEventos();}catch(e){} try{ if(window._pevAlumnaSel===alumnaActiva.id) mostrarInfoAlumnaPev(alumnaActiva); }catch(e){} showToast("✓ Clase agendada para "+alumnaActiva.nombre.split(" ")[0]); }
   else { renderVistaAlumna(); showToast("✓ Clase agendada"); }
 };
 
