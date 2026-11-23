@@ -470,7 +470,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
         <option value="dos_pagos">📅 En dos pagos</option>
       </select>
     </div>
-    <div class="field"><label id="pev-monto1-label">Monto ($) *</label><input type="text" inputmode="decimal" id="pev-monto1" placeholder="Ej. 500"></div>
+    <div class="field"><label id="pev-monto1-label">Monto ($) *</label><input type="text" inputmode="decimal" id="pev-monto1" placeholder="Ej. 500 (o 0 si es gratis)"></div>
     <div class="field"><label id="pev-metodo1-label">Método de pago</label>
       <select id="pev-metodo1">
         <option value="efectivo">💵 Efectivo</option>
@@ -1872,7 +1872,7 @@ document.getElementById("btn-guardar-participante-evento").onclick = async()=>{
   const telefono = document.getElementById("pev-tel")?.value?.trim()||"";
   const correo = document.getElementById("pev-email")?.value?.trim()||"";
   if(!nombre){ showToast("Ponle un nombre al participante"); return; }
-  if(!monto1){ showToast("Ingresa el monto"); return; }
+  if((document.getElementById("pev-monto1")?.value||"").trim()===""){ showToast("Ingresa el monto (puede ser 0)"); return; }
   let segundoPago = null;
   if(tipoPago==="dos_pagos"){
     const monto2 = _numLimpio(document.getElementById("pev-monto2")?.value);
