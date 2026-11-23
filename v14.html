@@ -62,9 +62,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
 .vista-toggle{display:flex;gap:4px;background:var(--hueso2);border-radius:10px;padding:4px;margin-bottom:16px;}
 .vista-btn{flex:1;border:none;border-radius:7px;padding:7px;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:var(--gris);font-family:inherit;}
 .vista-btn.active{background:var(--blanco);color:var(--principal);box-shadow:0 1px 4px #0001;}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:8px;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;margin-bottom:8px;}
 .cal-header{text-align:center;font-size:10px;font-weight:700;color:var(--gris);padding:4px 0;}
-.cal-day{min-height:60px;background:var(--blanco);border-radius:6px;border:1px solid var(--hueso2);padding:4px;cursor:pointer;}
+.cal-day{min-width:0;overflow:hidden;min-height:60px;background:var(--blanco);border-radius:6px;border:1px solid var(--hueso2);padding:4px;cursor:pointer;}
 .cal-day.otro-mes{opacity:.4;}
 .cal-day.hoy{border:2px solid var(--principal);}
 .cal-day-num{font-size:11px;font-weight:700;color:var(--grafito);margin-bottom:2px;}
@@ -1113,10 +1113,7 @@ window.renderAgendaMes=()=>{
     const bgIntensity=total===0?"":total<=2?"var(--secundario)33":total<=5?"var(--principal)22":"var(--principal)44";
     const bloq=esBloqueado(fecha);
     html+=`<div class="cal-day${esHoy?" hoy":""}" style="cursor:pointer;${bloq?"background:#d1362618;border:1px solid #d1362644":bgIntensity?"background:"+bgIntensity:""}" data-fecha-dia="${fecha}">`;
-    html+=`<div class="cal-day-num" style="color:${bloq?"var(--acento2)":esHoy?"var(--principal)":"var(--grafito)"}">${d}${bloq?"🚫":""}</div>`;
-    eventosDelDia(fecha).forEach(ev=>{
-      html+=`<div class="cal-slot" style="background:#ff9e9733;color:#c4473d;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${ev.nombre}">🎉 ${ev.horaInicio?ev.horaInicio+" ":""}${ev.nombre}</div>`;
-    });
+    html+=`<div class="cal-day-num" style="color:${bloq?"var(--acento2)":esHoy?"var(--principal)":"var(--grafito)"}">${d}${bloq?"🚫":""}${(()=>{const _ev=eventosDelDia(fecha);return _ev.length?`<span title="${_ev.map(e=>e.nombre.replace(/"/g,"'")).join(", ")}" style="float:right;font-size:13px;line-height:1">🎉${_ev.length>1?`<sup style="font-size:9px;font-weight:800;color:#c4473d">${_ev.length}</sup>`:""}</span>`:"";})()}</div>`;
     if(c){
       Object.values(c.horarios).forEach(h=>{
         const color=h.tipo==="membresia"?"var(--oro)":"var(--principal)";
