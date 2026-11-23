@@ -562,9 +562,9 @@ const HORARIOS = [
   {id:"sab_a",label:"Sábado 9:00–11:00",     dia:"Sábado",    hora:"9:00–11:00",   diaN:6, tipo:"paquete"},
   {id:"sab_b",label:"Sábado 11:30–13:30",    dia:"Sábado",    hora:"11:30–13:30",  diaN:6, tipo:"paquete"},
   {id:"mie_a",label:"Miércoles 11:30–13:30", dia:"Miércoles", hora:"11:30–13:30",  diaN:3, tipo:"paquete"},
-  {id:"mie_b",label:"Miércoles 16:00–18:00", dia:"Miércoles", hora:"16:00–18:00",  diaN:3, tipo:"paquete"},
+  {id:"mie_b",label:"Miércoles 16:00–18:00", dia:"Miércoles", hora:"16:00–18:00",  diaN:3, tipo:"paquete", inactivo:true},
   {id:"jue_a",label:"Jueves 11:30–13:30",    dia:"Jueves",    hora:"11:30–13:30",  diaN:4, tipo:"paquete"},
-  {id:"jue_b",label:"Jueves 16:00–18:00",    dia:"Jueves",    hora:"16:00–18:00",  diaN:4, tipo:"paquete"},
+  {id:"jue_b",label:"Jueves 16:00–18:00",    dia:"Jueves",    hora:"16:00–18:00",  diaN:4, tipo:"paquete", inactivo:true},
   {id:"lun_m",label:"Lunes 16:00–19:00",   dia:"Lunes",  hora:"16:00–19:00", diaN:1, tipo:"membresia"},
   {id:"mar_m",label:"Martes 16:00–19:00",  dia:"Martes", hora:"16:00–19:00", diaN:2, tipo:"membresia"},
   {id:"sab_m",label:"Sábado 16:00–19:00",  dia:"Sábado", hora:"16:00–19:00", diaN:6, tipo:"membresia"},
@@ -585,6 +585,8 @@ const fmtFechaLarga=d=>new Date(d+"T12:00:00").toLocaleDateString("es-MX",{weekd
 let alumnaActiva=null,semanaOffset=0,pkgAlumnaId=null,vistaAgenda="mes",mesOffset=0;
 let bloqueos=[];
 let clasesCerradas=[];
+// Horarios que ya no se ofrecen se marcan con inactivo:true (se conservan para ver clases pasadas)
+const HORARIOS_ACTIVOS=HORARIOS.filter(h=>!h.inactivo);
 let agendarHorarioSel=HORARIOS[0].id,agendarFechaSel="";
 let asistenciaReservaId=null;
 
@@ -1011,6 +1013,7 @@ window.renderAgenda=()=>{
   const nom=semanaOffset===0?"Esta semana":semanaOffset===1?"Próxima semana":semanaOffset===-1?"Semana pasada":`Semana ${semanaOffset>0?"+":""}${semanaOffset}`;
   const rango=`${new Date(dias[0]+"T12:00:00").toLocaleDateString("es-MX",{day:"numeric",month:"short"})} – ${new Date(dias[6]+"T12:00:00").toLocaleDateString("es-MX",{day:"numeric",month:"short"})}`;
   const slots=[];HORARIOS.forEach(h=>dias.filter(f=>new Date(f+"T12:00:00").getDay()===h.diaN).forEach(fecha=>slots.push({h,fecha,resSlot:reservas.filter(r=>r.horarioId===h.id&&r.fecha===fecha&&r.estado!=="cancelada")})));
+  for(let i=slots.length-1;i>=0;i--){ if(slots[i].h.inactivo&&!slots[i].resSlot.length) slots.splice(i,1); }
   // Add orphan reservas (horarioId not in current HORARIOS)
   const horarioIds=HORARIOS.map(h=>h.id);
   const huerfanas=reservas.filter(r=>r.estado!=="cancelada"&&dias.includes(r.fecha)&&!horarioIds.includes(r.horarioId));
@@ -2000,7 +2003,7 @@ window.verDiaDetalle = (fecha) => {
   // Group by horario
   const porHorario = {};
   const _diaSem=new Date(fecha+"T12:00:00").getDay();
-  HORARIOS.forEach(h=>{if(h.diaN===_diaSem)porHorario[h.id]=[];});
+  HORARIOS_ACTIVOS.forEach(h=>{if(h.diaN===_diaSem)porHorario[h.id]=[];});
   resDelDia.forEach(r=>{
     if(!porHorario[r.horarioId]) porHorario[r.horarioId]=[];
     porHorario[r.horarioId].push(r);
@@ -2955,7 +2958,7 @@ window.renderVistaAlumna=()=>{
 
 window.abrirAgendarMaestra=id=>{
   alumnaActiva=alumnas.find(x=>x.id===id);
-  agendarHorarioSel=HORARIOS[0].id;
+  agendarHorarioSel=HORARIOS_ACTIVOS[0].id;
   agendarFechaSel="";
   // Temporarily allow scheduling without package
   window._agendarDesdeMaestra=true;
@@ -2968,15 +2971,15 @@ window.openAgendarAlumna=()=>{
   const paquete=getPaqueteActivo(alumnaActiva);
   const def=paquete?PAQUETES_DEF[paquete.paqueteDefId]:null;
   const tipo=def?.tipo||"paquete";
-  const horariosDisp=HORARIOS.filter(h=>h.tipo===tipo);
-  agendarHorarioSel=horariosDisp[0]?.id||HORARIOS[0].id;
+  const horariosDisp=HORARIOS_ACTIVOS.filter(h=>h.tipo===tipo);
+  agendarHorarioSel=horariosDisp[0]?.id||HORARIOS_ACTIVOS[0].id;
   agendarFechaSel="";renderAgendarContent();openModal("modal-agendar");
 };
 window.renderAgendarContent=()=>{
   const paquete=getPaqueteActivo(alumnaActiva);
   const def=paquete?PAQUETES_DEF[paquete.paqueteDefId]:null;
   const tipo=window._agendarDesdeMaestra?"todos":(def?.tipo||"paquete");
-  const horariosDisp=tipo==="todos"?HORARIOS:HORARIOS.filter(h=>h.tipo===tipo);
+  const horariosDisp=tipo==="todos"?HORARIOS_ACTIVOS:HORARIOS_ACTIVOS.filter(h=>h.tipo===tipo);
   const h=horariosDisp.find(hh=>hh.id===agendarHorarioSel)||horariosDisp[0];
   if(!agendarHorarioSel||!horariosDisp.find(hh=>hh.id===agendarHorarioSel))agendarHorarioSel=h?.id;
   const fechas=proximasFechas(h.diaN);
