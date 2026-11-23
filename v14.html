@@ -443,6 +443,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
       <div class="field" style="flex:1"><label>Hora de inicio</label><input type="time" id="ev-hora-inicio"></div>
       <div class="field" style="flex:1"><label>Hora de fin</label><input type="time" id="ev-hora-fin"></div>
     </div>
+    <div class="field"><label>¿Qué tipo de evento es?</label><select id="ev-tipo">
+      <option value="taller">🎉 Taller o evento normal</option>
+      <option value="sesion">🎨 Sesión de esmaltado: usa la clase que ya tienen pendiente</option>
+      <option value="simple">✨ Evento sin clases</option>
+    </select></div>
     <div class="field"><label>Costo sugerido por persona ($)</label><input type="text" inputmode="decimal" id="ev-costo" placeholder="Ej. 500"></div>
     <div class="field"><label>Notas (opcional)</label><input type="text" id="ev-notas" placeholder="Ej. Cupo máximo, detalles…"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
@@ -465,6 +470,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
       <div class="field" style="flex:1"><label>Correo</label><input type="email" id="pev-email" placeholder="correo@ejemplo.com"></div>
     </div>
     <div id="pev-info-alumna" style="display:none;margin:-2px 0 12px"></div>
+    <label id="pev-gratis-campo" style="display:flex;gap:10px;align-items:center;background:var(--fondo);border:1.5px solid var(--secundario);border-radius:9px;padding:10px 12px;margin-bottom:12px;cursor:pointer;font-size:13px;font-weight:700"><input type="checkbox" id="pev-gratis" style="width:18px;height:18px;flex-shrink:0"> 🎁 Incluye sesión de esmaltado gratis (2 hrs)</label>
+    <div class="field" id="pev-clase-campo" style="display:none"><label>📅 ¿Qué clase suya se registra en este evento?</label><select id="pev-clase"></select></div>
     <div style="font-size:11px;color:var(--gris);margin:-4px 0 10px">💡 Se agrega sola a Alumnas con su 2ª sesión de esmaltado. Con celular o correo ya puede entrar a agendar.</div>
     <div class="field"><label>¿Cuántos pagos?</label>
       <select id="pev-tipo-pago" onchange="toggleSegundoPagoEvento()">
@@ -553,7 +560,7 @@ const PAQUETES_DEF = {
   mem_plus:    {nombre:"Membresía Plus",             clases:8, dias:90, precio:2900, emoji:"💎", tipo:"membresia"},
   clase_esmalte:      {nombre:"Clase esmalte 3hrs",     clases:1, dias:15, precio:300, emoji:"🌈", tipo:"paquete", desc:"Sesión de 3 horas para esmaltar y decorar piezas que ya pasaron por el sancocho."},
   clase_extra_esmalte:{nombre:"Clase extra esmaltado",  clases:1, dias:15, precio:250, emoji:"🎨", tipo:"paquete", desc:"Para quienes tomaron un evento y no alcanzaron a terminar de pintar su pieza en la segunda sesión, o a quienes solo les faltan detalles por pintar."},
-  evento_esmalte:     {nombre:"2ª sesión de esmaltado (evento)", clases:1, dias:45, precio:0, emoji:"🎉", tipo:"paquete", desc:"Incluida en el evento: sesión para esmaltar la pieza que hizo en el evento."},
+  evento_esmalte:     {nombre:"Sesión de esmaltado gratis 2 hrs (evento)", clases:1, dias:45, precio:0, emoji:"🎁", tipo:"paquete", desc:"Incluida en el evento: sesión para esmaltar la pieza que hizo en el evento."},
   pulido_esmaltado:   {nombre:"Pulido + esmaltado",     clases:1, dias:15, precio:0,   emoji:"🌈", tipo:"paquete", desc:"Pulimos la pieza y se esmalta en clase. El precio depende del peso final de la pieza.", porPeso:true},
 };
 const HORARIOS = [
@@ -602,7 +609,7 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const badge=(t,c,bg)=>`<span class="badge" style="background:${bg||c+"22"};color:${c};border:1px solid ${c}44">${t}</span>`;
 const getPaqueteActivo=a=>(a.paquetes||[]).find(p=>p.clasesRestantes>0&&diasRestantes(p.expira)>0);
 const cupoDisponible=(hId,f)=>CUPO_MAX-reservas.filter(r=>r.horarioId===hId&&r.fecha===f&&r.estado!=="cancelada").length;
-const puedeCancel24h=r=>{const h=HORARIOS.find(hh=>hh.id===r.horarioId);const[hh,mm]=(h?.hora.split("–")[0]||"09:00").split(":");return(new Date(r.fecha+"T"+hh.padStart(2,"0")+":"+(mm||"00")+":00")-new Date())>86400000;};
+const puedeCancel24h=r=>{const h=infoHorario(r.horarioId);const[hh,mm]=(h?.hora.split("–")[0]||"09:00").split(":");return(new Date(r.fecha+"T"+hh.padStart(2,"0")+":"+(mm||"00")+":00")-new Date())>86400000;};
 const diasDeSemana=off=>{const d=new Date();d.setHours(0,0,0,0);const l=new Date(d);l.setDate(d.getDate()-((d.getDay()+6)%7)+off*7);return Array.from({length:7},(_,i)=>{const x=new Date(l);x.setDate(l.getDate()+i);return x.toISOString().split("T")[0];});};
 const proximasFechas=(diaN,n=6)=>{const r=[],d=new Date();d.setHours(0,0,0,0);for(let i=1;i<=42&&r.length<n;i++){const x=new Date(d);x.setDate(d.getDate()+i);if(x.getDay()===diaN)r.push(x.toISOString().split("T")[0]);}return r;};
 
@@ -1019,6 +1026,9 @@ window.renderAgenda=()=>{
   const huerfanas=reservas.filter(r=>r.estado!=="cancelada"&&dias.includes(r.fecha)&&!horarioIds.includes(r.horarioId));
   huerfanas.forEach(r=>{
     const existing=slots.find(s=>s.fecha===r.fecha&&s.h.id===r.horarioId);
+    if(existing){ existing.resSlot.push(r); return; }
+    const _ih=infoHorario(r.horarioId);
+    if(_ih){ slots.push({h:_ih,fecha:r.fecha,resSlot:[r]}); return; }
     if(!existing){
       slots.push({h:{id:r.horarioId,label:r.horarioId,dia:new Date(r.fecha+"T12:00:00").toLocaleDateString("es-MX",{weekday:"long"}),hora:"Horario anterior",diaN:new Date(r.fecha+"T12:00:00").getDay()},fecha:r.fecha,resSlot:[r]});
     }
@@ -1553,6 +1563,17 @@ window.guardarServicio = async() => {
 // ── EVENTOS ─────────────────────────────────────────────
 const _numLimpio=(v)=>parseFloat((v||"0").toString().replace(/,/g,""))||0;
 
+function infoHorario(id){
+  const h=HORARIOS.find(hh=>hh.id===id);
+  if(h) return h;
+  if(typeof id==="string"&&id.startsWith("evento:")){
+    const ev=(eventos||[]).find(e=>e.id===id.slice(7));
+    const hora=ev?horaEvento(ev):"";
+    const nom="🎉 "+(ev?.nombre||"Evento");
+    return {id,label:nom+(hora?" "+hora:""),dia:nom,hora,diaN:-1,tipo:"evento"};
+  }
+  return undefined;
+}
 function pendientesPorAgendar(a){
   if(!a) return 0;
   const activos=(a.paquetes||[]).filter(p=>p.clasesRestantes>0&&diasRestantes(p.expira)>0);
@@ -1582,14 +1603,14 @@ window.renderEventos = () => {
           <div style="font-weight:800;font-size:16px;font-family:'DM Serif Display',serif">${ev.nombre}</div>
           <div style="display:flex;gap:2px"><button data-edit-evento="${ev.id}" title="Editar evento" style="font-size:13px;background:none;border:none;cursor:pointer;font-family:inherit;padding:2px 4px">✏️</button><button data-del-evento="${ev.id}" style="font-size:13px;background:none;color:var(--acento2);border:none;cursor:pointer;font-family:inherit;padding:2px 4px">✕</button></div>
         </div>
-        <div style="font-size:12px;color:var(--gris);margin-bottom:10px">${ev.fecha?fmtFecha(ev.fecha)+" · ":""}${horaEvento(ev)?"🕐 "+horaEvento(ev)+" · ":""}${ev.costo?"Costo sugerido: $"+Number(ev.costo).toLocaleString("es-MX"):""}${ev.notas?" · "+ev.notas:""}</div>
+        <div style="font-size:12px;color:var(--gris);margin-bottom:10px">${ev.fecha?fmtFecha(ev.fecha)+" · ":""}${horaEvento(ev)?"🕐 "+horaEvento(ev)+" · ":""}${ev.tipo==="sesion"?"🎨 Sesión de esmaltado · ":ev.tipo==="simple"?"✨ Sin clases · ":""}${ev.costo?"Costo sugerido: $"+Number(ev.costo).toLocaleString("es-MX"):""}${ev.notas?" · "+ev.notas:""}</div>
         <div style="display:flex;gap:8px;margin-bottom:12px">
           <div style="flex:1;background:var(--fondo);border-radius:10px;padding:8px;text-align:center"><div style="font-size:16px;font-weight:800;color:var(--verde)">$${totalCobrado.toLocaleString("es-MX")}</div><div style="font-size:10px;color:var(--gris)">Cobrado</div></div>
           <div style="flex:1;background:var(--fondo);border-radius:10px;padding:8px;text-align:center"><div style="font-size:16px;font-weight:800;color:var(--oro)">$${totalPorCobrar.toLocaleString("es-MX")}</div><div style="font-size:10px;color:var(--gris)">Por cobrar</div></div>
           <div style="flex:1;background:var(--fondo);border-radius:10px;padding:8px;text-align:center"><div style="font-size:16px;font-weight:800;color:var(--principal)">${participantes.length}</div><div style="font-size:10px;color:var(--gris)">Participantes</div></div>
         </div>
         <button data-add-participante="${ev.id}" class="btn btn-ghost btn-small btn-full" style="margin-bottom:10px">+ Agregar participante</button>
-        ${participantes.some(p=>!p.alumnaId)?`<button data-pasar-alumnas="${ev.id}" class="btn btn-primary btn-small btn-full" style="margin-bottom:10px">👩‍🎨 Pasar ${participantes.filter(p=>!p.alumnaId).length} a Alumnas</button>`:(participantes.length?`<div style="font-size:11px;color:var(--verde);font-weight:700;text-align:center;margin-bottom:10px">✓ Todas están en Alumnas</div>`:"")}`;
+        ${ev.tipo==="sesion"&&participantes.some(p=>!p.reservaId)?`<button data-pasar-alumnas="${ev.id}" class="btn btn-primary btn-small btn-full" style="margin-bottom:10px">📅 Registrar la clase de ${participantes.filter(p=>!p.reservaId).length} en esta sesión</button>`:participantes.some(p=>!p.alumnaId)?`<button data-pasar-alumnas="${ev.id}" class="btn btn-primary btn-small btn-full" style="margin-bottom:10px">👩‍🎨 Pasar ${participantes.filter(p=>!p.alumnaId).length} a Alumnas</button>`:(participantes.length?`<div style="font-size:11px;color:var(--verde);font-weight:700;text-align:center;margin-bottom:10px">✓ Todas están en Alumnas</div>`:"")}`;
       if(!participantes.length){
         html += `<div style="font-size:13px;color:var(--gris);text-align:center;padding:8px 0">Sin participantes todavía.</div>`;
       } else {
@@ -1599,8 +1620,8 @@ window.renderEventos = () => {
             <div class="row-space">
               <div>
                 <div style="font-weight:700;font-size:13px">${p.nombre}</div>
-                <div style="font-size:11px;color:var(--gris)">${metodoLabel(p.metodoPago||"efectivo")}${p.segundoPago?" · Dos pagos":""}${p.alumnaId?` · <span style="color:var(--verde);font-weight:700">✓ En Alumnas</span>`:""}</div>
-                ${(()=>{const _al=p.alumnaId&&alumnas.find(a=>a.id===p.alumnaId);const _n=pendientesPorAgendar(_al);return _n>0?`<button data-agendar-part="${_al.id}" style="margin-top:4px;font-size:11px;background:var(--principal);color:white;border:none;border-radius:6px;padding:3px 8px;cursor:pointer;font-family:inherit;font-weight:700">📅 Agendar (${_n} pendiente${_n!==1?"s":""})</button>`:"";})()}
+                <div style="font-size:11px;color:var(--gris)">${metodoLabel(p.metodoPago||"efectivo")}${p.segundoPago?" · Dos pagos":""}${p.alumnaId?` · <span style="color:var(--verde);font-weight:700">✓ En Alumnas</span>`:""}${p.incluyeSesion?` · <span style="color:#c4473d;font-weight:700">🎁 Sesión gratis</span>`:""}${(()=>{const _r=p.reservaId&&reservas.find(r=>r.id===p.reservaId&&r.estado!=="cancelada");if(!_r)return "";const _al=alumnas.find(a=>a.id===_r.alumnaId);const _pk=_al&&(_al.paquetes||[]).find(x=>x.id===_r.paqueteId);return ` · <span style="color:var(--principal);font-weight:700">📅 ${_r.estado==="asistida"?"Asistió":"Clase registrada"}${_pk?": "+_pk.nombre:""}</span>`;})()}</div>
+                ${(()=>{const _al=p.alumnaId&&alumnas.find(a=>a.id===p.alumnaId);const _n=pendientesPorAgendar(_al);return _n>0&&!p.reservaId?`<button data-agendar-part="${_al.id}" style="margin-top:4px;font-size:11px;background:var(--principal);color:white;border:none;border-radius:6px;padding:3px 8px;cursor:pointer;font-family:inherit;font-weight:700">📅 Agendar (${_n} pendiente${_n!==1?"s":""})</button>`:"";})()}
               </div>
               <div style="text-align:right;display:flex;align-items:center;gap:6px">
                 <div>
@@ -1628,6 +1649,7 @@ window.renderEventos = () => {
     document.getElementById("ev-notas").value="";
     document.getElementById("ev-hora-inicio").value="";
     document.getElementById("ev-hora-fin").value="";
+    document.getElementById("ev-tipo").value="taller";
     window._editEventoId=null;
     document.getElementById("modal-evento-title").textContent="🎉 Nuevo evento";
     openModal("modal-nuevo-evento");
@@ -1643,6 +1665,7 @@ window.renderEventos = () => {
       document.getElementById("ev-notas").value=ev.notas||"";
       document.getElementById("ev-hora-inicio").value=ev.horaInicio||"";
       document.getElementById("ev-hora-fin").value=ev.horaFin||"";
+      document.getElementById("ev-tipo").value=ev.tipo||"taller";
       window._editEventoId=ev.id;
       document.getElementById("modal-evento-title").textContent="✏️ Editar evento";
       openModal("modal-nuevo-evento");
@@ -1656,14 +1679,18 @@ window.renderEventos = () => {
     const notas=document.getElementById("ev-notas")?.value?.trim()||"";
     const horaInicio=document.getElementById("ev-hora-inicio")?.value||"";
     const horaFin=document.getElementById("ev-hora-fin")?.value||"";
+    const tipo=document.getElementById("ev-tipo")?.value||"taller";
     if(!nombre){ showToast("Ponle un nombre al evento"); return; }
     if(horaInicio&&horaFin&&horaFin<=horaInicio){ showToast("La hora de fin debe ser después del inicio"); return; }
     if(window._editEventoId){
       const ev=eventos.find(e=>e.id===window._editEventoId);
       if(ev){
-        const cambios={nombre,fecha,costo,notas,horaInicio,horaFin};
+        const cambios={nombre,fecha,costo,notas,horaInicio,horaFin,tipo};
         await fbUpdate("eventos",ev.id,cambios);
         Object.assign(ev,cambios);
+        for(const r of reservas.filter(r=>r.eventoId===ev.id&&r.estado==="reservada"&&r.fecha!==fecha)){
+          r.fecha=fecha; await fbUpdate("reservas",r.id,{fecha});
+        }
       }
       window._editEventoId=null;
       closeModal("modal-nuevo-evento");
@@ -1672,7 +1699,7 @@ window.renderEventos = () => {
       showToast("✓ Evento actualizado");
       return;
     }
-    const nuevo={id:uid(),nombre,fecha,horaInicio,horaFin,costo,notas,participantes:[],creadoEn:new Date().toISOString()};
+    const nuevo={id:uid(),nombre,fecha,horaInicio,horaFin,tipo,costo,notas,participantes:[],creadoEn:new Date().toISOString()};
     eventos.push(nuevo);
     await fbSet("eventos",nuevo.id,nuevo);
     closeModal("modal-nuevo-evento");
@@ -1734,6 +1761,9 @@ window.renderEventos = () => {
       const ev=eventos.find(e=>e.id===evId);
       if(!ev)return;
       if(!confirm("¿Quitar este participante del evento?"))return;
+      const _pq=(ev.participantes||[]).find(p=>p.id===pId);
+      const _res=_pq?.reservaId&&reservas.find(r=>r.id===_pq.reservaId&&r.estado==="reservada");
+      if(_res){ _res.estado="cancelada"; await fbUpdate("reservas",_res.id,{estado:"cancelada"}); try{renderAgenda();}catch(e){} }
       ev.participantes=(ev.participantes||[]).filter(p=>p.id!==pId);
       await fbUpdate("eventos",evId,{participantes:ev.participantes});
       renderEventos();
@@ -1757,9 +1787,22 @@ window.toggleSegundoPagoEvento = () => {
   document.getElementById("pev-metodo1-label").textContent = dosPag?"Método primer pago":"Método de pago";
 };
 
+function llenarSelectorClasePev(a){
+  const campo=document.getElementById("pev-clase-campo"), sel=document.getElementById("pev-clase");
+  if(!campo||!sel) return;
+  const ev=eventos.find(e=>e.id===window._eventoActualId);
+  const ops=paquetesConPendiente(a);
+  if(!a||!ev||ev.tipo==="simple"||!ops.length){ campo.style.display="none"; sel.innerHTML=""; return; }
+  const ninguna=`<option value="">No registrar ninguna clase</option>`;
+  const lista=ops.map(x=>`<option value="${x.p.id}">${x.p.emoji||""} ${x.p.nombre} · ${x.libres} por agendar · vence ${fmtFecha(x.p.expira)}</option>`).join("");
+  sel.innerHTML = ev.tipo==="sesion" ? lista+ninguna : ninguna+lista;
+  if(ev.tipo==="sesion"){ const pref=ops.find(x=>x.p.paqueteDefId==="evento_esmalte"); if(pref) sel.value=pref.p.id; }
+  campo.style.display="block";
+}
 function mostrarInfoAlumnaPev(a, o){
   const box=document.getElementById("pev-info-alumna");
   if(!box) return;
+  if(!a){ llenarSelectorClasePev(null); }
   if(!a && !o){ box.style.display="none"; box.innerHTML=""; return; }
   if(!a){
     box.style.display="block";
@@ -1768,11 +1811,12 @@ function mostrarInfoAlumnaPev(a, o){
   }
   const pend=pendientesPorAgendar(a);
   const act=getPaqueteActivo(a);
+  llenarSelectorClasePev(a);
   box.style.display="block";
   box.innerHTML=`<div style="background:var(--fondo);border:1.5px solid var(--secundario);border-radius:9px;padding:8px 12px;font-size:12px">
     <div style="font-weight:700">✓ Ya es alumna · se jalaron sus datos</div>
     ${act?`<div style="color:var(--gris);margin-top:2px">${act.emoji||""} ${act.nombre}</div>`:""}
-    ${pend>0?`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px"><span style="color:var(--principal);font-weight:700">📅 Tiene ${pend} clase${pend!==1?"s":""} por agendar</span><button type="button" data-pev-agendar="${a.id}" class="btn btn-primary btn-small">Agendar ahora</button></div>`:`<div style="color:var(--gris);margin-top:4px">No tiene clases pendientes por agendar</div>`}
+    ${pend>0?`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px"><span style="color:var(--principal);font-weight:700">📅 Tiene ${pend} clase${pend!==1?"s":""} por agendar</span><button type="button" data-pev-agendar="${a.id}" class="btn btn-ghost btn-small">Agendar otro día</button></div>`:`<div style="color:var(--gris);margin-top:4px">No tiene clases pendientes por agendar</div>`}
   </div>`;
   box.querySelector("[data-pev-agendar]")?.addEventListener("click",()=>abrirAgendarMaestra(a.id));
 }
@@ -1798,6 +1842,8 @@ window.abrirParticipanteEvento = (eventoId) => {
   const sugs = document.getElementById("pev-sugerencias");
   window._pevAlumnaSel = null;
   mostrarInfoAlumnaPev(null);
+  llenarSelectorClasePev(null);
+  document.getElementById("pev-gratis").checked = false;
   input.oninput = () => {
     // Si cambia el nombre a mano, ya no está ligada a la alumna elegida
     if(window._pevAlumnaSel){ window._pevAlumnaSel=null; mostrarInfoAlumnaPev(null); }
@@ -1836,7 +1882,9 @@ window.abrirEditarParticipanteEvento = (eventoId, participanteId) => {
   if(!p)return;
   window._eventoActualId = eventoId;
   window._editingParticipanteId = participanteId;
-  window._pevAlumnaSel = null; try{ mostrarInfoAlumnaPev(null); }catch(e){}
+  window._pevAlumnaSel = null; try{ mostrarInfoAlumnaPev(null); llenarSelectorClasePev(null); }catch(e){}
+  { const _evE=eventos.find(e=>e.id===eventoId); const _pE=_evE?.participantes?.find(x=>x.id===participanteId); const _alE=_pE?.alumnaId&&alumnas.find(a=>a.id===_pE.alumnaId);
+    document.getElementById("pev-gratis").checked = !!(_pE?.incluyeSesion || (_alE&&(_alE.paquetes||[]).some(x=>x.eventoId===eventoId&&x.paqueteDefId==="evento_esmalte"))); }
   document.getElementById("modal-participante-evento").querySelector(".modal-header span").textContent = "✏️ Editar participante";
   document.getElementById("pev-nombre").value = p.nombre||"";
   { const _al = p.alumnaId && alumnas.find(x=>x.id===p.alumnaId);
@@ -1872,10 +1920,11 @@ const pasarParticipanteAAlumna = async (ev, p) => {
   let a = (p.alumnaId && alumnas.find(x=>x.id===p.alumnaId)) || alumnas.find(x=>(x.nombre||"").trim().toLowerCase()===nombreLimpio.toLowerCase());
   const origen = {eventoId:ev.id, nombre:ev.nombre, fecha:ev.fecha||hoy()};
   const def = PAQUETES_DEF.evento_esmalte;
-  const pkg = {id:uid(),paqueteDefId:"evento_esmalte",nombre:"2ª sesión de esmaltado · "+ev.nombre,emoji:def.emoji,clasesTotal:1,clasesRestantes:1,monto:0,montoTotal:0,metodoPago:"evento",compradoEn:hoy(),expira:addDias(hoy(),def.dias),segundoPago:null,eventoId:ev.id};
+  const daPaquete = p.incluyeSesion===true;
+  const pkg = {id:uid(),paqueteDefId:"evento_esmalte",nombre:"Sesión de esmaltado gratis 2 hrs · "+ev.nombre,emoji:def.emoji,clasesTotal:1,clasesRestantes:1,monto:0,montoTotal:0,metodoPago:"evento",compradoEn:hoy(),expira:addDias(hoy(),def.dias),segundoPago:null,eventoId:ev.id};
   if(!a){
     const id = uid();
-    a = {id,nombre:nombreLimpio,telefono:p.telefono||"",correo:p.correo||"",nota:"",paquetes:[pkg],creadaEn:hoy(),eventosOrigen:[origen]};
+    a = {id,nombre:nombreLimpio,telefono:p.telefono||"",correo:p.correo||"",nota:"",paquetes:daPaquete?[pkg]:[],creadaEn:hoy(),eventosOrigen:[origen]};
     await fbSet("alumnas",id,a);
     alumnas.push(a);
     return {estado:"nueva",alumna:a};
@@ -1883,7 +1932,7 @@ const pasarParticipanteAAlumna = async (ev, p) => {
   const cambios = {};
   const origenes = a.eventosOrigen||[];
   if(!origenes.some(o=>o.eventoId===ev.id)) cambios.eventosOrigen = [...origenes,origen];
-  if(!(a.paquetes||[]).some(x=>x.eventoId===ev.id)) cambios.paquetes = [...(a.paquetes||[]),pkg];
+  if(daPaquete && !(a.paquetes||[]).some(x=>x.eventoId===ev.id)) cambios.paquetes = [...(a.paquetes||[]),pkg];
   if(!a.telefono && p.telefono) cambios.telefono = p.telefono;
   if(!a.correo && p.correo) cambios.correo = p.correo;
   if(Object.keys(cambios).length){
@@ -1892,22 +1941,42 @@ const pasarParticipanteAAlumna = async (ev, p) => {
   }
   return {estado:"existente",alumna:a};
 };
+function paquetesConPendiente(a){
+  if(!a) return [];
+  return (a.paquetes||[]).filter(p=>p.clasesRestantes>0&&diasRestantes(p.expira)>-1)
+    .map(p=>({p,libres:p.clasesRestantes-reservas.filter(r=>r.paqueteId===p.id&&r.estado==="reservada"&&r.fecha>=hoy()).length}))
+    .filter(x=>x.libres>0);
+}
+// Registra en el evento una clase de la alumna (la elegida, o la pendiente más lógica)
+const agendarEnEvento = async (ev, a, paqueteId) => {
+  if(!a || !ev.fecha) return {estado:"sin_fecha"};
+  const ya = reservas.find(r=>r.eventoId===ev.id&&r.alumnaId===a.id&&r.estado!=="cancelada");
+  if(ya) return {estado:"ya",reserva:ya};
+  const libres=paquetesConPendiente(a).map(x=>x.p);
+  const pkg=(paqueteId&&(a.paquetes||[]).find(p=>p.id===paqueteId))||libres.find(p=>p.paqueteDefId==="evento_esmalte")||libres[0]||null;
+  const nueva={id:uid(),alumnaId:a.id,paqueteId:pkg?.id||"sin-paquete",horarioId:"evento:"+ev.id,eventoId:ev.id,fecha:ev.fecha,estado:"reservada",creadaEn:new Date().toISOString()};
+  reservas.push(nueva);
+  await fbSet("reservas",nueva.id,nueva);
+  return {estado:pkg?"agendada":"sin_pendiente",reserva:nueva,paquete:pkg};
+};
 const puedeEntrar = a => !!(a.correo && a.correo.trim()) || (a.telefono||"").replace(/\D/g,"").length>=4;
 
 window.pasarEventoAAlumnas = async (evId) => {
   const ev = eventos.find(e=>e.id===evId);
   if(!ev) return;
-  const pendientes = (ev.participantes||[]).filter(p=>!p.alumnaId);
+  const pendientes = (ev.participantes||[]).filter(p=>!p.alumnaId || (ev.tipo==="sesion"&&!p.reservaId));
   if(!pendientes.length){ showToast("Todas ya están en Alumnas"); return; }
   let nuevas=0, existentes=0, sinAcceso=0;
   const actualizados = [];
   for(const p of ev.participantes||[]){
-    if(p.alumnaId){ actualizados.push(p); continue; }
+    if(p.alumnaId && !(ev.tipo==="sesion"&&!p.reservaId)){ actualizados.push(p); continue; }
     const r = await pasarParticipanteAAlumna(ev,p);
     if(r.alumna){
       if(r.estado==="nueva") nuevas++; else existentes++;
       if(!puedeEntrar(r.alumna)) sinAcceso++;
-      actualizados.push({...p,alumnaId:r.alumna.id});
+      let extra={};
+      if(ev.tipo==="sesion"){ const ag=await agendarEnEvento(ev,r.alumna); if(ag.reserva) extra.reservaId=ag.reserva.id; }
+      actualizados.push({...p,alumnaId:r.alumna.id,...extra});
     } else actualizados.push(p);
   }
   ev.participantes = actualizados;
@@ -1942,7 +2011,8 @@ document.getElementById("btn-guardar-participante-evento").onclick = async()=>{
   }
   if(window._editingParticipanteId){
     const pId = window._editingParticipanteId;
-    ev.participantes = ev.participantes.map(p=>p.id===pId?{...p,nombre,telefono,correo,monto:monto1,metodoPago:metodo1,segundoPago}:p);
+    const incluyeSesionE = !!document.getElementById("pev-gratis")?.checked;
+    ev.participantes = ev.participantes.map(p=>p.id===pId?{...p,nombre,telefono,correo,monto:monto1,metodoPago:metodo1,segundoPago,incluyeSesion:incluyeSesionE}:p);
     const pEdit = ev.participantes.find(p=>p.id===pId);
     if(pEdit){
       const al = pEdit.alumnaId && alumnas.find(x=>x.id===pEdit.alumnaId);
@@ -1950,6 +2020,15 @@ document.getElementById("btn-guardar-participante-evento").onclick = async()=>{
         const c={};
         if(telefono && !al.telefono) c.telefono=telefono;
         if(correo && !al.correo) c.correo=correo;
+        const _pkgEv=(al.paquetes||[]).find(x=>x.eventoId===ev.id&&x.paqueteDefId==="evento_esmalte");
+        if(incluyeSesionE && !_pkgEv){
+          const def=PAQUETES_DEF.evento_esmalte;
+          c.paquetes=[...(al.paquetes||[]),{id:uid(),paqueteDefId:"evento_esmalte",nombre:"Sesión de esmaltado gratis 2 hrs · "+ev.nombre,emoji:def.emoji,clasesTotal:1,clasesRestantes:1,monto:0,montoTotal:0,metodoPago:"evento",compradoEn:hoy(),expira:addDias(hoy(),def.dias),segundoPago:null,eventoId:ev.id}];
+        } else if(!incluyeSesionE && _pkgEv){
+          const usada=_pkgEv.clasesRestantes<_pkgEv.clasesTotal || reservas.some(r=>r.paqueteId===_pkgEv.id&&r.estado!=="cancelada");
+          if(usada) showToast("⚠️ Su sesión gratis ya está agendada o usada, no se quitó");
+          else c.paquetes=(al.paquetes||[]).filter(x=>x.id!==_pkgEv.id);
+        }
         if(Object.keys(c).length){ await fbUpdate("alumnas",al.id,c); Object.assign(al,c); }
       } else {
         const r = await pasarParticipanteAAlumna(ev,pEdit);
@@ -1962,18 +2041,26 @@ document.getElementById("btn-guardar-participante-evento").onclick = async()=>{
     showToast("✓ Participante actualizado");
     return;
   }
-  const nuevoParticipante = {id:uid(),nombre,telefono,correo,monto:monto1,metodoPago:metodo1,fechaPago:hoy(),segundoPago};
+  const incluyeSesion = !!document.getElementById("pev-gratis")?.checked;
+  const nuevoParticipante = {id:uid(),nombre,telefono,correo,monto:monto1,metodoPago:metodo1,fechaPago:hoy(),segundoPago,incluyeSesion};
   if(window._pevAlumnaSel && alumnas.some(a=>a.id===window._pevAlumnaSel)) nuevoParticipante.alumnaId = window._pevAlumnaSel;
   let rAlumna = {};
   try{ rAlumna = await pasarParticipanteAAlumna(ev,nuevoParticipante); }catch(e){ console.error(e); }
   if(rAlumna.alumna) nuevoParticipante.alumnaId = rAlumna.alumna.id;
+  let rAgenda = null;
+  const _campoClase = document.getElementById("pev-clase-campo");
+  const _claseSel = _campoClase && _campoClase.style.display!=="none" ? document.getElementById("pev-clase").value : null;
+  if(rAlumna.alumna && ev.tipo!=="simple" && (_claseSel || (ev.tipo==="sesion" && _claseSel===null))){
+    try{ rAgenda = await agendarEnEvento(ev,rAlumna.alumna,_claseSel||null); if(rAgenda.reserva) nuevoParticipante.reservaId = rAgenda.reserva.id; }catch(e){ console.error(e); }
+  }
   ev.participantes = [...(ev.participantes||[]),nuevoParticipante];
   await fbUpdate("eventos",evId,{participantes:ev.participantes});
   closeModal("modal-participante-evento");
   renderEventos();
   if(typeof renderAlumnas==="function") renderAlumnas();
-  const aviso = rAlumna.alumna && !puedeEntrar(rAlumna.alumna) ? " · ⚠️ falta cel o correo para que entre" : "";
-  showToast("✓ "+nombre+(rAlumna.estado==="nueva"?" agregada al evento y a Alumnas":" agregada al evento")+aviso);
+  let aviso = rAlumna.alumna && !puedeEntrar(rAlumna.alumna) && !rAgenda ? " · ⚠️ falta cel o correo para que entre" : "";
+  if(rAgenda){ try{renderAgenda();}catch(e){} aviso = rAgenda.estado==="agendada" ? " · 📅 clase registrada en el evento" : rAgenda.estado==="sin_pendiente" ? " · ⚠️ no tenía clase pendiente, quedó registrada sin descontar" : aviso; }
+  showToast("✓ "+nombre+(rAlumna.estado==="nueva"?" agregada al evento y a Alumnas":" agregada al evento")+(incluyeSesion?" · 🎁 con sesión gratis":"")+aviso);
 };
 
 window.verDiaDetalle = (fecha) => {
@@ -2010,11 +2097,11 @@ window.verDiaDetalle = (fecha) => {
   });
   let html = _evHtml;
   Object.entries(porHorario).forEach(([hId, res])=>{
-    const h = HORARIOS.find(hh=>hh.id===hId);
+    const h = infoHorario(hId);
     const cerrada = esCerrada(hId, fecha);
     html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;margin-top:12px">
       <div style="font-weight:800;font-size:13px;color:${cerrada?"var(--acento2)":"var(--principal)"}">
-        ${cerrada?"🔒 ":""}${h?h.hora:"—"} · ${res.length}/${CUPO_MAX} lugares
+        ${cerrada?"🔒 ":""}${h?(h.tipo==="evento"?h.label:h.hora):"—"} · ${h?.tipo==="evento"?res.length+" registrada"+(res.length!==1?"s":""):res.length+"/"+CUPO_MAX+" lugares"}
       </div>
       <button data-toggle-clase="${hId}|${fecha}" style="font-size:11px;background:${cerrada?"var(--verde)":"var(--acento2)"};color:white;border:none;border-radius:6px;padding:3px 8px;cursor:pointer;font-family:inherit;font-weight:700">
         ${cerrada?"🔓 Abrir":"🔒 Cerrar"}
@@ -2531,7 +2618,7 @@ window.verAlumna=async id=>{
   });
   html+=`<div style="font-weight:800;margin:14px 0 8px;font-family:'DM Serif Display',serif">Clases tomadas</div>`;
   if(!asistA.length)html+=`<div style="font-size:13px;color:var(--gris)">Sin asistencias registradas.</div>`;
-  [...asistA].reverse().slice(0,8).forEach(x=>{const h=HORARIOS.find(hh=>hh.id===x.horarioId);html+=`<div style="font-size:13px;padding:6px 0;border-bottom:1px solid var(--hueso2)"><div style="display:flex;justify-content:space-between"><span>${fmtFecha(x.fecha)}</span><span style="color:var(--gris)">${h?.label||"—"}</span></div>${x.nota?`<div style="font-size:11px;color:var(--gris);margin-top:2px">📝 ${x.nota}</div>`:""}</div>`;});
+  [...asistA].reverse().slice(0,8).forEach(x=>{const h=infoHorario(x.horarioId);html+=`<div style="font-size:13px;padding:6px 0;border-bottom:1px solid var(--hueso2)"><div style="display:flex;justify-content:space-between"><span>${fmtFecha(x.fecha)}</span><span style="color:var(--gris)">${h?.label||"—"}</span></div>${x.nota?`<div style="font-size:11px;color:var(--gris);margin-top:2px">📝 ${x.nota}</div>`:""}</div>`;});
   // Servicios e ingresos libres de la alumna
   const todosLocal = JSON.parse(localStorage.getItem("cc_servicios")||"[]");
   const srvAlumna = todosLocal.filter(s=>s.nombre.toLowerCase()===a.nombre.toLowerCase()&&s.tipo!=="libre");
@@ -2948,8 +3035,8 @@ window.renderVistaAlumna=()=>{
   html+=`<div class="aviso aviso-rosa" style="margin-bottom:16px"><div style="font-weight:700;color:var(--principal);margin-bottom:4px">⚠️ Política de cancelación</div><div style="color:var(--grafito);line-height:1.6">Cancela con <strong>mínimo 24 horas de anticipación</strong>. Las cancelaciones tardías o inasistencias sin aviso <strong>se descuentan como clase tomada</strong>.</div></div>`;
   html+=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif">Mis clases agendadas</div>${paquete?`<button class="btn btn-primary btn-small" id="btn-agendar-alumna">+ Agendar</button>`:`<button class="btn btn-primary btn-small" disabled>+ Agendar</button>`}</div>`;
   if(!misRes.length)html+=`<div class="card" style="text-align:center;color:var(--gris);padding:28px;margin-bottom:16px"><div style="font-size:28px;margin-bottom:6px">📅</div><div>${paquete?"¡Agenda tu próxima clase!":"Sin clases agendadas."}</div></div>`;
-  misRes.forEach(r=>{const h=HORARIOS.find(hh=>hh.id===r.horarioId),puede=puedeCancel24h(r);html+=`<div class="card" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700;font-size:14px;font-family:'DM Serif Display',serif">${h?.dia}</div><div style="font-size:13px;color:var(--gris)">${h?.hora} · ${fmtFecha(r.fecha)}</div></div>${puede?`<button data-cancel="${r.id}" style="background:none;border:1.5px solid var(--acento2);color:var(--acento2);border-radius:7px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Cancelar</button>`:`<span style="font-size:11px;color:var(--acento2);font-weight:700;text-align:right;max-width:110px">Ya no puedes cancelar</span>`}</div></div>`;});
-  if(misAsist.length){html+=`<div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif;margin:20px 0 10px">Mis clases tomadas</div>`;[...misAsist].reverse().slice(0,10).forEach(x=>{const h=HORARIOS.find(hh=>hh.id===x.horarioId);html+=`<div style="font-size:13px;padding:6px 0;border-bottom:1px solid var(--hueso2)"><div style="display:flex;justify-content:space-between;align-items:center"><span>${fmtFecha(x.fecha)}</span><span style="color:var(--gris)">${h?.label||"—"}</span>${badge("✓","var(--verde)")}</div>${x.nota?`<div style="font-size:11px;color:var(--gris);margin-top:2px">📝 ${x.nota}</div>`:""}</div>`;});}
+  misRes.forEach(r=>{const h=infoHorario(r.horarioId),puede=puedeCancel24h(r);html+=`<div class="card" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700;font-size:14px;font-family:'DM Serif Display',serif">${h?.dia}</div><div style="font-size:13px;color:var(--gris)">${h?.hora} · ${fmtFecha(r.fecha)}</div></div>${puede?`<button data-cancel="${r.id}" style="background:none;border:1.5px solid var(--acento2);color:var(--acento2);border-radius:7px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Cancelar</button>`:`<span style="font-size:11px;color:var(--acento2);font-weight:700;text-align:right;max-width:110px">Ya no puedes cancelar</span>`}</div></div>`;});
+  if(misAsist.length){html+=`<div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif;margin:20px 0 10px">Mis clases tomadas</div>`;[...misAsist].reverse().slice(0,10).forEach(x=>{const h=infoHorario(x.horarioId);html+=`<div style="font-size:13px;padding:6px 0;border-bottom:1px solid var(--hueso2)"><div style="display:flex;justify-content:space-between;align-items:center"><span>${fmtFecha(x.fecha)}</span><span style="color:var(--gris)">${h?.label||"—"}</span>${badge("✓","var(--verde)")}</div>${x.nota?`<div style="font-size:11px;color:var(--gris);margin-top:2px">📝 ${x.nota}</div>`:""}</div>`;});}
   document.getElementById("alumna-content").innerHTML=html;
   const btnAgendar=document.getElementById("btn-agendar-alumna");
   if(btnAgendar)btnAgendar.addEventListener("click",()=>openAgendarAlumna());
@@ -2978,7 +3065,7 @@ window.openAgendarAlumna=()=>{
 window.renderAgendarContent=()=>{
   const paquete=getPaqueteActivo(alumnaActiva);
   const def=paquete?PAQUETES_DEF[paquete.paqueteDefId]:null;
-  const tipo=window._agendarDesdeMaestra?"todos":(def?.tipo||"paquete");
+  const tipo=def?.tipo||"paquete";
   const horariosDisp=tipo==="todos"?HORARIOS_ACTIVOS:HORARIOS_ACTIVOS.filter(h=>h.tipo===tipo);
   const h=horariosDisp.find(hh=>hh.id===agendarHorarioSel)||horariosDisp[0];
   if(!agendarHorarioSel||!horariosDisp.find(hh=>hh.id===agendarHorarioSel))agendarHorarioSel=h?.id;
