@@ -438,6 +438,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
     <div class="modal-header"><span class="serif" id="modal-evento-title" style="font-weight:800;font-size:17px">🎉 Nuevo evento</span><button class="modal-close" onclick="closeModal('modal-nuevo-evento')">×</button></div>
     <div class="field"><label>Nombre del evento *</label><input type="text" id="ev-nombre" placeholder="Ej. Taller navideño"></div>
     <div class="field"><label>Fecha del evento</label><input type="date" id="ev-fecha"></div>
+    <div style="display:flex;gap:8px">
+      <div class="field" style="flex:1"><label>Hora de inicio</label><input type="time" id="ev-hora-inicio"></div>
+      <div class="field" style="flex:1"><label>Hora de fin</label><input type="time" id="ev-hora-fin"></div>
+    </div>
     <div class="field"><label>Costo sugerido por persona ($)</label><input type="text" inputmode="decimal" id="ev-costo" placeholder="Ej. 500"></div>
     <div class="field"><label>Notas (opcional)</label><input type="text" id="ev-notas" placeholder="Ej. Cupo máximo, detalles…"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
@@ -1016,6 +1020,12 @@ window.renderAgenda=()=>{
   });
   slots.sort((a,b)=>a.fecha.localeCompare(b.fecha)||a.h.hora.localeCompare(b.h.hora));
   let html=`<div class="semana-nav"><button class="nav-btn" id="btn-semana-prev">‹</button><div style="text-align:center"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif">${nom}</div><div style="font-size:12px;color:var(--gris)">${rango}</div></div><button class="nav-btn" id="btn-semana-next">›</button></div>`;
+  const _evSemana=dias.flatMap(f=>eventosDelDia(f));
+  if(_evSemana.length){
+    html+=`<div style="font-size:11px;color:var(--principal);font-weight:800;letter-spacing:1px;margin-bottom:6px">EVENTOS DE LA SEMANA</div>`;
+    _evSemana.forEach(ev=>{ html+=`<div style="font-size:12px;font-weight:700;color:var(--gris);margin-bottom:3px;text-transform:capitalize">${new Date(ev.fecha+"T12:00:00").toLocaleDateString("es-MX",{weekday:"long",day:"numeric",month:"short"})}</div>`+tarjetaEventoAgenda(ev); });
+    html+=`<div style="height:6px"></div>`;
+  }
   if(!slots.length)html+=`<div class="card empty-state"><div style="font-size:32px;margin-bottom:8px">📅</div><div>Sin clases esta semana</div></div>`;
   slots.forEach(({h,fecha,resSlot})=>{
     const esHoy=fecha===hoyStr,pasado=fecha<hoyStr,cupo=cupoDisponible(h.id,fecha);
@@ -1104,6 +1114,9 @@ window.renderAgendaMes=()=>{
     const bloq=esBloqueado(fecha);
     html+=`<div class="cal-day${esHoy?" hoy":""}" style="cursor:pointer;${bloq?"background:#d1362618;border:1px solid #d1362644":bgIntensity?"background:"+bgIntensity:""}" data-fecha-dia="${fecha}">`;
     html+=`<div class="cal-day-num" style="color:${bloq?"var(--acento2)":esHoy?"var(--principal)":"var(--grafito)"}">${d}${bloq?"🚫":""}</div>`;
+    eventosDelDia(fecha).forEach(ev=>{
+      html+=`<div class="cal-slot" style="background:#ff9e9733;color:#c4473d;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${ev.nombre}">🎉 ${ev.horaInicio?ev.horaInicio+" ":""}${ev.nombre}</div>`;
+    });
     if(c){
       Object.values(c.horarios).forEach(h=>{
         const color=h.tipo==="membresia"?"var(--oro)":"var(--principal)";
@@ -1538,6 +1551,10 @@ window.guardarServicio = async() => {
 // ── EVENTOS ─────────────────────────────────────────────
 const _numLimpio=(v)=>parseFloat((v||"0").toString().replace(/,/g,""))||0;
 
+function horaEvento(ev){ return ev.horaInicio ? ev.horaInicio+(ev.horaFin?"–"+ev.horaFin:"") : ""; }
+function eventosDelDia(f){ return (eventos||[]).filter(e=>e.fecha===f).sort((a,b)=>(a.horaInicio||"99").localeCompare(b.horaInicio||"99")); }
+function tarjetaEventoAgenda(ev){ return `<div style="background:#ff9e9722;border:1.5px solid #ff9e97;border-radius:10px;padding:8px 12px;margin-bottom:8px"><div style="font-weight:800;font-size:14px">🎉 ${ev.nombre}</div><div style="font-size:12px;color:var(--gris)">${horaEvento(ev)?"🕐 "+horaEvento(ev)+" · ":""}${(ev.participantes||[]).length} participante${(ev.participantes||[]).length!==1?"s":""}${ev.notas?" · "+ev.notas:""}</div></div>`; }
+
 window.renderEventos = () => {
   let html = `<div class="row-space" style="margin-bottom:16px">
     <span style="font-weight:800;font-size:16px;font-family:'DM Serif Display',serif">🎉 Eventos</span>
@@ -1554,9 +1571,9 @@ window.renderEventos = () => {
       html += `<div class="card" style="margin-bottom:16px;border:2px solid var(--secundario)">
         <div class="row-space" style="margin-bottom:4px">
           <div style="font-weight:800;font-size:16px;font-family:'DM Serif Display',serif">${ev.nombre}</div>
-          <button data-del-evento="${ev.id}" style="font-size:13px;background:none;color:var(--acento2);border:none;cursor:pointer;font-family:inherit;padding:2px 4px">✕</button>
+          <div style="display:flex;gap:2px"><button data-edit-evento="${ev.id}" title="Editar evento" style="font-size:13px;background:none;border:none;cursor:pointer;font-family:inherit;padding:2px 4px">✏️</button><button data-del-evento="${ev.id}" style="font-size:13px;background:none;color:var(--acento2);border:none;cursor:pointer;font-family:inherit;padding:2px 4px">✕</button></div>
         </div>
-        <div style="font-size:12px;color:var(--gris);margin-bottom:10px">${ev.fecha?fmtFecha(ev.fecha)+" · ":""}${ev.costo?"Costo sugerido: $"+Number(ev.costo).toLocaleString("es-MX"):""}${ev.notas?" · "+ev.notas:""}</div>
+        <div style="font-size:12px;color:var(--gris);margin-bottom:10px">${ev.fecha?fmtFecha(ev.fecha)+" · ":""}${horaEvento(ev)?"🕐 "+horaEvento(ev)+" · ":""}${ev.costo?"Costo sugerido: $"+Number(ev.costo).toLocaleString("es-MX"):""}${ev.notas?" · "+ev.notas:""}</div>
         <div style="display:flex;gap:8px;margin-bottom:12px">
           <div style="flex:1;background:var(--fondo);border-radius:10px;padding:8px;text-align:center"><div style="font-size:16px;font-weight:800;color:var(--verde)">$${totalCobrado.toLocaleString("es-MX")}</div><div style="font-size:10px;color:var(--gris)">Cobrado</div></div>
           <div style="flex:1;background:var(--fondo);border-radius:10px;padding:8px;text-align:center"><div style="font-size:16px;font-weight:800;color:var(--oro)">$${totalPorCobrar.toLocaleString("es-MX")}</div><div style="font-size:10px;color:var(--gris)">Por cobrar</div></div>
@@ -1599,9 +1616,27 @@ window.renderEventos = () => {
     document.getElementById("ev-fecha").value=hoy();
     document.getElementById("ev-costo").value="";
     document.getElementById("ev-notas").value="";
+    document.getElementById("ev-hora-inicio").value="";
+    document.getElementById("ev-hora-fin").value="";
     window._editEventoId=null;
     document.getElementById("modal-evento-title").textContent="🎉 Nuevo evento";
     openModal("modal-nuevo-evento");
+  });
+
+  document.querySelectorAll("[data-edit-evento]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const ev=eventos.find(e=>e.id===btn.getAttribute("data-edit-evento"));
+      if(!ev)return;
+      document.getElementById("ev-nombre").value=ev.nombre||"";
+      document.getElementById("ev-fecha").value=ev.fecha||hoy();
+      document.getElementById("ev-costo").value=ev.costo||"";
+      document.getElementById("ev-notas").value=ev.notas||"";
+      document.getElementById("ev-hora-inicio").value=ev.horaInicio||"";
+      document.getElementById("ev-hora-fin").value=ev.horaFin||"";
+      window._editEventoId=ev.id;
+      document.getElementById("modal-evento-title").textContent="✏️ Editar evento";
+      openModal("modal-nuevo-evento");
+    });
   });
 
   document.getElementById("btn-guardar-evento").onclick = async()=>{
@@ -1609,12 +1644,30 @@ window.renderEventos = () => {
     const fecha=document.getElementById("ev-fecha")?.value||hoy();
     const costo=_numLimpio(document.getElementById("ev-costo")?.value);
     const notas=document.getElementById("ev-notas")?.value?.trim()||"";
+    const horaInicio=document.getElementById("ev-hora-inicio")?.value||"";
+    const horaFin=document.getElementById("ev-hora-fin")?.value||"";
     if(!nombre){ showToast("Ponle un nombre al evento"); return; }
-    const nuevo={id:uid(),nombre,fecha,costo,notas,participantes:[],creadoEn:new Date().toISOString()};
+    if(horaInicio&&horaFin&&horaFin<=horaInicio){ showToast("La hora de fin debe ser después del inicio"); return; }
+    if(window._editEventoId){
+      const ev=eventos.find(e=>e.id===window._editEventoId);
+      if(ev){
+        const cambios={nombre,fecha,costo,notas,horaInicio,horaFin};
+        await fbUpdate("eventos",ev.id,cambios);
+        Object.assign(ev,cambios);
+      }
+      window._editEventoId=null;
+      closeModal("modal-nuevo-evento");
+      renderEventos();
+      try{renderAgenda();}catch(e){}
+      showToast("✓ Evento actualizado");
+      return;
+    }
+    const nuevo={id:uid(),nombre,fecha,horaInicio,horaFin,costo,notas,participantes:[],creadoEn:new Date().toISOString()};
     eventos.push(nuevo);
     await fbSet("eventos",nuevo.id,nuevo);
     closeModal("modal-nuevo-evento");
     renderEventos();
+    try{renderAgenda();}catch(e){}
     showToast("✓ Evento \""+nombre+"\" creado");
   };
 
@@ -1884,8 +1937,9 @@ window.verDiaDetalle = (fecha) => {
     });
     return;
   }
+  const _evHtml = eventosDelDia(fecha).map(tarjetaEventoAgenda).join("");
   if(!resDelDia.length){
-    document.getElementById("dia-detalle-content").innerHTML = `<div class="empty-state"><div style="font-size:32px;margin-bottom:8px">📅</div><div>Sin reservas este día</div></div>`;
+    document.getElementById("dia-detalle-content").innerHTML = _evHtml + `<div class="empty-state"><div style="font-size:32px;margin-bottom:8px">📅</div><div>Sin reservas de clases este día</div></div>`;
     openModal("modal-dia-detalle");
     return;
   }
@@ -1897,7 +1951,7 @@ window.verDiaDetalle = (fecha) => {
     if(!porHorario[r.horarioId]) porHorario[r.horarioId]=[];
     porHorario[r.horarioId].push(r);
   });
-  let html = "";
+  let html = _evHtml;
   Object.entries(porHorario).forEach(([hId, res])=>{
     const h = HORARIOS.find(hh=>hh.id===hId);
     const cerrada = esCerrada(hId, fecha);
