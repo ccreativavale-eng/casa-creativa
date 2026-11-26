@@ -434,6 +434,12 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-asistencia-evento">
+  <div class="modal">
+    <div class="modal-header"><span class="serif" style="font-weight:800;font-size:17px">✓ Asistió al evento</span><button class="modal-close" onclick="closeModal('modal-asistencia-evento')">×</button></div>
+    <div id="asistencia-evento-content"></div>
+  </div>
+</div>
 <div class="modal-overlay" id="modal-nuevo-evento">
   <div class="modal">
     <div class="modal-header"><span class="serif" id="modal-evento-title" style="font-weight:800;font-size:17px">🎉 Nuevo evento</span><button class="modal-close" onclick="closeModal('modal-nuevo-evento')">×</button></div>
@@ -1609,6 +1615,7 @@ window.renderEventos = () => {
           <div style="flex:1;background:var(--fondo);border-radius:10px;padding:8px;text-align:center"><div style="font-size:16px;font-weight:800;color:var(--oro)">$${totalPorCobrar.toLocaleString("es-MX")}</div><div style="font-size:10px;color:var(--gris)">Por cobrar</div></div>
           <div style="flex:1;background:var(--fondo);border-radius:10px;padding:8px;text-align:center"><div style="font-size:16px;font-weight:800;color:var(--principal)">${participantes.length}</div><div style="font-size:10px;color:var(--gris)">Participantes</div></div>
         </div>
+        ${(()=>{const _as=participantes.filter(p=>estadoAsistenciaPart(p)==="asistio").length,_fa=participantes.filter(p=>estadoAsistenciaPart(p)==="falta").length,_sm=participantes.length-_as-_fa;return participantes.length?`<div style="font-size:12px;text-align:center;margin-bottom:10px;font-weight:700"><span style="color:var(--verde)">✓ ${_as} asistieron</span> · <span style="color:var(--acento2)">✗ ${_fa} no asistieron</span>${_sm?` · <span style="color:var(--gris)">${_sm} sin marcar</span>`:""}</div>`:"";})()}
         <button data-add-participante="${ev.id}" class="btn btn-ghost btn-small btn-full" style="margin-bottom:10px">+ Agregar participante</button>
         ${ev.tipo==="sesion"&&participantes.some(p=>!p.reservaId)?`<button data-pasar-alumnas="${ev.id}" class="btn btn-primary btn-small btn-full" style="margin-bottom:10px">📅 Registrar la clase de ${participantes.filter(p=>!p.reservaId).length} en esta sesión</button>`:participantes.some(p=>!p.alumnaId)?`<button data-pasar-alumnas="${ev.id}" class="btn btn-primary btn-small btn-full" style="margin-bottom:10px">👩‍🎨 Pasar ${participantes.filter(p=>!p.alumnaId).length} a Alumnas</button>`:(participantes.length?`<div style="font-size:11px;color:var(--verde);font-weight:700;text-align:center;margin-bottom:10px">✓ Todas están en Alumnas</div>`:"")}`;
       if(!participantes.length){
@@ -1633,6 +1640,7 @@ window.renderEventos = () => {
               </div>
             </div>
             ${pendiente?`<button data-pagar-participante="${p.id}" data-pagar-participante-evento="${ev.id}" style="margin-top:6px;font-size:11px;background:var(--verde);color:white;border:none;border-radius:6px;padding:3px 8px;cursor:pointer;font-family:inherit">✓ Marcar segundo pago como pagado</button>`:""}
+            ${filaAsistenciaEvento(ev,p)}
           </div>`;
         });
       }
@@ -1724,6 +1732,16 @@ window.renderEventos = () => {
     btn.addEventListener("click",()=>abrirAgendarMaestra(btn.getAttribute("data-agendar-part")));
   });
 
+  document.querySelectorAll("[data-ev-asistio]").forEach(btn=>{
+    btn.addEventListener("click",()=>eventoAsistio(btn.getAttribute("data-ev"),btn.getAttribute("data-ev-asistio")));
+  });
+  document.querySelectorAll("[data-ev-falta]").forEach(btn=>{
+    btn.addEventListener("click",()=>eventoFalta(btn.getAttribute("data-ev"),btn.getAttribute("data-ev-falta")));
+  });
+  document.querySelectorAll("[data-ev-deshacer]").forEach(btn=>{
+    btn.addEventListener("click",()=>eventoDeshacerAsistencia(btn.getAttribute("data-ev"),btn.getAttribute("data-ev-deshacer")));
+  });
+
   document.querySelectorAll("[data-pasar-alumnas]").forEach(btn=>{
     btn.addEventListener("click",async()=>{
       btn.disabled=true; btn.textContent="Pasando…";
@@ -1778,6 +1796,128 @@ window.renderEventos = () => {
       abrirEditarParticipanteEvento(evId,pId);
     });
   });
+};
+
+// ── ASISTENCIA EN EVENTOS ────────────────────────────────
+function reservaDePart(p){ return p.reservaId ? reservas.find(r=>r.id===p.reservaId&&r.estado!=="cancelada") : null; }
+function estadoAsistenciaPart(p){
+  const r=reservaDePart(p);
+  if(r&&r.estado==="asistida") return "asistio";
+  if(r&&r.estado==="falta") return "falta";
+  return p.asistencia||"";
+}
+function filaAsistenciaEvento(ev,p){
+  const est=estadoAsistenciaPart(p);
+  const r=reservaDePart(p);
+  const al=p.alumnaId&&alumnas.find(a=>a.id===p.alumnaId);
+  const pk=r&&al&&(al.paquetes||[]).find(x=>x.id===r.paqueteId);
+  const b=(attr,color,txt)=>`<button ${attr} data-ev="${ev.id}" style="font-size:11px;background:${color};color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-family:inherit;font-weight:700;white-space:nowrap;flex-shrink:0">${txt}</button>`;
+  if(est==="asistio") return `<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-top:6px;padding-top:6px;border-top:1px solid var(--hueso2)"><span style="font-size:11px;color:var(--verde);font-weight:800">✅ Asistió${pk?` · se descontó 1 clase de ${pk.emoji||""} ${pk.nombre} (le quedan ${pk.clasesRestantes})`:" · sin descontar clase"}</span>${b(`data-ev-deshacer="${p.id}"`,"var(--gris)","↩ Deshacer")}</div>`;
+  if(est==="falta") return `<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-top:6px;padding-top:6px;border-top:1px solid var(--hueso2)"><span style="font-size:11px;color:var(--acento2);font-weight:800">❌ No asistió</span>${b(`data-ev-deshacer="${p.id}"`,"var(--gris)","↩ Deshacer")}</div>`;
+  return `<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-top:6px;padding-top:6px;border-top:1px solid var(--hueso2)"><span style="font-size:11px;color:var(--gris);font-weight:700">¿Asistió?</span><div style="display:flex;gap:6px">${b(`data-ev-asistio="${p.id}"`,"var(--verde)","✓ Asistió")}${b(`data-ev-falta="${p.id}"`,"var(--acento2)","✗ No asistió")}</div></div>`;
+}
+async function guardarPartEvento(ev,pId,cambios){
+  ev.participantes=(ev.participantes||[]).map(x=>x.id===pId?{...x,...cambios}:x);
+  await fbUpdate("eventos",ev.id,{participantes:ev.participantes});
+}
+function refrescarTrasAsistenciaEvento(){
+  renderEventos();
+  try{renderAgenda();}catch(e){}
+  try{renderAlumnas();}catch(e){}
+}
+window.eventoAsistio = async (evId,pId) => {
+  const ev=eventos.find(e=>e.id===evId); if(!ev) return;
+  const p=(ev.participantes||[]).find(x=>x.id===pId); if(!p) return;
+  const al=p.alumnaId&&alumnas.find(a=>a.id===p.alumnaId);
+  const r=reservaDePart(p);
+  try{
+    // Ya tenía una clase suya registrada en el evento: se descuenta esa
+    if(r){
+      await marcarAsistencia(r.id,true,"Evento: "+ev.nombre);
+      await guardarPartEvento(ev,pId,{asistencia:"asistio"});
+      refrescarTrasAsistenciaEvento();
+      return;
+    }
+    // Es alumna con clases compradas: preguntar de cuál descontar
+    const ops=al?(al.paquetes||[]).filter(x=>x.clasesRestantes>0&&diasRestantes(x.expira)>-1):[];
+    if(al&&ops.length){ abrirAsistenciaEvento(ev,p,al,ops); return; }
+    // No es alumna o no tiene clases: solo se marca
+    await guardarPartEvento(ev,pId,{asistencia:"asistio"});
+    refrescarTrasAsistenciaEvento();
+    showToast("✓ Asistencia registrada"+(al?" · no tenía clases por descontar":""));
+  }catch(e){ console.error(e); showToast("No se pudo guardar. Intenta de nuevo."); }
+};
+function abrirAsistenciaEvento(ev,p,al,ops){
+  const pref=ops.find(x=>x.eventoId===ev.id&&x.paqueteDefId==="evento_esmalte")||ops.find(x=>x.paqueteDefId==="evento_esmalte")||ops[0];
+  const sel=ev.tipo==="simple"?"":pref.id;
+  const opciones=ops.map(x=>`<option value="${x.id}" ${x.id===sel?"selected":""}>${x.emoji||""} ${x.nombre} · le quedan ${x.clasesRestantes} · vence ${fmtFecha(x.expira)}</option>`).join("")+`<option value="" ${sel===""?"selected":""}>No descontar ninguna clase (pagó el evento aparte)</option>`;
+  document.getElementById("asistencia-evento-content").innerHTML=`
+    <div style="font-size:14px;margin-bottom:4px"><strong>${al.nombre}</strong> asistió a <strong>${ev.nombre}</strong>.</div>
+    <div style="font-size:13px;color:var(--gris);margin-bottom:12px">Tiene clases compradas. ¿De cuál se descuenta?</div>
+    <div class="field"><select id="asis-ev-pkg">${opciones}</select></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost btn-small" onclick="closeModal('modal-asistencia-evento')">Cancelar</button>
+      <button class="btn btn-primary btn-small" id="btn-confirmar-asis-ev">Registrar asistencia</button>
+    </div>`;
+  document.getElementById("btn-confirmar-asis-ev").onclick=async()=>{
+    const btn=document.getElementById("btn-confirmar-asis-ev"); btn.disabled=true; btn.textContent="Guardando…";
+    const pkgId=document.getElementById("asis-ev-pkg").value;
+    try{
+      if(pkgId){
+        const ag=await agendarEnEvento(ev,al,pkgId);
+        if(ag.reserva){
+          if(ag.estado!=="ya"){ ag.reserva.creadaAlAsistir=true; await fbUpdate("reservas",ag.reserva.id,{creadaAlAsistir:true}); }
+          await guardarPartEvento(ev,p.id,{reservaId:ag.reserva.id,asistencia:"asistio"});
+          if(ag.reserva.estado!=="asistida") await marcarAsistencia(ag.reserva.id,true,"Evento: "+ev.nombre);
+        }
+      } else {
+        await guardarPartEvento(ev,p.id,{asistencia:"asistio"});
+        showToast("✓ Asistencia registrada · sin descontar clase");
+      }
+      closeModal("modal-asistencia-evento");
+      refrescarTrasAsistenciaEvento();
+    }catch(e){ console.error(e); showToast("No se pudo guardar. Intenta de nuevo."); btn.disabled=false; btn.textContent="Registrar asistencia"; }
+  };
+  openModal("modal-asistencia-evento");
+}
+window.eventoFalta = async (evId,pId) => {
+  const ev=eventos.find(e=>e.id===evId); if(!ev) return;
+  const p=(ev.participantes||[]).find(x=>x.id===pId); if(!p) return;
+  try{
+    const r=reservaDePart(p);
+    if(r) await marcarAsistencia(r.id,false);
+    else showToast("Registrado: no asistió");
+    await guardarPartEvento(ev,pId,{asistencia:"falta"});
+    refrescarTrasAsistenciaEvento();
+  }catch(e){ console.error(e); showToast("No se pudo guardar. Intenta de nuevo."); }
+};
+window.eventoDeshacerAsistencia = async (evId,pId) => {
+  const ev=eventos.find(e=>e.id===evId); if(!ev) return;
+  const p=(ev.participantes||[]).find(x=>x.id===pId); if(!p) return;
+  const r=reservaDePart(p);
+  let devuelta=false;
+  try{
+    const cambios={asistencia:null};
+    if(r){
+      if(r.estado==="asistida"){
+        const al=alumnas.find(a=>a.id===r.alumnaId);
+        const pk=al&&(al.paquetes||[]).find(x=>x.id===r.paqueteId);
+        if(pk){ pk.clasesRestantes=(pk.clasesRestantes||0)+1; await fbUpdate("alumnas",al.id,{paquetes:al.paquetes}); devuelta=true; }
+        const regs=asistencias.filter(x=>x.reservaId===r.id);
+        await Promise.all(regs.map(x=>fbDelete("asistencias",x.id)));
+        asistencias=asistencias.filter(x=>x.reservaId!==r.id);
+      }
+      if(r.creadaAlAsistir){
+        r.estado="cancelada"; await fbUpdate("reservas",r.id,{estado:"cancelada"});
+        cambios.reservaId=null;
+      } else {
+        r.estado="reservada"; await fbUpdate("reservas",r.id,{estado:"reservada"});
+      }
+    }
+    await guardarPartEvento(ev,pId,cambios);
+    refrescarTrasAsistenciaEvento();
+    showToast(devuelta?"↩ Deshecho · se le devolvió la clase":"↩ Deshecho");
+  }catch(e){ console.error(e); showToast("No se pudo deshacer. Intenta de nuevo."); }
 };
 
 window.toggleSegundoPagoEvento = () => {
