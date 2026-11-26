@@ -192,7 +192,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
     <div class="field"><label>Correo electrónico</label><input type="email" id="na-email" placeholder="maria@email.com"></div>
     <div class="field"><label>Notas</label><input type="text" id="na-nota" placeholder="Nivel previo, preferencias…"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button class="btn btn-ghost btn-small" onclick="closeModal('modal-nueva-alumna')">Cancelar</button>
+      <button class="btn btn-ghost btn-small" onclick="window._altaParaEvento=null;closeModal('modal-nueva-alumna')">Cancelar</button>
       <button class="btn btn-primary btn-small" onclick="guardarAlumna()">Guardar</button>
     </div>
   </div>
@@ -229,7 +229,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
 <div class="modal-overlay" id="modal-paquete">
   <div class="modal">
     <div class="modal-header"><span class="serif" id="modal-paquete-title" style="font-weight:800;font-size:17px">Nuevo paquete</span><button class="modal-close" onclick="closeModal('modal-paquete')">×</button></div>
-    <div class="field"><label>Paquete</label>
+    <div id="pkg-eventos"></div>
+    <div class="field"><label id="pkg-def-label">Paquete</label>
       <select id="pkg-def" onchange="updatePkgInfo()">
         <optgroup label="── Paquetes de Curso ──">
         <option value="previo1">📦 Paquete previo · 1 clase · 15 días · $320</option>
@@ -1939,7 +1940,7 @@ function pevPintar(){
 
   if(!_pev.forma){
     const ops = paquetesDisponibles(al);
-    _pev.forma = (ev?.tipo==="sesion" && ops.length) ? "paquete" : "pago";
+    _pev.forma = ops.length ? "paquete" : "pago";
   }
   document.querySelectorAll("[data-pev-forma]").forEach(b=>{
     b.classList.toggle("sel", b.getAttribute("data-pev-forma")===_pev.forma);
@@ -1980,7 +1981,7 @@ function pevBuscar(){
     const ya = yaEnEvento.has(a.id);
     return `<div data-pev-alumna="${a.id}" style="padding:8px 13px;cursor:${ya?"default":"pointer"};border-bottom:1px solid var(--hueso2);${ya?"opacity:.5":""}"><div style="font-size:14px;font-weight:700">${a.nombre}</div><div style="font-size:11px;color:var(--gris)">${ya?"✓ Ya está en este evento":`${tot?`<span style="color:var(--verde);font-weight:700">${tot} clase${tot!==1?"s":""} en su paquete</span>`:"Sin clases en su paquete"}${a.telefono?" · 📱 "+a.telefono:""}`}</div></div>`;
   }).join("");
-  if(!exacta && /[a-záéíóúñ]/i.test(nombreEscrito)) html += `<div data-pev-nueva="1" style="padding:9px 13px;cursor:pointer;color:var(--principal);font-weight:800;font-size:13px">+ Es nueva: agregar a "${nombreEscrito}"</div>`;
+  if(!exacta) html += `<div data-pev-nueva="1" style="padding:9px 13px;cursor:pointer;color:var(--principal);font-weight:800;font-size:13px">¿No la encuentras? + Darla de alta como alumna nueva</div>`;
   sugs.innerHTML = html;
   sugs.style.display = html ? "block" : "none";
   sugs.querySelectorAll("[data-pev-alumna]").forEach(d=>d.addEventListener("click",()=>{
@@ -1990,11 +1991,13 @@ function pevBuscar(){
     sugs.style.display="none"; pevPintar();
   }));
   sugs.querySelector("[data-pev-nueva]")?.addEventListener("click",()=>{
-    _pev.alumnaId=null; _pev.nueva=true; _pev.forma="pago";
-    document.getElementById("pev-nombre").value = nombreEscrito;
-    document.getElementById("pev-tel").value = /^\d[\d\s-]{3,}$/.test(nombreEscrito)?nombreEscrito:"";
-    document.getElementById("pev-email").value = "";
-    sugs.style.display="none"; pevPintar();
+    window._altaParaEvento = _pev.evId;
+    closeModal("modal-participante-evento");
+    const esTel = /^\d[\d\s-]{3,}$/.test(nombreEscrito);
+    document.getElementById("na-nombre").value = esTel ? "" : nombreEscrito;
+    document.getElementById("na-tel").value = esTel ? nombreEscrito : "";
+    document.getElementById("na-email").value = ""; document.getElementById("na-nota").value = "";
+    openModal("modal-nueva-alumna");
   });
 }
 
@@ -2353,7 +2356,7 @@ window.renderAlumnas=()=>{
     const tieneVencido=(a.paquetes||[]).some(p=>pagoVencido(p));
     const tienePendiente=(a.paquetes||[]).some(p=>pagoPendiente(p));
     const border=tieneVencido?"border:2px solid var(--acento2)!important;":tienePendiente?"border:2px solid var(--oro)!important;":"";
-    html+=`<div class="card" style="margin-bottom:12px;${border}"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="flex:1"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif">${a.nombre}</div><div style="font-size:12px;color:var(--gris);margin-top:2px;display:flex;gap:12px;flex-wrap:wrap">${a.telefono?`<span>📱 ${a.telefono}</span>`:""} ${a.correo?`<span>✉️ ${a.correo}</span>`:""}</div>${(a.eventosOrigen||[]).length?`<div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap">${a.eventosOrigen.map(o=>badge("🎉 Viene de: "+o.nombre,"#a376a6")).join("")}${puedeEntrar(a)?"":badge("⚠️ Sin cel ni correo: no puede entrar","#d13626")}</div>`:""}<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${act?`${badge(act.emoji+" "+pend+" clase"+(pend!==1?"s":""),pend>3?"var(--verde)":pend>0?"var(--oro)":"var(--acento2)")} ${badge("Expira en "+diasExp+"d",diasExp>14?"var(--gris)":"var(--acento2)")}`:badge("Sin paquete activo","var(--acento2)")} ${resFut>0?badge(resFut+" agendada"+(resFut!==1?"s":""),"var(--principal)"):""} ${tieneVencido?badge("💸 Pago vencido","var(--acento2)"):""} ${tienePendiente&&!tieneVencido?badge("⏳ Pago pendiente","var(--oro)"):""} ${necesitaRenovar(a)?badge("🔔 Renovar","var(--principal)"):""} ${alertaPiezaAlumna(a)==="vencida"?badge("⚠️ Pieza vencida","var(--acento2)"):alertaPiezaAlumna(a)==="pronto"?badge("🏺 Recoger pronto","var(--oro)"):""}</div></div><div style="display:flex;flex-direction:column;gap:5px;margin-left:10px;flex-shrink:0"><button class="btn btn-primary btn-small" onclick="window.openPaquete('${a.id}')">+ Paquete</button><button class="btn btn-ghost btn-small" onclick="window.abrirAgendarMaestra('${a.id}')">📅 Agendar</button><button class="btn btn-ghost btn-small" onclick="try{window.verAlumna('${a.id}')}catch(e){alert('Error: '+e.message)}">Ver</button></div></div></div>`;
+    html+=`<div class="card" style="margin-bottom:12px;${border}"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="flex:1"><div style="font-weight:800;font-size:15px;font-family:'DM Serif Display',serif">${a.nombre}</div><div style="font-size:12px;color:var(--gris);margin-top:2px;display:flex;gap:12px;flex-wrap:wrap">${a.telefono?`<span>📱 ${a.telefono}</span>`:""} ${a.correo?`<span>✉️ ${a.correo}</span>`:""}</div>${(a.eventosOrigen||[]).length&&!puedeEntrar(a)?`<div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap">${badge("⚠️ Sin cel ni correo: no puede entrar","#d13626")}</div>`:""}<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${act?`${badge(act.emoji+" "+pend+" clase"+(pend!==1?"s":""),pend>3?"var(--verde)":pend>0?"var(--oro)":"var(--acento2)")} ${badge("Expira en "+diasExp+"d",diasExp>14?"var(--gris)":"var(--acento2)")}`:badge("Sin paquete activo","var(--acento2)")} ${resFut>0?badge(resFut+" agendada"+(resFut!==1?"s":""),"var(--principal)"):""} ${tieneVencido?badge("💸 Pago vencido","var(--acento2)"):""} ${tienePendiente&&!tieneVencido?badge("⏳ Pago pendiente","var(--oro)"):""} ${necesitaRenovar(a)?badge("🔔 Renovar","var(--principal)"):""} ${alertaPiezaAlumna(a)==="vencida"?badge("⚠️ Pieza vencida","var(--acento2)"):alertaPiezaAlumna(a)==="pronto"?badge("🏺 Recoger pronto","var(--oro)"):""}</div></div><div style="display:flex;flex-direction:column;gap:5px;margin-left:10px;flex-shrink:0"><button class="btn btn-primary btn-small" onclick="window.openPaquete('${a.id}')">+ Paquete / evento</button><button class="btn btn-ghost btn-small" onclick="window.abrirAgendarMaestra('${a.id}')">📅 Agendar</button><button class="btn btn-ghost btn-small" onclick="try{window.verAlumna('${a.id}')}catch(e){alert('Error: '+e.message)}">Ver</button></div></div></div>`;
   });
   document.getElementById("tab-alumnas").innerHTML=html;
   const searchInput = document.getElementById("buscar-alumna");
@@ -2679,10 +2682,22 @@ window.guardarAlumna=async()=>{
   const id=uid(),nueva={id,nombre,telefono:document.getElementById("na-tel").value,correo:document.getElementById("na-email").value,nota:document.getElementById("na-nota").value,paquetes:[],creadaEn:hoy()};
   await fbSet("alumnas",id,nueva);alumnas.push(nueva);
   closeModal("modal-nueva-alumna");["na-nombre","na-tel","na-email","na-nota"].forEach(x=>document.getElementById(x).value="");
-  renderAlumnas();showToast("✓ "+nombre+" agregada");
+  try{renderAlumnas();}catch(e){}
+  const _evDestino=window._altaParaEvento; window._altaParaEvento=null;
+  if(_evDestino && eventos.some(e=>e.id===_evDestino)){ showToast("✓ "+nombre+" dada de alta"); abrirAgregarAEvento(_evDestino,id); }
+  else { showToast("✓ "+nombre+" agregada · ahora elige qué compró"); openPaquete(id); }
 };
 
-window.openPaquete=id=>{pkgAlumnaId=id;const a=alumnas.find(x=>x.id===id);document.getElementById("modal-paquete-title").textContent="Nuevo paquete — "+a.nombre;document.getElementById("pkg-fecha1").value=hoy();document.getElementById("pkg-monto1").value="";document.getElementById("pkg-monto2").value="";document.getElementById("pkg-fecha2").value=addDias(hoy(),15);document.getElementById("pkg-metodo").value="efectivo";document.getElementById("segundo-pago-section").style.display="none";document.getElementById("pkg-metodo1-field").style.display="none";const pkt=document.getElementById("pkg-def").value;const isPrevio=pkt.startsWith("previo");document.getElementById("pkg-clases-field").style.display=isPrevio?"none":"block";document.getElementById("pkg-clases-restantes").value="";updatePkgInfo();openModal("modal-paquete");};
+window.openPaquete=id=>{pkgAlumnaId=id;const a=alumnas.find(x=>x.id===id);document.getElementById("modal-paquete-title").textContent="¿Qué compró "+a.nombre.split(" ")[0]+"?";document.getElementById("pkg-fecha1").value=hoy();document.getElementById("pkg-monto1").value="";document.getElementById("pkg-monto2").value="";document.getElementById("pkg-fecha2").value=addDias(hoy(),15);document.getElementById("pkg-metodo").value="efectivo";document.getElementById("segundo-pago-section").style.display="none";document.getElementById("pkg-metodo1-field").style.display="none";const pkt=document.getElementById("pkg-def").value;const isPrevio=pkt.startsWith("previo");document.getElementById("pkg-clases-field").style.display=isPrevio?"none":"block";document.getElementById("pkg-clases-restantes").value="";updatePkgInfo();pintarEventosEnPaquete(id);openModal("modal-paquete");};
+function pintarEventosEnPaquete(alumnaId){
+  const box=document.getElementById("pkg-eventos"); if(!box) return;
+  const prox=(eventos||[]).filter(e=>e.fecha&&e.fecha>=hoy()).sort((x,y)=>x.fecha.localeCompare(y.fecha));
+  const lbl=document.getElementById("pkg-def-label");
+  if(!prox.length){ box.innerHTML=""; if(lbl) lbl.textContent="Paquete"; return; }
+  if(lbl) lbl.textContent="📦 ¿O qué paquete de clases compró?";
+  box.innerHTML=`<div style="font-size:12px;color:var(--gris);margin-bottom:8px;font-weight:700;letter-spacing:.3px">🎉 ¿VA A UN EVENTO?</div><div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">${prox.map(e=>{const ya=(e.participantes||[]).some(p=>p.alumnaId===alumnaId);return `<button type="button" data-pkg-evento="${e.id}" ${ya?"disabled":""} style="text-align:left;background:#ff9e9718;border:1.5px solid #ff9e97;border-radius:10px;padding:8px 12px;cursor:${ya?"default":"pointer"};font-family:inherit;color:var(--grafito);${ya?"opacity:.55":""}"><div style="font-weight:800;font-size:13px">🎉 ${e.nombre}</div><div style="font-size:11px;color:var(--gris)">${fmtFecha(e.fecha)}${horaEvento(e)?" · "+horaEvento(e):""}${e.costo?" · $"+Number(e.costo).toLocaleString("es-MX"):""}${ya?" · ✓ Ya está inscrita":""}</div></button>`;}).join("")}</div>`;
+  box.querySelectorAll("[data-pkg-evento]").forEach(b=>b.addEventListener("click",()=>{ closeModal("modal-paquete"); abrirAgregarAEvento(b.getAttribute("data-pkg-evento"),alumnaId); }));
+}
 window.toggleSegundoPago=()=>{const m=document.getElementById("pkg-metodo").value;const esDosPagos=m==="dos_pagos";document.getElementById("segundo-pago-section").style.display=esDosPagos?"block":"none";document.getElementById("pkg-metodo1-field").style.display=esDosPagos?"block":"none";};
 const DIAS_PREVIO = (clases) => {
   if(clases <= 1) return 15;
@@ -2760,7 +2775,7 @@ window.verAlumna=async id=>{
   } catch(e){}
   const act=getPaqueteActivo(a);document.getElementById("ver-alumna-nombre").textContent=a.nombre;
   const asistA=asistencias.filter(x=>x.alumnaId===id);
-  let html=`<div style="font-size:13px;color:var(--gris);margin-bottom:12px;display:flex;flex-direction:column;gap:4px">${a.telefono?`<span>📱 ${a.telefono}</span>`:""} ${a.correo?`<span>✉️ ${a.correo}</span>`:""}${(a.eventosOrigen||[]).map(o=>`<span>🎉 Viene de: <strong>${o.nombre}</strong>${o.fecha?" ("+fmtFecha(o.fecha)+")":""}</span>`).join("")}</div>
+  let html=`<div style="font-size:13px;color:var(--gris);margin-bottom:12px;display:flex;flex-direction:column;gap:4px">${a.telefono?`<span>📱 ${a.telefono}</span>`:""} ${a.correo?`<span>✉️ ${a.correo}</span>`:""}</div>
   <div class="field" style="margin-bottom:12px"><label>📝 Notas de seguimiento</label><textarea id="notas-alumna-${a.id}" style="width:100%;padding:8px 12px;border:1.5px solid var(--hueso2);border-radius:9px;font-size:13px;font-family:inherit;background:var(--blanco);color:var(--grafito);resize:vertical;min-height:60px">${a.nota||""}</textarea><button data-guardar-nota="${a.id}" style="margin-top:4px;font-size:11px;background:var(--principal);color:white;border:none;border-radius:6px;padding:3px 10px;cursor:pointer;font-family:inherit">Guardar nota</button></div><div style="font-weight:800;margin-bottom:8px;font-family:'DM Serif Display',serif">Paquete activo</div>`;
   const _allPkgs=a.paquetes||[];const _activePkgs=_allPkgs.filter(p=>p.clasesRestantes>0&&diasRestantes(p.expira)>0);const _conDeuda=_allPkgs.filter(p=>p.segundoPago&&!p.segundoPago.pagado);const _base=_activePkgs.length>0?_activePkgs:_allPkgs.slice(-1);const _showPkgs=[...new Set([..._base,..._conDeuda])];
   if(!_allPkgs.length)html+=`<div style="font-size:13px;color:var(--gris);margin-bottom:12px">Sin paquetes.</div>`;
@@ -2768,9 +2783,47 @@ window.verAlumna=async id=>{
     const dias=diasRestantes(p.expira),venc=pagoVencido(p),pend=pagoPendiente(p);
     html+=`<div style="background:var(--fondo);border-radius:10px;padding:10px 14px;margin-bottom:8px;border:${venc?"2px solid var(--acento2)":pend?"2px solid var(--oro)":"1px solid var(--hueso2)"}"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div style="font-weight:700;font-family:'DM Serif Display',serif">${p.emoji} ${p.nombre}</div><div style="display:flex;gap:6px;align-items:center">${badge(p.clasesRestantes+"/"+p.clasesTotal,p.clasesRestantes>0?"var(--verde)":"var(--acento2)")}<button data-edit-pkg="${p.id}" data-edit-alumna="${a.id}" style="font-size:11px;background:var(--principal);color:white;border:none;border-radius:6px;padding:2px 8px;cursor:pointer;font-family:inherit">✏️</button><button data-del-pkg="${p.id}" data-del-alumna="${a.id}" style="font-size:11px;background:var(--acento2);color:white;border:none;border-radius:6px;padding:2px 8px;cursor:pointer;font-family:inherit">✕</button></div></div><div style="font-size:12px;color:var(--gris)">Comprado ${fmtFecha(p.compradoEn)} · ${metodoLabel(p.metodoPago||"efectivo")}</div><div style="font-size:12px;color:var(--gris)">Pagado: $${(p.monto||0).toLocaleString("es-MX")} · Total: $${(p.montoTotal||p.monto||0).toLocaleString("es-MX")}</div><div style="font-size:12px;color:${dias<14?"var(--acento2)":"var(--gris)"}">Expira ${fmtFecha(p.expira)} (${dias}d)</div>${venc?`<div class="pago-vencido">🔴 Pago vencido desde ${fmtFecha(p.segundoPago.fechaLimite)} · $${(p.segundoPago.monto||0).toLocaleString("es-MX")}</div>`:""}${pend?`<div class="pago-pendiente">⏳ Segundo pago: $${(p.segundoPago.monto||0).toLocaleString("es-MX")} · Límite: ${fmtFecha(p.segundoPago.fechaLimite)} <button onclick="marcarSegundoPago('${a.id}','${p.id}')" style="margin-left:8px;background:var(--verde);color:white;border:none;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;font-family:inherit">✓ Marcar pagado</button></div>`:""}${esMembresiaPkg(p)?bloqueHorasMembresia(a,p):""}</div>`;
   });
-  html+=`<div style="font-weight:800;margin:14px 0 8px;font-family:'DM Serif Display',serif">Clases tomadas</div>`;
-  if(!asistA.length)html+=`<div style="font-size:13px;color:var(--gris)">Sin asistencias registradas.</div>`;
-  [...asistA].reverse().slice(0,8).forEach(x=>{const h=infoHorario(x.horarioId);html+=`<div style="font-size:13px;padding:6px 0;border-bottom:1px solid var(--hueso2)"><div style="display:flex;justify-content:space-between"><span>${fmtFecha(x.fecha)}</span><span style="color:var(--gris)">${h?.label||"—"}</span></div>${x.nota?`<div style="font-size:11px;color:var(--gris);margin-top:2px">📝 ${x.nota}</div>`:""}</div>`;});
+  {
+    // Todo lo que tiene o ha tenido agendado: clases y eventos
+    const _misRes=reservas.filter(r=>r.alumnaId===a.id&&r.estado!=="cancelada");
+    const _resIds=new Set(_misRes.map(r=>r.id));
+    const _items=_misRes.map(r=>({fecha:r.fecha,horarioId:r.horarioId,eventoId:r.eventoId,estado:r.estado,paqueteId:r.paqueteId,nota:(asistencias.find(x=>x.reservaId===r.id)||{}).nota||""}));
+    asistA.filter(x=>!x.reservaId||!_resIds.has(x.reservaId)).forEach(x=>_items.push({fecha:x.fecha,horarioId:x.horarioId,estado:"asistida",paqueteId:x.paqueteId,nota:x.nota||""}));
+    const _hoy=hoy();
+    const _prox=_items.filter(i=>i.estado==="reservada"&&i.fecha>=_hoy).sort((x,y)=>x.fecha.localeCompare(y.fecha));
+    const _hist=_items.filter(i=>!(i.estado==="reservada"&&i.fecha>=_hoy)).sort((x,y)=>y.fecha.localeCompare(x.fecha));
+    const _nAsis=_items.filter(i=>i.estado==="asistida").length;
+    const _pend=pendientesPorAgendar(a);
+    const _fila=i=>{
+      const esEv=!!i.eventoId||(i.horarioId||"").startsWith("evento:");
+      const evId=i.eventoId||(esEv?i.horarioId.slice(7):null);
+      const ev=esEv&&eventos.find(e=>e.id===evId);
+      const h=!esEv&&infoHorario(i.horarioId);
+      const titulo=esEv?(ev?.nombre||"Evento"):(h?.label||"Clase");
+      const pk=paqueteReal(a,i.paqueteId);
+      const pago=pk?`📦 ${pk.nombre}`:(esEv&&i.paqueteId==="evento")?"💵 Pagó el evento":"";
+      const est=i.estado==="asistida"?`<span style="color:var(--verde);font-weight:800">✅ Asistió</span>`:i.estado==="falta"?`<span style="color:var(--acento2);font-weight:800">❌ Faltó</span>`:i.estado==="cobrada_sin_asistir"?`<span style="color:var(--oro);font-weight:800">💰 Cobrada sin asistir</span>`:i.fecha>=_hoy?`<span style="color:var(--principal);font-weight:800">📅 Agendada</span>`:`<span style="color:var(--gris);font-weight:700">Sin marcar</span>`;
+      return `<div style="font-size:13px;padding:7px 0;border-bottom:1px solid var(--hueso2)">
+        <div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><span style="font-weight:700">${fmtFecha(i.fecha)}</span>${est}</div>
+        <div style="display:flex;gap:6px;align-items:center;margin-top:3px;flex-wrap:wrap"><span style="font-size:10px;font-weight:800;padding:1px 7px;border-radius:20px;background:${esEv?"#ff9e9733":"var(--secundario)"};color:var(--grafito)">${esEv?"🎉 EVENTO":"📅 CLASE"}</span><span style="color:var(--grafito)">${titulo}</span></div>
+        ${pago?`<div style="font-size:11px;color:var(--gris);margin-top:2px">${pago}</div>`:""}
+        ${i.nota&&!esEv?`<div style="font-size:11px;color:var(--gris);margin-top:2px">📝 ${i.nota}</div>`:""}
+      </div>`;
+    };
+    html+=`<div style="display:flex;gap:8px;margin:14px 0 10px">
+      <div style="flex:1;background:var(--fondo);border-radius:10px;padding:8px;text-align:center"><div style="font-size:18px;font-weight:800;color:var(--oro)">${_pend}</div><div style="font-size:10px;color:var(--gris)">Clases por agendar</div></div>
+      <div style="flex:1;background:var(--fondo);border-radius:10px;padding:8px;text-align:center"><div style="font-size:18px;font-weight:800;color:var(--principal)">${_prox.length}</div><div style="font-size:10px;color:var(--gris)">Agendadas</div></div>
+      <div style="flex:1;background:var(--fondo);border-radius:10px;padding:8px;text-align:center"><div style="font-size:18px;font-weight:800;color:var(--verde)">${_nAsis}</div><div style="font-size:10px;color:var(--gris)">Ha venido</div></div>
+    </div>`;
+    html+=`<div style="font-weight:800;margin:14px 0 4px;font-family:'DM Serif Display',serif">Próximas</div>`;
+    html+=_prox.length?_prox.map(_fila).join(""):`<div style="font-size:13px;color:var(--gris)">No tiene nada agendado.</div>`;
+    html+=`<div style="font-weight:800;margin:16px 0 4px;font-family:'DM Serif Display',serif">Historial</div>`;
+    if(!_hist.length) html+=`<div style="font-size:13px;color:var(--gris)">Todavía no ha venido.</div>`;
+    else {
+      html+=_hist.slice(0,10).map(_fila).join("");
+      if(_hist.length>10) html+=`<div id="hist-mas-${a.id}" style="display:none">${_hist.slice(10).map(_fila).join("")}</div><button onclick="this.previousElementSibling.style.display='block';this.remove()" style="margin-top:8px;font-size:12px;background:none;border:1.5px solid var(--principal);color:var(--principal);border-radius:7px;padding:4px 12px;cursor:pointer;font-family:inherit;font-weight:700">Ver ${_hist.length-10} más</button>`;
+    }
+  }
   // Servicios e ingresos libres de la alumna
   const todosLocal = JSON.parse(localStorage.getItem("cc_servicios")||"[]");
   const srvAlumna = todosLocal.filter(s=>s.nombre.toLowerCase()===a.nombre.toLowerCase()&&s.tipo!=="libre");
