@@ -476,8 +476,12 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
       <div class="field" style="flex:1"><label>Correo</label><input type="email" id="pev-email" placeholder="correo@ejemplo.com"></div>
     </div>
     <div id="pev-info-alumna" style="display:none;margin:-2px 0 12px"></div>
+    <div id="pev-clase-campo" style="display:none;background:var(--fondo);border:2px solid var(--principal);border-radius:10px;padding:10px 12px;margin-bottom:12px">
+      <label style="display:block;font-weight:800;font-size:14px;margin-bottom:6px;color:var(--grafito)">📅 ¿Le tomas una clase de su paquete en este evento?</label>
+      <select id="pev-clase" style="width:100%" onchange="if(this.value&&!document.getElementById('pev-monto1').value)document.getElementById('pev-monto1').value='0'"></select>
+      <div style="font-size:11px;color:var(--gris);margin-top:6px">Queda agendada en el evento. La clase se descuenta cuando marques <strong>✓ Asistió</strong>.</div>
+    </div>
     <label id="pev-gratis-campo" style="display:flex;gap:10px;align-items:center;background:var(--fondo);border:1.5px solid var(--secundario);border-radius:9px;padding:10px 12px;margin-bottom:12px;cursor:pointer;font-size:13px;font-weight:700"><input type="checkbox" id="pev-gratis" style="width:18px;height:18px;flex-shrink:0"> 🎁 Incluye sesión de esmaltado gratis (2 hrs)</label>
-    <div class="field" id="pev-clase-campo" style="display:none"><label>📅 ¿Qué clase suya se registra en este evento?</label><select id="pev-clase"></select></div>
     <div style="font-size:11px;color:var(--gris);margin:-4px 0 10px">💡 Se agrega sola a Alumnas con su 2ª sesión de esmaltado. Con celular o correo ya puede entrar a agendar.</div>
     <div class="field"><label>¿Cuántos pagos?</label>
       <select id="pev-tipo-pago" onchange="toggleSegundoPagoEvento()">
@@ -1628,7 +1632,7 @@ window.renderEventos = () => {
               <div>
                 <div style="font-weight:700;font-size:13px">${p.nombre}</div>
                 <div style="font-size:11px;color:var(--gris)">${metodoLabel(p.metodoPago||"efectivo")}${p.segundoPago?" · Dos pagos":""}${p.alumnaId?` · <span style="color:var(--verde);font-weight:700">✓ En Alumnas</span>`:""}${p.incluyeSesion?` · <span style="color:#c4473d;font-weight:700">🎁 Sesión gratis</span>`:""}${(()=>{const _r=p.reservaId&&reservas.find(r=>r.id===p.reservaId&&r.estado!=="cancelada");if(!_r)return "";const _al=alumnas.find(a=>a.id===_r.alumnaId);const _pk=_al&&(_al.paquetes||[]).find(x=>x.id===_r.paqueteId);return ` · <span style="color:var(--principal);font-weight:700">📅 ${_r.estado==="asistida"?"Asistió":"Clase registrada"}${_pk?": "+_pk.nombre:""}</span>`;})()}</div>
-                ${(()=>{const _al=p.alumnaId&&alumnas.find(a=>a.id===p.alumnaId);const _n=pendientesPorAgendar(_al);return _n>0&&!p.reservaId?`<button data-agendar-part="${_al.id}" style="margin-top:4px;font-size:11px;background:var(--principal);color:white;border:none;border-radius:6px;padding:3px 8px;cursor:pointer;font-family:inherit;font-weight:700">📅 Agendar (${_n} pendiente${_n!==1?"s":""})</button>`:"";})()}
+                ${(()=>{const _al=p.alumnaId&&alumnas.find(a=>a.id===p.alumnaId);const _n=pendientesPorAgendar(_al);const _tiene=_al&&(_al.paquetes||[]).some(x=>x.clasesRestantes>0&&diasRestantes(x.expira)>-1);const _sinClaseAqui=!reservaDePart(p)&&!estadoAsistenciaPart(p);return (_tiene&&_sinClaseAqui?`<button data-usar-clase-part="${p.id}" data-usar-clase-ev="${ev.id}" style="margin-top:4px;margin-right:4px;font-size:11px;background:var(--verde);color:white;border:none;border-radius:6px;padding:3px 8px;cursor:pointer;font-family:inherit;font-weight:700">📅 Tomar clase de su paquete aquí</button>`:"")+(_n>0&&!p.reservaId?`<button data-agendar-part="${_al.id}" style="margin-top:4px;font-size:11px;background:var(--principal);color:white;border:none;border-radius:6px;padding:3px 8px;cursor:pointer;font-family:inherit;font-weight:700">📅 Agendar otro día (${_n} pendiente${_n!==1?"s":""})</button>`:"");})()}
               </div>
               <div style="text-align:right;display:flex;align-items:center;gap:6px">
                 <div>
@@ -1732,6 +1736,9 @@ window.renderEventos = () => {
     btn.addEventListener("click",()=>abrirAgendarMaestra(btn.getAttribute("data-agendar-part")));
   });
 
+  document.querySelectorAll("[data-usar-clase-part]").forEach(btn=>{
+    btn.addEventListener("click",()=>{ window._pevTomarClase=true; abrirEditarParticipanteEvento(btn.getAttribute("data-usar-clase-ev"),btn.getAttribute("data-usar-clase-part")); });
+  });
   document.querySelectorAll("[data-ev-asistio]").forEach(btn=>{
     btn.addEventListener("click",()=>eventoAsistio(btn.getAttribute("data-ev"),btn.getAttribute("data-ev-asistio")));
   });
@@ -1931,12 +1938,13 @@ function llenarSelectorClasePev(a){
   const campo=document.getElementById("pev-clase-campo"), sel=document.getElementById("pev-clase");
   if(!campo||!sel) return;
   const ev=eventos.find(e=>e.id===window._eventoActualId);
-  const ops=paquetesConPendiente(a);
-  if(!a||!ev||ev.tipo==="simple"||!ops.length){ campo.style.display="none"; sel.innerHTML=""; return; }
-  const ninguna=`<option value="">No registrar ninguna clase</option>`;
-  const lista=ops.map(x=>`<option value="${x.p.id}">${x.p.emoji||""} ${x.p.nombre} · ${x.libres} por agendar · vence ${fmtFecha(x.p.expira)}</option>`).join("");
-  sel.innerHTML = ev.tipo==="sesion" ? lista+ninguna : ninguna+lista;
-  if(ev.tipo==="sesion"){ const pref=ops.find(x=>x.p.paqueteDefId==="evento_esmalte"); if(pref) sel.value=pref.p.id; }
+  const ops=a?(a.paquetes||[]).filter(p=>p.clasesRestantes>0&&diasRestantes(p.expira)>-1):[];
+  if(!a||!ev||!ops.length){ campo.style.display="none"; sel.innerHTML=""; return; }
+  const ninguna=`<option value="">No, no tomar clase de su paquete</option>`;
+  const lista=ops.map(p=>`<option value="${p.id}">Sí, de ${p.emoji||""} ${p.nombre} · le quedan ${p.clasesRestantes} · vence ${fmtFecha(p.expira)}</option>`).join("");
+  sel.innerHTML = ninguna+lista;
+  const pref=ops.find(p=>p.eventoId===ev.id&&p.paqueteDefId==="evento_esmalte")||(ev.tipo==="sesion"?(ops.find(p=>p.paqueteDefId==="evento_esmalte")||ops[0]):null);
+  sel.value = pref?pref.id:"";
   campo.style.display="block";
 }
 function mostrarInfoAlumnaPev(a, o){
@@ -1980,6 +1988,7 @@ window.abrirParticipanteEvento = (eventoId) => {
 
   const input = document.getElementById("pev-nombre");
   const sugs = document.getElementById("pev-sugerencias");
+  sugs.style.display="none"; sugs.innerHTML="";
   window._pevAlumnaSel = null;
   mostrarInfoAlumnaPev(null);
   llenarSelectorClasePev(null);
@@ -1990,6 +1999,8 @@ window.abrirParticipanteEvento = (eventoId) => {
     const q = input.value.trim().toLowerCase();
     const qDig = q.replace(/\D/g,"");
     if(q.length<2){ sugs.style.display="none"; return; }
+    { const exacta=alumnas.find(a=>(a.nombre||"").trim().toLowerCase()===q);
+      if(exacta){ window._pevAlumnaSel=exacta.id; mostrarInfoAlumnaPev(exacta); if(!document.getElementById("pev-tel").value) document.getElementById("pev-tel").value=exacta.telefono||""; if(!document.getElementById("pev-email").value) document.getElementById("pev-email").value=exacta.correo||""; } }
     // Alumnas + participantes de eventos pasados que aún no están en Alumnas
     const opciones = alumnas.map(a=>({tipo:"alumna",id:a.id,nombre:a.nombre,telefono:a.telefono||"",correo:a.correo||"",eventos:(a.eventosOrigen||[]).map(o=>o.nombre)}));
     eventos.forEach(ev=>(ev.participantes||[]).forEach(p=>{
@@ -2001,7 +2012,7 @@ window.abrirParticipanteEvento = (eventoId) => {
     const matches = opciones.filter(o=>(o.nombre||"").toLowerCase().includes(q) || (qDig.length>=4 && (o.telefono||"").replace(/\D/g,"").includes(qDig))).slice(0,6);
     if(!matches.length){ sugs.style.display="none"; return; }
     sugs.style.display="block";
-    sugs.innerHTML = matches.map((o,k)=>`<div data-pev-op="${k}" style="padding:8px 13px;cursor:pointer;border-bottom:1px solid var(--hueso2)"><div style="font-size:14px;font-weight:700">${o.nombre}</div><div style="font-size:11px;color:var(--gris)">${o.telefono?"📱 "+o.telefono+" · ":""}${o.eventos.length?"🎉 "+o.eventos.slice(-2).join(", "):(o.tipo==="alumna"?"👩‍🎨 Alumna":"")}</div></div>`).join("");
+    sugs.innerHTML = matches.map((o,k)=>`<div data-pev-op="${k}" style="padding:8px 13px;cursor:pointer;border-bottom:1px solid var(--hueso2)"><div style="font-size:14px;font-weight:700">${o.nombre}</div><div style="font-size:11px;color:var(--gris)">${o.tipo==="alumna"?(()=>{const _a=alumnas.find(x=>x.id===o.id);const _n=(_a?.paquetes||[]).filter(p=>p.clasesRestantes>0&&diasRestantes(p.expira)>-1).reduce((t,p)=>t+p.clasesRestantes,0);return `<span style="color:var(--verde);font-weight:700">👩‍🎨 Alumna${_n?` · ${_n} clase${_n!==1?"s":""} en su paquete`:""}</span> · `;})():""}${o.telefono?"📱 "+o.telefono+" · ":""}${o.eventos.length?"🎉 "+o.eventos.slice(-2).join(", "):""}</div></div>`).join("");
     sugs.querySelectorAll("[data-pev-op]").forEach(d=>{
       d.addEventListener("click",()=>{
         const o = matches[parseInt(d.getAttribute("data-pev-op"))];
@@ -2011,6 +2022,7 @@ window.abrirParticipanteEvento = (eventoId) => {
         sugs.style.display="none";
         window._pevAlumnaSel = o.id;
         mostrarInfoAlumnaPev(o.id ? alumnas.find(a=>a.id===o.id) : null, o);
+        if(document.getElementById("pev-clase").value && !document.getElementById("pev-monto1").value) document.getElementById("pev-monto1").value="0";
       });
     });
   };
@@ -2031,7 +2043,7 @@ window.abrirEditarParticipanteEvento = (eventoId, participanteId) => {
     document.getElementById("pev-tel").value = p.telefono||_al?.telefono||"";
     document.getElementById("pev-email").value = p.correo||_al?.correo||""; }
   document.getElementById("pev-tipo-pago").value = p.segundoPago ? "dos_pagos" : "unico";
-  document.getElementById("pev-monto1").value = p.monto||"";
+  document.getElementById("pev-monto1").value = (p.monto!=null&&p.monto!=="")?p.monto:"";
   document.getElementById("pev-metodo1").value = p.metodoPago||"efectivo";
   if(p.segundoPago){
     document.getElementById("pev-monto2").value = p.segundoPago.monto||"";
@@ -2049,6 +2061,9 @@ window.abrirEditarParticipanteEvento = (eventoId, participanteId) => {
   toggleSegundoPagoEvento();
   document.getElementById("pev-sugerencias").style.display="none";
   document.getElementById("pev-nombre").oninput = null;
+  { const _alC = p.alumnaId && alumnas.find(x=>x.id===p.alumnaId);
+    if(_alC && !reservaDePart(p)) llenarSelectorClasePev(_alC);
+    if(window._pevTomarClase){ const _s=document.getElementById("pev-clase"); const _o=[..._s.options].find(o=>o.value); if(_o) _s.value=_o.value; window._pevTomarClase=false; } }
   openModal("modal-participante-evento");
 };
 
@@ -2170,6 +2185,12 @@ document.getElementById("btn-guardar-participante-evento").onclick = async()=>{
           else c.paquetes=(al.paquetes||[]).filter(x=>x.id!==_pkgEv.id);
         }
         if(Object.keys(c).length){ await fbUpdate("alumnas",al.id,c); Object.assign(al,c); }
+        const _cc=document.getElementById("pev-clase-campo");
+        const _sel=_cc&&_cc.style.display!=="none"?document.getElementById("pev-clase").value:"";
+        if(_sel && !reservaDePart(pEdit)){
+          const ag=await agendarEnEvento(ev,al,_sel);
+          if(ag.reserva){ ev.participantes=ev.participantes.map(p=>p.id===pId?{...p,reservaId:ag.reserva.id}:p); try{renderAgenda();}catch(e){} showToast("📅 Clase de su paquete registrada en el evento"); }
+        }
       } else {
         const r = await pasarParticipanteAAlumna(ev,pEdit);
         if(r.alumna) ev.participantes = ev.participantes.map(p=>p.id===pId?{...p,alumnaId:r.alumna.id}:p);
@@ -2190,7 +2211,7 @@ document.getElementById("btn-guardar-participante-evento").onclick = async()=>{
   let rAgenda = null;
   const _campoClase = document.getElementById("pev-clase-campo");
   const _claseSel = _campoClase && _campoClase.style.display!=="none" ? document.getElementById("pev-clase").value : null;
-  if(rAlumna.alumna && ev.tipo!=="simple" && (_claseSel || (ev.tipo==="sesion" && _claseSel===null))){
+  if(rAlumna.alumna && (_claseSel || (ev.tipo==="sesion" && _claseSel===null))){
     try{ rAgenda = await agendarEnEvento(ev,rAlumna.alumna,_claseSel||null); if(rAgenda.reserva) nuevoParticipante.reservaId = rAgenda.reserva.id; }catch(e){ console.error(e); }
   }
   ev.participantes = [...(ev.participantes||[]),nuevoParticipante];
